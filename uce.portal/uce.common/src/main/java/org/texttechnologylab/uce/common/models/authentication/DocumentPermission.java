@@ -1,12 +1,21 @@
-package org.texttechnologylab.models.authentication;
+package org.texttechnologylab.uce.common.models.authentication;
 
 
-import lombok.Getter;
-import lombok.Setter;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+
 import org.texttechnologylab.uce.common.models.ModelBase;
 import org.texttechnologylab.uce.common.models.corpus.Document;
 
-import javax.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(

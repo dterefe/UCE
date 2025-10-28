@@ -1,15 +1,41 @@
 package org.texttechnologylab.uce.common.config;
 
+import java.util.HashMap;
+
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.texttechnologylab.models.authentication.DocumentPermission;
+import org.texttechnologylab.uce.common.models.authentication.DocumentPermission;
 import org.texttechnologylab.uce.common.models.biofid.BiofidTaxon;
 import org.texttechnologylab.uce.common.models.biofid.GazetteerTaxon;
 import org.texttechnologylab.uce.common.models.biofid.GnFinderTaxon;
-import org.texttechnologylab.uce.common.models.corpus.*;
+import org.texttechnologylab.uce.common.models.corpus.Block;
+import org.texttechnologylab.uce.common.models.corpus.Corpus;
+import org.texttechnologylab.uce.common.models.corpus.CorpusTsnePlot;
+import org.texttechnologylab.uce.common.models.corpus.Document;
+import org.texttechnologylab.uce.common.models.corpus.DocumentKeywordDistribution;
+import org.texttechnologylab.uce.common.models.corpus.DocumentTopThreeTopics;
+import org.texttechnologylab.uce.common.models.corpus.GeoName;
+import org.texttechnologylab.uce.common.models.corpus.Image;
+import org.texttechnologylab.uce.common.models.corpus.Lemma;
+import org.texttechnologylab.uce.common.models.corpus.LexiconEntry;
+import org.texttechnologylab.uce.common.models.corpus.Line;
+import org.texttechnologylab.uce.common.models.corpus.MetadataTitleInfo;
+import org.texttechnologylab.uce.common.models.corpus.NamedEntity;
+import org.texttechnologylab.uce.common.models.corpus.Page;
+import org.texttechnologylab.uce.common.models.corpus.PageKeywordDistribution;
+import org.texttechnologylab.uce.common.models.corpus.Paragraph;
+import org.texttechnologylab.uce.common.models.corpus.Sentence;
+import org.texttechnologylab.uce.common.models.corpus.Sentiment;
+import org.texttechnologylab.uce.common.models.corpus.SrLink;
+import org.texttechnologylab.uce.common.models.corpus.Time;
+import org.texttechnologylab.uce.common.models.corpus.UCELog;
+import org.texttechnologylab.uce.common.models.corpus.UCEMetadata;
+import org.texttechnologylab.uce.common.models.corpus.UCEMetadataFilter;
+import org.texttechnologylab.uce.common.models.corpus.WikiDataHyponym;
+import org.texttechnologylab.uce.common.models.corpus.WikipediaLink;
 import org.texttechnologylab.uce.common.models.corpus.emotion.Emotion;
 import org.texttechnologylab.uce.common.models.corpus.emotion.Feeling;
 import org.texttechnologylab.uce.common.models.corpus.links.AnnotationLink;
@@ -19,13 +45,16 @@ import org.texttechnologylab.uce.common.models.corpus.links.DocumentToAnnotation
 import org.texttechnologylab.uce.common.models.gbif.GbifOccurrence;
 import org.texttechnologylab.uce.common.models.imp.ImportLog;
 import org.texttechnologylab.uce.common.models.imp.UCEImport;
-import org.texttechnologylab.uce.common.models.negation.*;
+import org.texttechnologylab.uce.common.models.negation.CompleteNegation;
+import org.texttechnologylab.uce.common.models.negation.Cue;
+import org.texttechnologylab.uce.common.models.negation.Event;
+import org.texttechnologylab.uce.common.models.negation.Focus;
+import org.texttechnologylab.uce.common.models.negation.Scope;
+import org.texttechnologylab.uce.common.models.negation.XScope;
 import org.texttechnologylab.uce.common.models.topic.TopicValueBase;
 import org.texttechnologylab.uce.common.models.topic.TopicValueBaseWithScore;
 import org.texttechnologylab.uce.common.models.topic.TopicWord;
 import org.texttechnologylab.uce.common.models.topic.UnifiedTopic;
-
-import java.util.HashMap;
 
 @Configuration
 @EnableTransactionManagement
