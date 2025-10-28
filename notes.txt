@@ -1,0 +1,166 @@
+was ist keycloak und wie verwendet dieses projekt keycload
+
+
+Keycloak ist ein Open-Source-Identity- und Access-Management-System, das Single Sign-on über OpenID Connect/OAuth2, Benutzer- und Rollenverwaltung sowie Social-Login bietet; in UCE liefert es die komplette Authentifizierungs- und Sitzungsverwaltung.
+
+Einsatz im Projekt
+
+Die Zugangsdaten zur Keycloak-Instanz (Realm, Server-URL, Client-ID, Secret) werden zentral in uce.portal/uce.common/src/main/resources/common.conf (line 48) und dem Release-Pendant gehalten; so kann die Anwendung zwischen lokaler und produktiver Umgebung wechseln.
+CommonConfig baut daraus eine org.keycloak.authorization.client.Configuration, die später von den Services verwendet wird (uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/config/CommonConfig.java (line 99)).
+AuthenticationService erzeugt beim Start einen Keycloak-AuthzClient auf Basis dieser Konfiguration und prüft, ob die Auth-Integration erreichbar ist (uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/AuthenticationService.java (line 18)).
+Der Login-Callback tauscht im OAuth2-Flow den Authorization Code gegen Access-, ID- und Refresh-Token am Keycloak-Token-Endpunkt ein, erzeugt daraus das UceUser-Objekt und legt es in der Session ab (uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/AuthenticationApi.java (line 51)).
+Beim Start registriert die App die API-Routen nur dann für Auth-Checks, wenn die Authentifizierung laut Konfiguration aktiviert ist (uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/App.java (line 221)); geschützte Handler prüfen anschließend auf das Sitzungsobjekt.
+Sowohl das Web- als auch das Common-Modul binden den Keycloak Authz Client als Maven-Abhängigkeit ein (uce.portal/uce.web/pom.xml (line 63), uce.portal/uce.common/pom.xml (line 55)).
+Eine eigene Keycloak-Instanz wird über den Compose-Service uce-keycloak-auth bereitgestellt, der beim Start automatisch das mitgelieferte Realm-JSON importiert (docker-compose.yaml (line 121)); Dokumentation und .env-Parameter beschreibt documentation/docs/getting-started/keycloak.md (line 1).
+Wenn du die Integration lokal ausprobieren möchtest, kannst du als nächsten Schritt den Keycloak-Container mit docker-compose up uce-keycloak-auth starten und danach den Login-Flow in der Weboberfläche testen.
+
+in this line the user is saved inside the context:
+
+ctx.sessionAttribute("uceUser", user);
+
+how am i supposed to understand the persistence of this value. my first assumption was that the context is newly created with each http request. but this seems more persistent than a single request. if so how are multiple connections to the api differentiated. is there a context object for each connection or each ip address? i dont get it
+
+
+Context ist bei Javalin wirklich nur ein Request-Wrapper: Für jede eingehende HTTP-Anfrage wird ein neues Context-Objekt gebaut. Wenn du ctx.sessionAttribute("uceUser", user); aufrufst, landet der Wert nicht im Context selbst, sondern im darunterliegenden HttpSession-Objekt (Servlet-Spezifikation).
+
+Eine HttpSession gilt pro Browser/Sitzung. Beim ersten Request, der eine Session benötigt, erzeugt der Server eine Session-ID, legt sie als Cookie (z. B. JSESSIONID) ab und speichert die Session-Daten serverseitig.
+Kommt später ein weiterer Request mit derselben Session-ID im Cookie, wird dieselbe Session wiederverwendet – alle dort abgelegten Attribute (wie uceUser) sind weiterhin da.
+Jeder Request hat zwar seinen eigenen Context, aber mehrere Contexts können während der Lebensdauer einer Session auf dasselbe HttpSession-Objekt zugreifen.
+Unterschiedliche Clients/Browser bekommen unterschiedliche Session-IDs und damit verschiedene Sessions. Innerhalb einer Session kannst du mehrere parallele Requests haben; sie teilen sich die Attribute, aber jede Anfrage hat ihren eigenen Context.
+Kurz: Context ist kurzlebig, die Session dahinter hält die Daten zwischen Requests fest und wird über die Session-ID (Cookie) pro Client unterschieden.
+
+
+
+
+_____________________________________________________________________________________________________________________________________
+
+
+
+
+
+
+
+
+
+
+
+verstehst du die aufgabenstellung in diesem chatverlauf:
+
+dawit
+—
+11:35
+Ich geh gerade durch den Code durch. Können Sie mir die zwei Aufgaben schon mal erklären damit mich mit dem Projekt vertraut machen kann? Falls, Abrami mir was anderes gibt, schieb ich's erstmal auf.
+Ich verstehe es grundsätzlich aber nur Code zu lesen, hilft mir nicht wirklich beim lernen.
+baumartz
+—
+11:41
+Ja ok gerne. Ich würde sagen wir fangen mit dem Thema "Permissions" an, das ist aktuell ein wichtiger Punkt der in UCE noch nicht fertig ist. Aktuell ist es so, dass alle Dokumente in UCE frei/öffentlich einsehbar sind. Dazu haben wir eine Keycloak-Instanz am Laufen, über die User/Gruppen angelegt werden können. Damit können dann in UCE einzelne Endpoints beschränkt werden. Dieses System wollen wir auf einzelne Corpora bzw Dokumente erweitern.
+Dazu habe ich hier bereits einen PR vorbereitet der einen ersten "Proof of Concept" zeigt: https://github.com/texttechnologylab/UCE/pull/114
+GitHub
+WIP: Permission system in UCE by Myyyvothrr · Pull Request #114 ·...
+See also #109
+See also #109
+Die Aufgabe ist jetzt, UCE überall anzupassen sodass es keine "Löcher" in den Permissions gibt.
+Also zB: In der Suche tauchen auch Dokumente auf, auf die ein User keinen Zugriff hat usw
+Das bedeutet ganz konkret, dass die Anmelde-Infos "durchgereicht" werden müssen, und entweder in der Datenbank direkt (SQL) oder in Java (Hibernate bzw die Dokument-Klasse) geprüft bzw gefiltert werden, je nach Zugriffsrecht
+Der Task ist tatächlich auch schön zum "Lernen" von UCE, da er eine große Bandbreite im Backend abdeckt
+Ich würde folgendes Vorgehen vorschlagen:
+
+Schau dir mal prinzipiell an wie in UCE auf Dokumente aus der DB zugegriffen wird (da gibt es zB den Reader oder die Suche (das sind teilweise große SQL-Funktionen, siehe dazu auch die Definitionen in dem "database" Ordner))
+Kurze Recherche, wie größere andere Software solche Dinge wie "Dokument-basierte Permissions" umsetzen, damit wir uns das nicht zu kompliziert machen, bzw "best practices" umsetzen falls möglichReview des PR, müssen wir da was anpassen oder sollten wir das so finalisierenIntegration von Permissions in ganz UCE, das ist dann vor allem Programmieraufwand
+baumartz
+—
+11:48
+Gerne können wir uns dazu dann auch nochmal direkt besprechen, manche Punkte in UCE sind nicht so direkt sichtbar wie sie funktionieren...
+Aber du hast so erstmal ein "Ziel" um dich mit UCE vertrauter zu machen
+dawit
+—
+11:51
+Alles klar, das klingt interessant. Es geht also erstmal darum einen Entwurf zu erstellen wie das funktionieren soll.
+baumartz
+—
+11:52
+Genau, basierend auf dem Vorschlag im PR. Der war "auf die Schnelle" gebaut, das würde funktionieren aber braucht auch Änderungen überall wo auf Dokumente zugegriffen wird. Da gibts vielleicht schönere Lösungn
+Zb einen "View" in der DB, dort sind nur die Dokumente auf die ich Zugriff habe
+Der View wird dann beim Einloggen erstellt/aktualisiert
+Dann müsste man eventuell nur im SQL den View statt "documents" Tabelle verwenden
+dawit
+—
+11:56
+Ah verstehe, das Feature ist dann nur für das Web-Interface relevant oder? In dem Fall müsste es bei jedem Einloggen teils aktualisiert werden. Größtenteils könnte es dann glaub ich vorberechnet werden.
+
+Sind die Permissions dann beliebig flexibel also Rollen & spezifische User können beide gleichzeitig für eine Permission verwendet werden.
+Bei Gateway haben wir Groups & Rollen. Da kann der Admin User zu einer Gruppe hinzufügen und diese Gruppe kann ebenfalls wie eine Rolle fungieren.
+baumartz
+—
+11:58
+Ja so wollten wir das auch machen. Aktuell berechnen wir beim Login die "effektiven" Berechtigungen von einem User auf ein Dokument, also sozusagen "basierend auf User- und Gruppen-Permissions, was ist die höchste für ein Dokument" (siehe PR)
+UCE ist aktuell sehr statisch, aber wir arbeiten daran dass man auch Dokumente erstellen kann
+Daher haben wir auch sowas wie READ, WRITE Stufen usw
+
+
+Ja, die Aufgabenstellung ist klar: - Dokumentbasierte Rechteverwaltung in UCE fertigstellen, so dass nur berechtigte Nutzer Dokumente sehen bzw. bearbeiten. - Anmeldeinformationen vom Keycloak durchgängig weiterreichen und bei jedem Dokumentzugriff prüfen (SQL/Hibernate). - Bestehenden Proof-of-Concept-PR (#114) analysieren, bewerten und verbessern. - Best Practices recherchieren (z. B. DB-Views je Nutzer) und Lösungskonzept ableiten. - System so ausbauen, dass Rollen und Gruppen aus Keycloak kombiniert werden können und bei Login die effektiven Berechtigungen je Dokument vorliegen (READ/WRITE etc.).
+
+was sind so best practices in der industrie was Dokumenten Permissions angeht. nimm die DocumentPermissions Klasse als Basis für deine Recherche für alternative Lösungen
+
+
+Best Practices
+
+DocumentPermission als ACL-Eintrag nutzen: jede Zeile beschreibt (Document, Principal, PermissionLevel); Principal sollte generisch sein (User, Gruppe, Rolle) mit eindeutiger ID und Typ, damit dieselbe Klasse alle Varianten trägt.
+Immer „deny by default“: keine impliziten Berechtigungen, volatile Gastrechte nur explizit setzen; in DocumentPermission also keine Null- oder Fallback-Permission akzeptieren und Zugriffe erst nach erfolgreicher Auflösung erlauben.
+Trennung Identität ↔ Berechtigung: Gruppen- und Rollenbeziehungen aus Keycloak referenzieren statt duplizieren; DocumentPermission enthält nur den Principal-Schlüssel, die effektiven Rechte werden beim Login oder on demand aus Keycloak + DB berechnet.
+Klares Permission-Level-Schema (READ/WRITE/ADMIN o. Ä.) per Enum, das monotone Ordnung hat (WRITE ⊃ READ); Berechnungslogik darf immer das „höchste“ Level wählen und Konflikte deterministisch lösen.
+Kontextkapselung: Zugriff nie direkt über DocumentPermission-Repo prüfen, sondern über einen zentralen PermissionService, der das Objekt liest, Caches pflegt und Business-Logik (z. B. Ownership, Dokumentstatus) bündelt.
+Datenbankfilter statt Streuung: wo möglich Row Level Security oder materialisierte Views/CTEs verwenden, sodass jede Query automatisch per DocumentPermission gefiltert wird und kein Endpunkt vergessen wird.
+Auditierbarkeit & Historie: DocumentPermission um Metadaten wie createdBy, createdAt, optional expiresAt, revokedAt ergänzen; Löschungen vermeiden, lieber „revoked“-Flag setzen, damit man später nachvollziehen kann, wer was durfte.
+Performance-Caching: effektive Rechte (inkl. Gruppenauflösung) beim Login oder Event-getrieben in Cache/RBAC-Matrix halten; DocumentPermission dient dabei als persistente Quelle, Cache invalidieren bei Änderungen.
+Bulk-Operationen & Vererbung: bei Ordnern/Sammlungen Vererbungsregeln definieren (z. B. separate Tabelle DocumentPermissionInheritance), damit DocumentPermission nicht mit Kopien überladen wird; sorgt für wartbare Strukturen.
+Tests und Compliance: jede neue Zugriffsstelle braucht automatisierte Tests (Unit/Integration) mit verschiedenen DocumentPermission-Setups; hilft, „Löcher“ früh zu finden und regulatorische Anforderungen (DSGVO, ISO 27001) zu erfüllen.
+Alternative Patterns
+
+1: RBAC-first – DocumentPermission speichert nur Rollenbindungen, konkrete Dokumentrechte kommen über „Role to Scope“-Tabellen. Schlank bei vielen Nutzern, wenn Rollen stabil sind.
+2: ABAC/Policy Engine – DocumentPermission hält Dokument-Attribute (Owner, Classification); eine regelbasierte Engine (OPA, Keycloak policies) bewertet zur Laufzeit dynamisch. Gut bei komplexen Kontextbedingungen.
+3: DB Row-Level Security – DocumentPermission bleibt technische ACL-Tabelle, Postgres RLS-Policy mappt current_setting('app.user_id') auf erlaubte Dokument-IDs. So bleibt Java-Code frei von Berechtigungsfiltern.
+ich mag die idee mit dem permission service. bau es aus als alternative zum aktuellen. beschreib in welcher form die permissions im jcas gespeichert werden, wie sie im backend durch keycloak gezogen/berechnet werden und wie für eine document_id + user eine abfrage gestellt wird
+
+
+Permission Service Alternative
+
+Zielarchitektur: zentraler PermissionService, der alle Zugriffe kapselt; DocumentPermission bleibt persistente ACL-Tabelle (document_id, principal_id, principal_type, permission_level, created_at, created_by, optional expires_at).
+
+JCas-Ablage: beim Import/Erstellen eines Dokuments werden effektive Rechte als Feature in der Metadaten-View gespeichert, z. B. Feature permissionsJson (String), das eine schlanke JSON-Struktur enthält:
+
+{
+  "inherit": true,
+  "principals": [
+    {"type": "USER", "id": "uuid-user-123", "level": "WRITE"},
+    {"type": "GROUP", "id": "kc-group-editors", "level": "READ"}
+  ]
+}
+So können Pipelines (z. B. Corpus-Importer) die Informationen mit transportieren; beim Persistieren wird JSON vom PermissionService ausgelesen und in DocumentPermission-Rows überführt.
+
+Keycloak-Integration: beim Login holt der Backend-Auth-Layer (z. B. KeycloakPrincipalExtractor) alle direkten User-Rollen und Gruppen; PermissionService.refreshEffectivePermissions(userId):
+
+ruft Keycloak-API (Userinfo + Groups) bzw. nutzt KeycloakSecurityContext.
+Mappt Realm-/Client-Rollen auf interne principal_id (KC_ROLE:<roleName>), Gruppen auf KC_GROUP:<path>.
+Baut Cache-Eintrag (z. B. Guava/Caffeine) mit EffectivePrincipalSet – enthält alle Principals, auf die der Nutzer gemappt ist.
+Berechnung im Backend: PermissionService hat Repositories für DocumentPermission und optional DocumentPermissionInheritance.
+
+getEffectiveLevel(documentId, userContext):
+Holt Set<PrincipalKey> aus Cache (USER:<uid>, KC_GROUP:..., KC_ROLE:...).
+Fragt DB:
+SELECT permission_level
+FROM document_permissions
+WHERE document_id = :doc
+  AND principal_key = ANY(:principalKeys)
+Aggregiert mit definierter Ordnung (z. B. ADMIN > WRITE > READ > NONE).
+Berücksichtigt Vererbung (optional per CTE oder document_permission_inheritance).
+Dokumentzugriff: Controller/Service ruft permissionService.assertMinLevel(documentId, currentUser, PermissionLevel.READ).
+
+Falls Cache-Miss, wird refreshEffectivePermissions.
+Bei Erfolg liefert boolean/PermissionLevel, bei fehlender Berechtigung wird AccessDeniedException.
+Query-Integration: Für Sammelabfragen permissionService.visibleDocumentIds(userContext) erzeugt vorbereitete Liste der erlaubten IDs oder registriert DB-Filter (Hibernate @FilterDef) mit Parameter principalKeys. Alle Repository-Queries binden @Filter(name="documentPermissionFilter").
+
+Änderungen: API zum Aktualisieren (grantPermission, revokePermission) schreibt in DocumentPermission, invalidiert Cache, optional posted Event für asynchrone JCas-Aktualisierung.
+
+Vorteile: klare Trennung von Identitätslogik (Keycloak) und Berechtigungsprüfung, Auditing über ACL-Tabelle, JCas bleibt Quelle bei Importpfaden, backendweite Wiederverwendung durch Service.
