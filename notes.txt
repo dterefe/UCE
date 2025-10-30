@@ -164,3 +164,71 @@ Query-Integration: Für Sammelabfragen permissionService.visibleDocumentIds(user
 Änderungen: API zum Aktualisieren (grantPermission, revokePermission) schreibt in DocumentPermission, invalidiert Cache, optional posted Event für asynchrone JCas-Aktualisierung.
 
 Vorteile: klare Trennung von Identitätslogik (Keycloak) und Berechtigungsprüfung, Auditing über ACL-Tabelle, JCas bleibt Quelle bei Importpfaden, backendweite Wiederverwendung durch Service.
+
+
+
+_____________________________________________________________________________________________________________________________________
+
+
+
+
+
+
+
+
+my goal is to add authentification to every document access in all applications inside this codebase. the problem is i don't know every position in this codebase where a document is accessed, either through java or sql directly or any other language is possible. the documents and documentpermissions are in sql tables. users too but there is also a keycloak system that stores groups users belong to which makes permissions more complex since a user can have permission if either his user id or on of his group ids is listed in the documentpermissions table. authentification is not yet implemented for every document access therefore i need you to look for all instances where documents are being accessed.
+
+
+
+my goal is to add authentification to every document access in all applications inside this codebase. the problem is i don't know every position in this codebase where a document is accessed, either through java or sql directly or any other language is possible. the documents and documentpermissions are in sql tables. users too but there is also a keycloak system that stores groups users belong to which makes permissions more complex since a user can have permission if either his user id or on of his group ids is listed in the documentpermissions table. authentification is not yet implemented for every document access therefore i need you to look for all instances where documents are being accessed.
+
+
+Mapped the document touch points across modules; here's where document data is read or written today.
+
+Core Data Layer
+
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 329) lists documents per corpus via raw SQL; when a user is supplied it only checks EFFECTIVE permissions by username, so group grants and other access levels never get evaluated and unauthenticated callers receive the full list.
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 598), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1235), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1354), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1698) expose bulk/look-up document fetches; aside from the “complete” variant none enforce permissions, so every caller that reaches them gets raw document rows.
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 734), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 782), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1063) wrap stored search procedures that return document ids/snippets and immediately call getManyDocumentsByIds, again without checking the active principal.
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 86), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 102), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1663) handle permission materialisation and checks; EFFECTIVE rows are generated per user name only, userHasPermission never resolves Keycloak groups at runtime, and documents with empty permission sets fall back to “public”.
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1796), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1803), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1835), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/PostgresqlDataInterface_Impl.java (line 1846) persist documents, keyword distributions, and topic summaries with no permission hooks.
+Supporting Services
+
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/WikiService.java (line 59), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/WikiService.java (line 123), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/WikiService.java (line 151), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/WikiService.java (line 186) repeatedly resolve documents for wiki view-models through getDocumentById, so every wiki detail page currently bypasses authentication.
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/LexiconService.java (line 108) looks up pages by document id/begin/end to build lexicon occurrences, again assuming unrestricted access to the underlying document.
+uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/RAGService.java (line 153), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/RAGService.java (line 544), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/RAGService.java (line 625), uce.portal/uce.common/src/main/java/org/texttechnologylab/uce/common/services/RAGService.java (line 692) iterate over entire corpora and query embedding tables by document_id, which exposes content to anyone invoking the RAG endpoints.
+Web Routes
+
+uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/DocumentApi.java (line 53), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/DocumentApi.java (line 90), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/DocumentApi.java (line 152), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/DocumentApi.java (line 187), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/DocumentApi.java (line 335) surface metadata lists, document readers, topic summaries, and per-page entity data; only the reader path leans on getCompleteDocumentById(user), the rest call unauthenticated DB methods.
+uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/DocumentApi.java (line 285) deletes documents directly once an id is provided, without checking caller entitlements.
+uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/RAGApi.java (line 220), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/RAGApi.java (line 276), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/RAGApi.java (line 305) hydrate chat responses with raw documents and embeddings; no permission is evaluated before streaming data back to the client.
+uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/CorpusUniverseApi.java (line 55), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/CorpusUniverseApi.java (line 121), uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/CorpusUniverseApi.java (line 196) fetch individual documents and bulk summaries to build the corpus universe visualisation, handing the results straight to the frontend.
+uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/routes/McpApi.java (line 93) returns document titles/content in the MCP integration without any guard besides the caller knowing the id.
+Search Module
+
+uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/Search_DefaultImpl.java (line 127), uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/Search_DefaultImpl.java (line 154), uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/Search_DefaultImpl.java (line 179) hydrate search state by pulling documents for every hit and for embedding lookups; no user context is passed into the DB calls.
+uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/Search_SemanticRoleImpl.java (line 72), uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/Search_SemanticRoleImpl.java (line 92) page through semantic-role hits and load the linked documents directly.
+uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/SearchCompleteNegation.java (line 144), uce.portal/uce.search/src/main/java/org/texttechnologylab/uce/search/SearchCompleteNegation.java (line 189) do the same for negation search results.
+Importer
+
+uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 517) builds new Document entities from CAS metadata and checks for duplicates via getDocumentByCorpusAndDocumentId at uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 533); this path is inherently privileged and writes raw records.
+uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 203), uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 280), uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 291) persist documents, rerun post-processing, and log success without any permission enforcement.
+uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 665) materialises DocumentPermission rows straight from import metadata (type + level), assuming the effective permission rebuild will run later.
+uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 2004), uce.portal/uce.corpus-importer/src/main/java/org/texttechnologylab/uce/corpusimporter/Importer.java (line 2066) persist keyword distributions, topic summaries, and embeddings, which are later exposed by the web layer.
+Analysis Pipeline
+
+uce.portal/uce.analysis/src/main/java/org/texttechnologylab/uce/analysis/DUUIPipeline.java (line 949) deserialises documents from JSON responses during DUUI processing, then pushes them back into the shared DB interface.
+uce.portal/uce.analysis/src/main/java/org/texttechnologylab/uce/analysis/modules/ModelResources.java (line 34) and uce.portal/uce.web/src/main/java/org/texttechnologylab/uce/web/LanguageResources.java (line 40) load document structures from static JSON payloads; while not DB-bound, they propagate Document instances into other flows.
+SQL & Stored Procedures
+
+database/4_createSearchLayerFulltextProcedure.sql (line 90), database/6_createSemanticRoleSearchProcedure.sql (line 37) run the heavy full-text and semantic-role searches against the document table and return document id arrays that the Java layer later dereferences without permission filters.
+database/3_createGetCorpusAnnotationProcedure.sql (line 24) derives annotation slices by selecting document ids per corpus, so row-level filtering must happen here if you want DB-backed enforcement.
+database/utils/deleteDataOfCorpus.sql (line 7), database/7_logicalLinks.sql (line 13) and related blocks perform cascading deletes/repairs via direct joins on document, operating outside the Java permission model.
+database/topic/2_updateDocumentTopics.sql (line 1), database/topic/3_updateDocumentTopicWord.sql (line 3), database/13_corpusTopicDist.sql (line 12) aggregate document-topic data that later gets exposed in the UI and APIs.
+database/1_createDocumentChunkEmbeddings.sql (line 5), database/2_createDocumentEmbeddings.sql (line 5), database/12_createDocumentSentenceEmbeddings.sql (line 5) define the embedding tables keyed by document_id; every downstream embedding query assumes unrestricted read access.
+Next Steps
+
+Introduce a central DocumentAccessService that all controllers/services must call so permission checks (including Keycloak group resolution) happen exactly once before any document leaves the backend.
+Extend SQL/stored procedures (and the get…ById helpers) to accept a principal context and join against documentpermissions, ensuring both user- and group-based grants are enforced at query time.
+Backfill tests covering typical access paths (search, RAG, wiki, import/export) to confirm locked-down endpoints reject users without direct or group permissions.
+
