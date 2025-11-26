@@ -314,7 +314,9 @@ public class Document extends ModelBase implements WikiModel, Linkable {
     }
 
     public List<UCEMetadata> getUceMetadata() {
-        if (uceMetadata == null) new ArrayList<>();
+        if (uceMetadata == null) {
+            uceMetadata = new ArrayList<>();
+        }
         uceMetadata.sort(Comparator.comparing(UCEMetadata::getValueType));
         return uceMetadata;
     }

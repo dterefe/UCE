@@ -82,6 +82,51 @@
 
 <#include "*/messageModal.ftl">
 
+<#if renderModes?has_content>
+<nav class="view-mode-nav">
+    <#list renderModes as mode>
+        <a class="view-mode-link ${mode.key == activeMode?then('active','')}"
+           href="?id=${document.id}&mode=${mode.key}">
+            ${mode.name}
+        </a>
+    </#list>
+</nav>
+</#if>
+
+<#if activeMode?has_content && activeMode == "feedback_presentation">
+<div class="site-container feedback-mode">
+    <div class="feedback-main">
+        <#if middlePaneTemplate??>
+            <#include middlePaneTemplate using middlePaneModel>
+        <#else>
+            <p>Kein Renderer für diese Ansicht verfügbar.</p>
+        </#if>
+    </div>
+    <#if hasRightPane?? && hasRightPane>
+        <aside class="feedback-side">
+            <#include rightPaneTemplate using rightPaneModel>
+        </aside>
+    </#if>
+</div>
+
+<#-- Ensure shared scripts still load in feedback mode -->
+<#--<script type="module">
+    <#include "*/js/corpusUniverse.js">
+</script>-->
+<script type="module">
+    <#include "*/js/graphViz.js">
+    <#include "*/js/flowViz.js">
+</script>
+
+<script>
+    <#include "*/js/site.js">
+    <#include "*/js/documentReader.js">
+    <#include "*/js/customContextMenu.js">
+</script>
+
+</body>
+</html>
+<#else>
 <div class="site-container">
 
     <#include "*/wiki/components/wikiPageModal.ftl">
@@ -400,3 +445,4 @@
 
 
 </html>
+</#if>

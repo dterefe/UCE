@@ -20,12 +20,21 @@ import org.texttechnologylab.uce.search.SearchState;
 import org.texttechnologylab.uce.web.LanguageResources;
 import org.texttechnologylab.uce.web.SessionManager;
 import org.texttechnologylab.uce.web.freeMarker.AccessDeniedRenderer;
+import org.texttechnologylab.uce.web.render.DefaultPaneRenderer;
+import org.texttechnologylab.uce.web.render.RenderContext;
+import org.texttechnologylab.uce.web.render.RenderException;
+import org.texttechnologylab.uce.web.render.RenderModeDescriptor;
+import org.texttechnologylab.uce.web.render.RenderResult;
+import org.texttechnologylab.uce.web.render.RendererRegistry;
+import org.texttechnologylab.uce.web.render.feedback.FeedbackDocument;
+import org.texttechnologylab.uce.web.render.feedback.FeedbackDocumentMapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class DocumentApi implements UceApi {
     private S3StorageService s3StorageService;
@@ -33,10 +42,15 @@ public class DocumentApi implements UceApi {
     private static final Logger logger = LogManager.getLogger(DocumentApi.class);
     private Configuration freemarkerConfig;
 
+    private final FeedbackDocumentMapper feedbackMapper = new FeedbackDocumentMapper();
+    private final RendererRegistry rendererRegistry;
+
     public DocumentApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
         this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
         this.s3StorageService = serviceContext.getBean(S3StorageService.class);
         this.freemarkerConfig = freemarkerConfig;
+
+        this.rendererRegistry = serviceContext.getBean(RendererRegistry.class);
     }
 
     public void getUceMetadataOfDocument(Context ctx) throws IOException {
@@ -215,16 +229,56 @@ public class DocumentApi implements UceApi {
             model.put("document", doc);
 
             var corpus = db.getCorpusById(doc.getCorpusId());
+            var corpusConfig = CorpusConfig.fromJson(corpus.getCorpusJsonConfig());
             var casDownloadName = s3StorageService.buildCasXmiObjectName(corpus.getId(), doc.getDocumentId());
             var casDownloadExists = s3StorageService.objectExists(casDownloadName);
             model.put("casDownloadName", casDownloadExists ? casDownloadName : "");
+
+            // Build render mode descriptors
+            var modes = buildRenderModes(corpusConfig);
+            var selectedKey = Optional.ofNullable(ctx.queryParam("mode"))
+                    .filter(key -> modes.stream().anyMatch(m -> m.key().equals(key)))
+                    .orElse("default");
+            var activeMode = modes.stream()
+                    .filter(m -> m.key().equals(selectedKey))
+                    .findFirst()
+                    .orElseGet(() -> modes.get(0));
+
+            model.put("renderModes", modes);
+            model.put("activeMode", activeMode.key());
+
+            var renderer = rendererRegistry
+                    .renderer(activeMode.handler())
+                    .orElseGet(() -> rendererRegistry.renderer(DefaultPaneRenderer.HANDLER_KEY).orElseThrow());
+
+            var renderContext = RenderContext.builder(corpus, doc)
+                    .payload(FeedbackDocument.class, feedbackMapper.map(doc))
+                    .build();
+
+            RenderResult panes;
+            try {
+                panes = renderer.render(renderContext);
+            } catch (RenderException ex) {
+                panes = rendererRegistry.renderer(DefaultPaneRenderer.HANDLER_KEY).orElseThrow()
+                        .render(renderContext);
+                activeMode = modes.stream().filter(m -> m.key().equals("default")).findFirst().orElse(activeMode);
+                model.put("activeMode", activeMode.key());
+            }
+
+            model.put("middlePaneTemplate", panes.getMiddlePaneTemplate());
+            model.put("middlePaneModel", panes.getMiddlePaneModel());
+            model.put("hasRightPane", panes.hasRightPane());
+            model.put("rightPaneTemplate", panes.getRightPaneTemplate());
+            model.put("rightPaneModel", panes.getRightPaneModel());
+            model.put("document", doc);
+            model.put("corpus", corpus);
 
             // If this document was opened from an active search, we can highlight the search tokens in the text
             // This is only optional and works fine even without the search tokens.
             if (searchId != null && SessionManager.ActiveSearches.containsKey(searchId)) {
                 var activeSearchState = (SearchState) SessionManager.ActiveSearches.get(searchId);
                 // For SRL Search, there are no search tokens really. We will handle that exclusively later.
-                if (activeSearchState.getSearchType() != SearchType.SEMANTICROLE || activeSearchState.getSearchType() != SearchType.NEG) {
+                if (activeSearchState.getSearchType() != SearchType.SEMANTICROLE && activeSearchState.getSearchType() != SearchType.NEG) {
                     if (activeSearchState.getSearchTokens() != null)
                         model.put("searchTokens", String.join("[TOKEN]", activeSearchState.getSearchTokens()));
                 }
@@ -243,6 +297,21 @@ public class DocumentApi implements UceApi {
 
         ctx.render("reader/documentReaderView.ftl", model);
     };
+
+    private List<RenderModeDescriptor> buildRenderModes(CorpusConfig config) {
+        var descriptors = new ArrayList<RenderModeDescriptor>();
+        descriptors.add(new RenderModeDescriptor(
+                "default", "Standardansicht", DefaultPaneRenderer.HANDLER_KEY, null));
+
+        for (var mode : config.getRenderModes()) {
+            descriptors.add(new RenderModeDescriptor(
+                    mode.getKey(),
+                    mode.getName(),
+                    mode.getHandler(),
+                    mode.getDescription()));
+        }
+        return descriptors;
+    }
 
     /**
     * Finds all document ids matching a metadata key, value and value type.
