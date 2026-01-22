@@ -22,6 +22,7 @@ public final class FeedbackDocument {
     private final ProcessingTime processingTime;
     private final List<CardSection> sections;
     private final List<Permission> permissions;
+    private final Permission effectivePermission;
 
     private FeedbackDocument(Builder builder) {
         this.documentId = builder.documentId;
@@ -35,6 +36,7 @@ public final class FeedbackDocument {
         this.processingTime = builder.processingTime;
         this.sections = Collections.unmodifiableList(new ArrayList<>(builder.sections));
         this.permissions = Collections.unmodifiableList(new ArrayList<>(builder.permissions));
+        this.effectivePermission = builder.effectivePermission;
     }
 
     public String documentId() {
@@ -81,6 +83,10 @@ public final class FeedbackDocument {
         return permissions;
     }
 
+    public Permission effectivePermission() {
+        return effectivePermission;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -97,6 +103,7 @@ public final class FeedbackDocument {
         private ProcessingTime processingTime = ProcessingTime.empty();
         private List<CardSection> sections = List.of();
         private List<Permission> permissions = List.of();
+        private Permission effectivePermission;
 
         public Builder documentId(String documentId) {
             this.documentId = documentId;
@@ -153,6 +160,11 @@ public final class FeedbackDocument {
             return this;
         }
 
+        public Builder effectivePermission(Permission effectivePermission) {
+            this.effectivePermission = effectivePermission;
+            return this;
+        }
+
         public FeedbackDocument build() {
             Objects.requireNonNull(documentId, "documentId");
             Objects.requireNonNull(documentTitle, "documentTitle");
@@ -166,7 +178,7 @@ public final class FeedbackDocument {
     public record Permission(PermissionType type, PermissionLevel level, String principal) {}
 
     public enum PermissionType { USER, GROUP }
-    public enum PermissionLevel { READ, WRITE, OWNER, ADMIN }
+    public enum PermissionLevel { NONE, READ, WRITE, OWNER, ADMIN }
 
     public record Overview(int participantCount, Metric pagesMetric, Metric uniquePagesMetric) {
         public static Overview empty() {

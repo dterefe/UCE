@@ -396,8 +396,10 @@ public class Importer {
             if (existingCorpus != null) { // If we have the corpus, use that.
                 return existingCorpus;
             }
-            throw new DatabaseOperationException("The corpus config specified to add to an existing corpus, " +
-                    "but no corpus with the name " + corpusConfig.getName() + " exists.");
+            // If we want to add to an existing corpus but it does not exist yet,
+            // create it now to make the first import idempotent.
+            db.saveCorpus(corpus);
+            return corpus;
         }
         db.saveCorpus(corpus);
         return null;
@@ -522,6 +524,17 @@ public class Importer {
                 logger.info("Setting document id from \"" + metadata.getDocumentId() + "\" to \"" + documentId + "\"");
                 metadata.setDocumentId(documentId);
             }
+            // Ensure documentId is numeric-only to satisfy downstream expectations
+            var rawDocId = metadata.getDocumentId();
+            var numericDocId = rawDocId != null ? rawDocId.replaceAll("\\D+", "") : "";
+            if (numericDocId.isBlank()) {
+                numericDocId = String.valueOf(System.currentTimeMillis());
+                logger.warn("DocumentId \"" + rawDocId + "\" is non-numeric; falling back to " + numericDocId);
+            } else if (!numericDocId.equals(rawDocId)) {
+                logger.info("Coerced non-numeric documentId \"" + rawDocId + "\" to \"" + numericDocId + "\"");
+            }
+            metadata.setDocumentId(numericDocId);
+
             var document = new Document(metadata.getLanguage(),
                     metadata.getDocumentTitle(),
                     metadata.getDocumentId(),

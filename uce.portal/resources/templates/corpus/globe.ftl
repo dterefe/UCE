@@ -3,18 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>${document.getDocumentTitle()}</title>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-          crossorigin="anonymous">
-    <link
-            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-            rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin=""/>
-    <script src="https://kit.fontawesome.com/b0888ca2eb.js"
-            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="css/animate.min.css">
+
+    <link rel="stylesheet" href="leaflet/leaflet.css"/>
+    <script src="js/fontawesome/all.js"></script>
     <style>
         <#include "*/css/site.css">
         <#include "*/css/globe.css">
@@ -103,22 +96,16 @@
 
 </body>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script
-        src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
-        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-        crossorigin="anonymous"></script>
-<script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
-        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-        crossorigin="anonymous"></script>
+<script src="js/jquery-3.7.1.min.js"></script>
+<script src="js/popper.js/umd/popper.min.js"></script>
+<script src="js/bootstrap/bootstrap.min.js"></script>
 <!-- Make sure you put this AFTER Leaflet's CSS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
-<script src="//unpkg.com/d3"></script>
-<script src="//unpkg.com/topojson-client"></script>
-<script src="//unpkg.com/globe.gl"></script>
+<script src="leaflet/leaflet.js"></script>
+
+<script src="js/d3.v7.min.js"></script>
+<script src="js/topojson-client.min.js"></script>
+<script src="js/globe.gl.min.js"></script>
+
 <script src="js/utils.js"></script>
 <script>
     <#include "*/js/site.js">

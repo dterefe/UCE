@@ -1,17 +1,10 @@
 <!DOCTYPE html>
 <html lang="${languageResource.getDefaultLanguage()}">
 <head>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-          crossorigin="anonymous">
-    <link
-            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-            rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin=""/>
-    <link href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="css/animate.min.css">
+    <link rel="stylesheet" href="leaflet/leaflet.css"/>
+    <link href="css/tabulator-tables/tabulator.min.css" rel="stylesheet">
     <style>
         <#include "*/css/site.css">
         <#include "*/css/simple-loader.css">
@@ -28,28 +21,19 @@
         <#include "*/css/leaflet/MarkerCluster.css">
         <#include "*/css/leaflet/MarkerCluster.Default.css">
     </style>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://kit.fontawesome.com/b0888ca2eb.js"
-            crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
-    <script
-            src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
-            integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-            crossorigin="anonymous"></script>
-    <script
-            src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
-            integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-            crossorigin="anonymous"></script>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/tabulator-tables/tabulator.min.js"></script>
+    <script src="js/xlsx.full.min.js"></script>
+    <script src="js/fontawesome/all.js"></script>
+    <script src="leaflet/leaflet.js"></script>
+    <script src="js/popper.js/umd/popper.min.js"></script>
+    <script src="js/bootstrap/bootstrap.min.js"></script>
     <!-- For corpus universe three.js -->
     <script type="importmap">
         {
           "imports": {
-            "three": "https://unpkg.com/three@v0.161.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@v0.161.0/examples/jsm/"
+            "three": "//js/three/three.module.js",
+            "three/addons/": "//js/examples/jsm/"
           }
         }
     </script>
@@ -59,24 +43,25 @@
     <script src="js/visualization/cdns/d3js-790.js"></script>
     <script src="js/visualization/cdns/drawflow-last.js"></script>
     <!-- for leaflet search plugin -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"/>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <link rel="stylesheet" href="css/Control.Geocoder.css"/>
+    <script src="js/Control.Geocoder.js"></script>
     <!-- leaflet clusters and heatmap plugins -->
     <script src="js/visualization/cdns/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="js/leaflet.markercluster.js"></script>
 
     <!-- for Markdown blocks -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/marked.min.js"></script>
     <script type="module" src="js/md-block.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.4.0/gsap.min.js"></script>
-    <script src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
+    <script src="js/gsap.min.js"></script>
+    <script src="js/require.js"></script>
     <!--<script src="https://unpkg.com/@tweenjs/tween.js@^20.0.0/dist/tween.umd.js"></script>-->
     <title>${title}</title>
 </head>
 
 <body>
 <#include "*/messageModal.ftl">
+<#include "*/sessionExpiredModal.ftl">
 <#include "*/auth/userShortProfile.ftl">
 
 <!-- The flow chart of the Linkable objects -->

@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public final class DefaultPaneRenderer implements PaneRenderer {
 
-    public static final String HANDLER_KEY = "default";
+    public static final String HANDLER_KEY = "document_reader_pdf_view";
     private static final String TEMPLATE = "documents/detail.ftl";
 
     @Override

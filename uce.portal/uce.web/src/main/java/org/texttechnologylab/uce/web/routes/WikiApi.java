@@ -337,8 +337,8 @@ public class WikiApi implements UceApi {
                 linkableDto.toNodes.add(newLinkableDto);
             }
 
-            ctx.result(gson.toJson(linkableDto));
-            //ctx.json(linkableDto);
+            // ctx.result(gson.toJson(linkableDto));
+            ctx.json(linkableDto);
         } catch (DocumentAccessDeniedException dade) {
             AccessDeniedRenderer.render(
                     ctx,

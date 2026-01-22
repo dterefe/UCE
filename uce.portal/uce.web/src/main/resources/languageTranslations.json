@@ -231,6 +231,14 @@
     "de-DE": "Nur zugänglich, wenn eine aktive Graph-Datenbank mit hinterlegter Ontologie existiert. Durchsucht den Such-Query nach potentiellen Erweiterungen durch eben jene Ontologie der Datenbank.",
     "en-EN": "Only accessible if an active graph database with a stored ontology exists. Searches the search query for potential extensions using the same ontology of the database."
   },
+  "enrichmentCutoffTitle": {
+    "de-DE": "Diese Enrichment-Suche wurde abgeschnitten.",
+    "en-EN": "This enriched search got cutoff."
+  },
+  "enrichmentCutoffDescription": {
+    "de-DE": "Die Anreicherung wird nach einer bestimmten Anzahl von Tokens abgeschnitten (limitiert), da diese stringbasierte Volltext-Suche sonst zu komplex wird. Dies geschieht nur bei sehr umfangreicher Anreicherung, beispielsweise bei Commands. Um dies zu umgehen, verwenden Sie bitte die Layered Search, die nicht auf einer Volltextsuche basiert, sondern auf den importierten Annotationen, die nicht abgeschnitten werden.",
+    "en-EN": "Enrichment is truncated (limited) after a certain number of tokens, as otherwise this string-based search becomes too complex. This only happens in cases of very large enrichment, such as with commands. To get around this, please use layered search, which is not based on a full-text search but on the imported annotations, which are not truncated."
+  },
   "searchRankDescription": {
     "de-DE": "Die Relevanz des Dokuments für die gegebene Suchanfrage. Ein höherer Wert bedeutet eine höhere Relevanz des Dokuments.",
     "en-EN": "The relevance of the document to the given search query. A higher value indicates a higher relevance of the document."
@@ -301,7 +309,19 @@
   },
   "noAccess": {
     "de-DE": "Sie haben momentan keinen Zugriff auf diese Ressource.",
-    "en-EN": "You don't have access to this ressource right now."
+    "en-EN": "You don't have access to this resource right now."
+  },
+  "backToHome": {
+    "de-DE": "Zur Startseite",
+    "en-EN": "Back to home"
+  },
+  "goBack": {
+    "de-DE": "Zurück",
+    "en-EN": "Go back"
+  },
+  "contactAdminText": {
+    "de-DE": "Bitte kontaktieren Sie eine Administratorin oder einen Administrator, falls Sie glauben, dass es sich um einen Fehler handelt.",
+    "en-EN": "Please contact an administrator if you believe this is an error."
   },
   "loginRequired": {
     "de-DE": "Sie müssen eingeloggt sein, um auf diese Ressource zugreifen zu können.",
@@ -542,5 +562,25 @@
   "documentAccessDeniedError": {
     "en-EN": "You are not allowed to view this document.",
     "de-DE": "Sie haben keine Berechtigung, dieses Dokument zu sehen."
+  },
+  "sessionExpiredTitle": {
+    "en-EN": "Session expired",
+    "de-DE": "Sitzung abgelaufen"
+  },
+  "sessionExpiredBody": {
+    "en-EN": "Your login session ended. Please log in again to continue.",
+    "de-DE": "Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an, um fortzufahren."
+  },
+  "sessionExpiredCountdownPrefix": {
+    "en-EN": "Redirecting to home in",
+    "de-DE": "Weiterleitung zur Startseite in"
+  },
+  "sessionExpiredReloginBtn": {
+    "en-EN": "Log back in",
+    "de-DE": "Erneut anmelden"
+  },
+  "sessionExpiredHomeBtn": {
+    "en-EN": "Go to home now",
+    "de-DE": "Jetzt zur Startseite"
   }
 }

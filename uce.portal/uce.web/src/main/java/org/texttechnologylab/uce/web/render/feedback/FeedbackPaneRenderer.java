@@ -17,7 +17,7 @@ import java.util.Map;
  */
 public final class FeedbackPaneRenderer implements PaneRenderer {
 
-    public static final String HANDLER_KEY = "feedback_presentation";
+    public static final String HANDLER_KEY = "document_reader_feedback_view";
     private static final String TEMPLATE = "feedback/middlePane.ftl";
 
     @Override
@@ -29,6 +29,7 @@ public final class FeedbackPaneRenderer implements PaneRenderer {
         model.put("subtitle",
                 "%s • %s".formatted(feedback.assessmentPhase(), feedback.assessmentName()));
         model.put("metaBadges", buildMetaBadges(feedback));
+        model.put("effectivePermission", feedback.effectivePermission());
         model.put("overviewCards", buildOverviewCards(feedback));
         model.put("overviewHighlights", feedback.engagement().highlights());
         model.put("topUrls", buildTopUrls(feedback));
@@ -78,8 +79,7 @@ public final class FeedbackPaneRenderer implements PaneRenderer {
         for (var url : feedback.topUrls()) {
             rows.add(Map.of(
                     "rank", rank++,
-                    "url", url.url(),
-                    "hits", url.hits()
+                    "url", url.url()
             ));
         }
         return rows;

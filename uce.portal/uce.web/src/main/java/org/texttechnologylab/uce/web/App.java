@@ -117,7 +117,7 @@ public class App {
 
         // Application context for services
         var context = ExceptionUtils.tryCatchLog(
-                () -> new AnnotationConfigApplicationContext(SpringConfig.class),
+                () -> new AnnotationConfigApplicationContext(WebSpringConfig.class),
                 (ex) -> logger.fatal("========== [ABORT] ==========\nThe Application context couldn't be established. " +
                         "This is very likely due to a missing/invalid database connection. UCE will have to shutdown."));
         if(context == null) return;
@@ -205,7 +205,12 @@ public class App {
         var javalinApp = Javalin.create(config -> {
             try {
                 // We use the externalLocation method so that the files in the public folder are hot reloaded
-                config.staticFiles.add(commonConfig.getPublicLocation(), Location.EXTERNAL);
+                if (commonConfig.useExternalPublicLocation()) {
+                    config.staticFiles.add(commonConfig.getPublicLocation(), Location.EXTERNAL);
+                }
+                else {
+                    config.staticFiles.add("/public", Location.CLASSPATH);
+                }
                 logger.info("Setup FreeMarker templates and public folders.");
             } catch (Exception e) {
                 logger.error("Error setting up FreeMarker, the application will hence shutdown.", e);
@@ -339,6 +344,8 @@ public class App {
             throw new MissingOptionException("UCE couldn't establish its UceConfiguration properly. " +
                     "Either pass in a path to the config json file via -cf or the json content directly via -cj.");
         }
+
+        SystemStatus.UceConfig.applyEnvironmentOverrides();
     }
 
     private static void initMCP(ApiRegistry registry, JavalinConfig config) throws Exception {
@@ -417,16 +424,17 @@ public class App {
                             RequestContextHolder.setAuthenticatedUceUser(user);
 
                             UceUser uceUser = user;
-                            String principal = (uceUser != null 
-                                                && uceUser.getUsername() != null 
+                            String principal = (uceUser != null
+                                                && uceUser.getUsername() != null
                                                 && !uceUser.getUsername().isBlank())
                                                 ? uceUser.getUsername()
                                                 : DocumentPermission.PUBLIC_USERNAME;
 
-                            var accessContext = contextFactory.getObject(
-                                principal, 
-                                uceUser != null ? uceUser.getRoles() : null
-                            );
+                            var roles = (uceUser != null && uceUser.getRoles() != null)
+                                        ? uceUser.getRoles()
+                                        : java.util.EnumSet.noneOf(org.texttechnologylab.uce.common.security.DocumentAccessContext.Role.class);
+
+                            var accessContext = contextFactory.getObject(principal, roles);
                             var guard = accessManager.as(accessContext);
                             ctx.attribute("documentAccessGuard", guard);
                         }
@@ -492,6 +500,10 @@ public class App {
                     // API routes
                     path("/api", () -> {
                         before("/*", (ctx) -> {
+                        });
+
+                        path("/auth", () -> {
+                            get("/ping", (ctx) -> (registry.get(AuthenticationApi.class)).authPing(ctx));
                         });
 
                         path("/ie", () -> {

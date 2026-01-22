@@ -1,16 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
-          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-          crossorigin="anonymous">
-    <link
-            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-            rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin=""/>
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="css/animate.min.css">
+    <link rel="stylesheet" href="leaflet/leaflet.css"/>
     <style>
         <#include "*/css/site.css">
     </style>
@@ -29,30 +22,29 @@
     <style>
         <#include "*/css/bg-anim.css">
     </style>
-    <script src="https://kit.fontawesome.com/b0888ca2eb.js"
-            crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script
-            src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
-            integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-            crossorigin="anonymous"></script>
-    <script
-            src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
-            integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-            crossorigin="anonymous"></script>
+    <style>
+        <#include "*/css/view-nav.css">
+    </style>
+    <#if activeMode?has_content && activeMode == "document_reader_feedback_view">
+    <style>
+        <#include "*/css/feedback.css">
+    </style>
+    </#if>
+    <script src="js/fontawesome/all.js"></script>
+    <script src="leaflet/leaflet.js"></script>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/popper.js/umd/popper.min.js"></script>
+    <script src="js/bootstrap/bootstrap.min.js"></script>
     <script type="importmap">
         {
           "imports": {
-            "three": "https://unpkg.com/three@v0.161.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@v0.161.0/examples/jsm/"
+            "three": "//js/three/three.module.js",
+            "three/addons/": "//js/examples/jsm/"
           }
         }
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/marked.min.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/visualization/cdns/chartjs-449.js"></script>
     <script src="js/visualization/cdns/echarts-560.js"></script>
@@ -61,7 +53,7 @@
     <script type="module" src="js/md-block.js"></script>
 
     <!-- for rendering markdown to HTML, use the markdown-viewer box -->
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <script src="js/markdown-it.min.js"></script>
     <script>
         // Using https://github.com/markdown-it/markdown-it
         class MarkdownViewer extends HTMLElement {
@@ -80,369 +72,400 @@
 
 <body class="no-cursor">
 
-<#include "*/messageModal.ftl">
+    <#include "*/messageModal.ftl">
 
-<#if renderModes?has_content>
-<nav class="view-mode-nav">
-    <#list renderModes as mode>
-        <a class="view-mode-link ${mode.key == activeMode?then('active','')}"
-           href="?id=${document.id}&mode=${mode.key}">
-            ${mode.name}
-        </a>
-    </#list>
-</nav>
-</#if>
+<#if activeMode?has_content && activeMode == "document_reader_feedback_view">
+    <div class="site-container feedback-mode with-view-nav">
+        <#if renderModes?has_content>
+            <nav class="view-mode-nav" aria-label="Views">
+                <#list renderModes as mode>
+                    <#assign modeKey = mode.key()>
+                    <#assign modeName = mode.name()>
+                    <a class="view-mode-link<#if modeKey == activeMode> active</#if>"
+                       href="?id=${document.id}&mode=${modeKey}">
+                        ${modeName}
+                    </a>
+                </#list>
+            </nav>
+        </#if>
 
-<#if activeMode?has_content && activeMode == "feedback_presentation">
-<div class="site-container feedback-mode">
-    <div class="feedback-main">
-        <#if middlePaneTemplate??>
-            <#include middlePaneTemplate using middlePaneModel>
-        <#else>
-            <p>Kein Renderer für diese Ansicht verfügbar.</p>
+        <div class="feedback-main">
+            <#if middlePaneTemplate??>
+                <#include "/" + middlePaneTemplate>
+            <#else>
+                <p>Kein Renderer für diese Ansicht verfügbar.</p>
+            </#if>
+        </div>
+        <#if hasRightPane?? && hasRightPane>
+            <aside class="feedback-side">
+                <#if rightPaneTemplate??>
+                    <#include "/" + rightPaneTemplate>
+                </#if>
+            </aside>
         </#if>
     </div>
-    <#if hasRightPane?? && hasRightPane>
-        <aside class="feedback-side">
-            <#include rightPaneTemplate using rightPaneModel>
-        </aside>
-    </#if>
-</div>
 
-<#-- Ensure shared scripts still load in feedback mode -->
-<#--<script type="module">
-    <#include "*/js/corpusUniverse.js">
-</script>-->
-<script type="module">
-    <#include "*/js/graphViz.js">
-    <#include "*/js/flowViz.js">
-</script>
+    <#-- Ensure shared scripts still load in feedback mode -->
+    <#--<script type="module">
+        <#include "*/js/corpusUniverse.js">
+    </script>-->
+    <script type="module">
+        <#include "*/js/graphViz.js">
+        <#include "*/js/flowViz.js">
+    </script>
 
-<script>
-    <#include "*/js/site.js">
-    <#include "*/js/documentReader.js">
-    <#include "*/js/customContextMenu.js">
-</script>
+    <script>
+        <#include "*/js/site.js">
+        <#include "*/js/customContextMenu.js">
+    </script>
 
-</body>
-</html>
 <#else>
-<div class="site-container">
 
-    <#include "*/wiki/components/wikiPageModal.ftl">
+    <div class="site-container with-view-nav">
 
-    <div class="corpus-inspector-include display-none">
-    </div>
+        <#if renderModes?has_content>
+            <button class="view-mode-toggle" type="button" aria-label="Toggle Views">
+                ☰
+            </button>
+            <nav class="view-mode-nav" aria-label="Views">
+                <#list renderModes as mode>
+                    <#assign modeKey = mode.key()>
+                    <#assign modeName = mode.name()>
+                    <a class="view-mode-link<#if modeKey == activeMode> active</#if>"
+                       href="?id=${document.id}&mode=${modeKey}">
+                        ${modeName}
+                    </a>
+                </#list>
+            </nav>
+        </#if>
 
-    <!-- this object must be set on any site we use within UCE -->
-    <div id="prime-color-container" class="color-prime"></div>
+        <#include "*/wiki/components/wikiPageModal.ftl">
 
-    <div class="pages-loader-popup">
-        <div class="flexed align-items-center justify-content-center h-100 w-100">
-            <p class="mb-0 text">
-                <i class="rotate fas fa-circle-notch mr-1"></i> ${languageResource.get("loadingPages")} <span
-                        class="color-prime loaded-pages-count">0</span>/${document.getPages()?size}</p>
+        <div class="corpus-inspector-include display-none">
         </div>
-    </div>
 
-    <div class="dot" id="custom-cursor"></div>
+        <!-- this object must be set on any site we use within UCE -->
+        <div id="prime-color-container" class="color-prime"></div>
 
-    <ul class='custom-menu'>
-        <li data-action="open-more"><i class="fab fa-readme mr-2"></i> ${languageResource.get("more")}</li>
-        <!--<li data-action="search"><i class="fas fa-search mr-2"></i> ${languageResource.get("search")}</li>-->
-        <li data-action="highlight" data-target=""><i
-                    class="fas fa-highlighter mr-2"></i> ${languageResource.get("highlight")}</li>
-    </ul>
-
-    <div class="container-fluid">
-        <div class="flexed m-0 p-0">
-
-            <div class="w-100">
-                <div class="position-relative reader-container container"
-                     data-id="${document.getId()?string?replace('.', '')?replace(',', '')}"
-                     data-pagescount="${document.getPages()?size?string?replace('.', '')?replace(',', '')}" data-searchtokens="${(searchTokens)!''}">
-
-                    <!-- Topic navigation buttons (hidden by default) -->
-                    <div class="topic-navigation-buttons">
-                        <button class="topic-nav-button prev-topic-button" title="Previous occurrence">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                        <button class="topic-nav-button next-topic-button" title="Next occurrence">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                    </div>
-
-                    <div class="header ">
-                        <div class="text-center flexed align-items-center justify-content-around w-100">
-                            <div class="flexed align-items-center">
-                                <a class="header-btn open-wiki-page color-prime" data-wid="${document.getWikiId()}">
-                                    <i class="large-font m-0 fab fa-wikipedia-w"></i>
-                                </a>
-                                <#if document.getMetadataTitleInfo().getScrapedUrl()?has_content>
-                                    <a class="header-btn open-metadata-url-btn m-0"
-                                       href="${document.getMetadataTitleInfo().getScrapedUrl()}" target="_blank">
-                                        <i class="color-prime m-0 large-font fas fa-university"></i>
-                                    </a>
-                                </#if>
-                            </div>
-
-                            <div class="ml-2 mr-2">
-                                <h5>${document.getDocumentTitle()}</h5>
-                                <p class="text mb-0">${document.getMetadataTitleInfo().getPublished()}</p>
-                            </div>
-                            <p class="m-0 text">${document.getLanguage()?upper_case}</p>
-                        </div>
-                    </div>
-
-                    <!-- metadata if exists -->
-                    <#assign uceMetadata = document.getUceMetadataWithoutJson()>
-                    <#if uceMetadata?has_content && uceMetadata?size gt 0>
-                        <div class="w-100 pt-4 pl-4 pr-4 pb-1 mt-2">
-                            <div class="small-font">
-                                <#include "*/document/documentUceMetadata.ftl">
-                            </div>
-                            <#if document.hasJsonUceMetadata()>
-                                <div class="flexed align-items-center justify-content-center text-center mt-1">
-                                    <a class="btn bg-lightgray rounded light-border xsmall-font open-wiki-page
-                                    align-items-center flexed hoverable"
-                                       data-wid="${document.getWikiId()}">
-                                        <i class="fab fa-wikipedia-w bg-light light-border rounded p-1 mr-2"></i>
-                                        <span class="font-italic text-secondary"
-                                              style="margin-top: 3px">${languageResource.get("showUceMetadata")}...</span>
-                                    </a>
-                                </div>
-                            </#if>
-                        </div>
-                        <hr class="mb-0"/>
-                    </#if>
-
-                    <#if document.getMimeType() == "application/pdf" ||  document.getMimeType() == "pdf">
-                        <#include '*/reader/components/viewerPdf.ftl' />
-                    <#elseif document.getMimeType()?starts_with("image/")>
-                        <#include '*/reader/components/viewerImage.ftl' />
-                    <#else>
-                        <div class="document-content">
-                            <!-- Here we lazily load in the pages -->
-                        </div>
-                        <!-- Scrollbar Minimap -->
-                        <div class="scrollbar-minimap">
-                            <div class="minimap-markers"></div>
-                            <div class="minimap-preview">
-                                <div class="preview-content"></div>
-                            </div>
-                        </div>
-                    </#if>
-
-
-                </div>
+        <div class="pages-loader-popup">
+            <div class="flexed align-items-center justify-content-center h-100 w-100">
+                <p class="mb-0 text">
+                    <i class="rotate fas fa-circle-notch mr-1"></i> ${languageResource.get("loadingPages")} <span
+                            class="color-prime loaded-pages-count">0</span>/${document.getPages()?size}</p>
             </div>
+        </div>
 
-            <div class="side-bar">
+        <div class="dot" id="custom-cursor"></div>
 
-                <div class="tab-header">
-                    <button class="tab-btn active" data-tab="navigator-tab">${languageResource.get("controlPanelTab")}</button>
-                    <button class="tab-btn" data-tab="visualization-tab">${languageResource.get("visualizationTab")}</button>
-<#--                    <button class="tab-btn" data-tab="playground-tab">Playground</button>-->
+        <ul class='custom-menu'>
+            <li data-action="open-more"><i class="fab fa-readme mr-2"></i> ${languageResource.get("more")}</li>
+            <!--<li data-action="search"><i class="fas fa-search mr-2"></i> ${languageResource.get("search")}</li>-->
+            <li data-action="highlight" data-target=""><i
+                        class="fas fa-highlighter mr-2"></i> ${languageResource.get("highlight")}</li>
+        </ul>
 
-                </div>
+        <div class="container-fluid">
+            <div class="flexed m-0 p-0">
 
-                <div class="tab-content">
+                <div class="w-100">
+                    <div class="position-relative reader-container container"
+                        data-id="${document.getId()?string?replace('.', '')?replace(',', '')}"
+                        data-pagescount="${document.getPages()?size?string?replace('.', '')?replace(',', '')}" data-searchtokens="${(searchTokens)!''}">
 
-                    <div class="tab-pane active" id="navigator-tab">
-                        <div class="expander" data-expanded="true"><i class="m-0 xlarge-font fas fa-chevron-right"></i></div>
-                        <div class="side-bar-content">
+                        <!-- Topic navigation buttons (hidden by default) -->
+                        <div class="topic-navigation-buttons">
+                            <button class="topic-nav-button prev-topic-button" title="Previous occurrence">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                            <button class="topic-nav-button next-topic-button" title="Next occurrence">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
 
-
-                            <div class="group-box">
-                                <p class="text-center mb-0"><i class="fas fa-id-card-alt mr-1"></i> ${document.getDocumentId()}</p>
-                            </div>
-
-                            <#if document.getMetadataTitleInfo().getScrapedUrl()?has_content>
-                                <div class="group-box">
-                                    <p class="title">${languageResource.get("ogDocument")}</p>
-                                    <a href="${document.getMetadataTitleInfo().getScrapedUrl()}" target="_blank"
-                                       class="title-image mb-3">
-                                        <img src="${document.getMetadataTitleInfo().getTitleImageUrl()}"/>
-                                    </a>
-                                </div>
-                            </#if>
-
-                            <div class="group-box">
-                                <p class="title">${languageResource.get("settings")}</p>
+                        <div class="header ">
+                            <div class="text-center flexed align-items-center justify-content-around w-100">
                                 <div class="flexed align-items-center">
-                                    <i class="fas fa-text-height mr-2"></i>
-                                    <input min="10" max="30" class="font-size-range w-100 hoverable" value="20" type="range"/>
-                                </div>
-                            </div>
-
-                            <#if document.getMetadataTitleInfo().getScrapedUrl()?has_content>
-                                <div class="group-box">
-                                    <p class="title">${languageResource.get("page")} <span class="current-page">1</span></p>
-                                    <a class="btn open-metadata-url-page-btn" target="_blank"
-                                       data-href="${document.getMetadataTitleInfo().getPageViewStartUrl()}"
-                                       href="${document.getMetadataTitleInfo().getPageViewStartUrl()}">
-                                        <i class="mr-2 fas fa-university"></i> Original
+                                    <a class="header-btn open-wiki-page color-prime" data-wid="${document.getWikiId()}">
+                                        <i class="large-font m-0 fab fa-wikipedia-w"></i>
                                     </a>
-                                </div>
-                            </#if>
-
-                            <div class="buttons group-box">
-                                <p class="title">${languageResource.get("functions")}</p>
-                                <button class="btn toggle-focus-btn">
-                                    <i class="fas fa-satellite-dish mr-2"></i> Toggle Focus
-                                </button>
-                                <button class="btn toggle-highlighting-btn" data-highlighted="true">
-                                    <i class="fas fa-highlighter mr-2"></i> Toggle Highlighting
-                                </button>
-                                <#if casDownloadName?has_content && casDownloadName != "">
-                                    <a href="/api/ie/download/uima?objectName=${casDownloadName}" class="btn">
-                                        <i class="fas fa-file-download mr-2"></i> Download XMI
-                                    </a>
-                                </#if>
-                            </div>
-
-                            <#if (searchTokens?has_content) && (searchTokens?length gt 0)>
-                                <div class="group-box search-tokens-box">
-                                    <p class="title"><span>${languageResource.get("searchTokens")}</span> <i
-                                                class="ml-2 rotate fas fa-spinner"></i></p>
-                                    <div class="found-searchtokens-list"></div>
-                                </div>
-                            </#if>
-
-                            <div class="group-box topics-box">
-                                <div class="key-topics-title d-flex align-items-center justify-content-between mb-3">
-                                    <span class="title mx-auto" style="flex:1; text-align:center;">${languageResource.get("topics")}</span>
-                                    <i class="ml-2 fas fa-cog key-topics-settings" title="Settings"></i>
+                                    <#if document.getMetadataTitleInfo().getScrapedUrl()?has_content>
+                                        <a class="header-btn open-metadata-url-btn m-0"
+                                        href="${document.getMetadataTitleInfo().getScrapedUrl()}" target="_blank">
+                                            <i class="color-prime m-0 large-font fas fa-university"></i>
+                                        </a>
+                                    </#if>
                                 </div>
 
-
-
-                                <div class="document-topics-list" data-document-id="${document.id}"></div>
+                                <div class="ml-2 mr-2">
+                                    <h5>${document.getDocumentTitle()}</h5>
+                                    <p class="text mb-0">${document.getMetadataTitleInfo().getPublished()}</p>
+                                </div>
+                                <p class="m-0 text">${document.getLanguage()?upper_case}</p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Visualization Tab -->
-                    <#assign documentTopics = document.getUnifiedTopics()![]>
-                    <div class="tab-pane" id="visualization-tab">
-                        <div class="visualization-wrapper">
-                            <div class="visualization-spinner">
-                                <div class="visualization-spinner__icon">
-                                    <i class="fa fa-spinner fa-spin"></i>
+                        <!-- metadata if exists -->
+                        <#assign uceMetadata = document.getUceMetadataWithoutJson()>
+                        <#if uceMetadata?has_content && uceMetadata?size gt 0>
+                            <div class="w-100 pt-4 pl-4 pr-4 pb-1 mt-2">
+                                <div class="small-font">
+                                    <#include "*/document/documentUceMetadata.ftl">
                                 </div>
-                                <div class="visualization-spinner__text">
-                                    Loading visualization&hellip;
+                                <#if document.hasJsonUceMetadata()>
+                                    <div class="flexed align-items-center justify-content-center text-center mt-1">
+                                        <a class="btn bg-lightgray rounded light-border xsmall-font open-wiki-page
+                                        align-items-center flexed hoverable"
+                                        data-wid="${document.getWikiId()}">
+                                            <i class="fab fa-wikipedia-w bg-light light-border rounded p-1 mr-2"></i>
+                                            <span class="font-italic text-secondary"
+                                                style="margin-top: 3px">${languageResource.get("showUceMetadata")}...</span>
+                                        </a>
+                                    </div>
+                                </#if>
+                            </div>
+                            <hr class="mb-0"/>
+                        </#if>
+
+                        <#if document.getMimeType() == "application/pdf" ||  document.getMimeType() == "pdf">
+                            <#include '*/reader/components/viewerPdf.ftl' />
+                        <#elseif document.getMimeType()?starts_with("image/")>
+                            <#include '*/reader/components/viewerImage.ftl' />
+                        <#else>
+                            <div class="document-content">
+                                <!-- Here we lazily load in the pages -->
+                            </div>
+                            <!-- Scrollbar Minimap -->
+                            <div class="scrollbar-minimap">
+                                <div class="minimap-markers"></div>
+                                <div class="minimap-preview">
+                                    <div class="preview-content"></div>
                                 </div>
                             </div>
-                            <div class="visualization-content" id="viz-content" data-message="${languageResource.get('noDataAvailable')}">
-                                <div class="viz-panel" id="viz-panel-1">
-                                    <div id="vp-1"></div>
+                        </#if>
+
+
+                    </div>
+                </div>
+
+                <div class="side-bar">
+
+                    <div class="tab-header">
+                        <button class="tab-btn active" data-tab="navigator-tab">${languageResource.get("controlPanelTab")}</button>
+                        <button class="tab-btn" data-tab="visualization-tab">${languageResource.get("visualizationTab")}</button>
+    <#--                    <button class="tab-btn" data-tab="playground-tab">Playground</button>-->
+
+                    </div>
+
+                    <div class="tab-content">
+
+                        <div class="tab-pane active" id="navigator-tab">
+                            <div class="expander" data-expanded="true"><i class="m-0 xlarge-font fas fa-chevron-right"></i></div>
+                            <div class="side-bar-content">
+
+
+                                <div class="group-box">
+                                    <p class="text-center mb-0"><i class="fas fa-id-card-alt mr-1"></i> ${document.getDocumentId()}</p>
                                 </div>
-                                <div class="viz-panel" id="viz-panel-2">
-                                    <div id="vp-2" ></div>
+
+                                <#if document.getMetadataTitleInfo().getScrapedUrl()?has_content>
+                                    <div class="group-box">
+                                        <p class="title">${languageResource.get("ogDocument")}</p>
+                                        <a href="${document.getMetadataTitleInfo().getScrapedUrl()}" target="_blank"
+                                        class="title-image mb-3">
+                                            <img src="${document.getMetadataTitleInfo().getTitleImageUrl()}"/>
+                                        </a>
+                                    </div>
+                                </#if>
+
+                                <div class="group-box">
+                                    <p class="title">${languageResource.get("settings")}</p>
+                                    <div class="flexed align-items-center">
+                                        <i class="fas fa-text-height mr-2"></i>
+                                        <input min="10" max="30" class="font-size-range w-100 hoverable" value="20" type="range"/>
+                                    </div>
                                 </div>
-                                <div class="viz-panel" id="viz-panel-3">
-                                    <div id="vp-3"></div>
+
+                                <#if document.getMetadataTitleInfo().getScrapedUrl()?has_content>
+                                    <div class="group-box">
+                                        <p class="title">${languageResource.get("page")} <span class="current-page">1</span></p>
+                                        <a class="btn open-metadata-url-page-btn" target="_blank"
+                                        data-href="${document.getMetadataTitleInfo().getPageViewStartUrl()}"
+                                        href="${document.getMetadataTitleInfo().getPageViewStartUrl()}">
+                                            <i class="mr-2 fas fa-university"></i> Original
+                                        </a>
+                                    </div>
+                                </#if>
+
+                                <div class="buttons group-box">
+                                    <p class="title">${languageResource.get("functions")}</p>
+                                    <button class="btn toggle-focus-btn">
+                                        <i class="fas fa-satellite-dish mr-2"></i> Toggle Focus
+                                    </button>
+                                    <button class="btn toggle-highlighting-btn" data-highlighted="true">
+                                        <i class="fas fa-highlighter mr-2"></i> Toggle Highlighting
+                                    </button>
+                                    <#if casDownloadName?has_content && casDownloadName != "">
+                                        <a href="/api/ie/download/uima?objectName=${casDownloadName}" class="btn">
+                                            <i class="fas fa-file-download mr-2"></i> Download XMI
+                                        </a>
+                                    </#if>
                                 </div>
-                                <div class="viz-panel" id="viz-panel-4">
-                                    <div id="vp-4-wrapper">
-                                        <div class="selector-container">
-                                            <label for="similarityTypeSelector">Similarity Type:</label>
-                                            <select id="similarityTypeSelector">
-                                                <option value="cosine" title="${languageResource.get('cosine')}">Cosine</option>
-                                                <option value="count" title="${languageResource.get('overlap')}">Shared Count</option>
-                                            </select>
-                                        </div>
-                                        <div id="vp-4"></div>
+
+                                <#if (searchTokens?has_content) && (searchTokens?length gt 0)>
+                                    <div class="group-box search-tokens-box">
+                                        <p class="title"><span>${languageResource.get("searchTokens")}</span> <i
+                                                    class="ml-2 rotate fas fa-spinner"></i></p>
+                                        <div class="found-searchtokens-list"></div>
+                                    </div>
+                                </#if>
+
+                                <div class="group-box topics-box">
+                                    <div class="key-topics-title d-flex align-items-center justify-content-between mb-3">
+                                        <span class="title mx-auto" style="flex:1; text-align:center;">${languageResource.get("topics")}</span>
+                                        <i class="ml-2 fas fa-cog key-topics-settings" title="Settings"></i>
                                     </div>
 
-                                </div>
-                                <div class="viz-panel" id="viz-panel-5">
-                                    <div id="vp-5" ></div>
+
+
+                                    <div class="document-topics-list" data-document-id="${document.id}"></div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="viz-bottom-nav">
-                                <button class="viz-nav-btn active" data-target="#viz-panel-1">${languageResource.get("semanticDensity")}</button>
-                                <button class="viz-nav-btn" data-target="#viz-panel-2">${languageResource.get("topicEntity")}</button>
-                                <button class="viz-nav-btn" data-target="#viz-panel-3">${languageResource.get("topicLandscape")}</button>
-                                <button class="viz-nav-btn" data-target="#viz-panel-4">${languageResource.get("topicSimilarity")}</button>
-                                <button class="viz-nav-btn" data-target="#viz-panel-5">${languageResource.get("sentenceTopicFlow")}</button>
+                        <!-- Visualization Tab -->
+                        <#assign documentTopics = document.getUnifiedTopics()![]>
+                        <div class="tab-pane" id="visualization-tab">
+                            <div class="visualization-wrapper">
+                                <div class="visualization-spinner">
+                                    <div class="visualization-spinner__icon">
+                                        <i class="fa fa-spinner fa-spin"></i>
+                                    </div>
+                                    <div class="visualization-spinner__text">
+                                        Loading visualization&hellip;
+                                    </div>
+                                </div>
+                                <div class="visualization-content" id="viz-content" data-message="${languageResource.get('noDataAvailable')}">
+                                    <div class="viz-panel" id="viz-panel-1">
+                                        <div id="vp-1"></div>
+                                    </div>
+                                    <div class="viz-panel" id="viz-panel-2">
+                                        <div id="vp-2" ></div>
+                                    </div>
+                                    <div class="viz-panel" id="viz-panel-3">
+                                        <div id="vp-3"></div>
+                                    </div>
+                                    <div class="viz-panel" id="viz-panel-4">
+                                        <div id="vp-4-wrapper">
+                                            <div class="selector-container">
+                                                <label for="similarityTypeSelector">Similarity Type:</label>
+                                                <select id="similarityTypeSelector">
+                                                    <option value="cosine" title="${languageResource.get('cosine')}">Cosine</option>
+                                                    <option value="count" title="${languageResource.get('overlap')}">Shared Count</option>
+                                                </select>
+                                            </div>
+                                            <div id="vp-4"></div>
+                                        </div>
+
+                                    </div>
+                                    <div class="viz-panel" id="viz-panel-5">
+                                        <div id="vp-5" ></div>
+                                    </div>
+                                </div>
+
+                                <div class="viz-bottom-nav">
+                                    <button class="viz-nav-btn active" data-target="#viz-panel-1">${languageResource.get("semanticDensity")}</button>
+                                    <button class="viz-nav-btn" data-target="#viz-panel-2">${languageResource.get("topicEntity")}</button>
+                                    <button class="viz-nav-btn" data-target="#viz-panel-3">${languageResource.get("topicLandscape")}</button>
+                                    <button class="viz-nav-btn" data-target="#viz-panel-4">${languageResource.get("topicSimilarity")}</button>
+                                    <button class="viz-nav-btn" data-target="#viz-panel-5">${languageResource.get("sentenceTopicFlow")}</button>
+                                </div>
+
                             </div>
-
                         </div>
                     </div>
+
                 </div>
-
-            </div>
-            <div class="key-topic-settings-panel" data-id="${document.getCorpusId()}">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h4 class="mb-0">${languageResource.get("topicSettings")}</h4>
-                    <div>
-                        <button class="save-topic-setting btn btn-light btn-sm mr-2" title="Save" data-toggle="tooltip" data-placement="top" data-original-title="${languageResource.get("saveTopicSettings")}"><i class="fas fa-save"></i></button>
-                        <button class="upload-topic-setting btn btn-light btn-sm" title="Upload" data-toggle="tooltip" data-placement="top" data-original-title="${languageResource.get("uploadTopicSettings")}"><i class="fas fa-upload"></i></button>
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <label for="topic-count">${languageResource.get("numTopics")}</label>
-                    <select id="topic-count" class="form-control">
-                    </select>
-                </div>
-
-                <div class="setting-group">
-                    <label>${languageResource.get("topicColorMode")}</label>
-
-                    <div class="color-option">
-                        <input type="radio" id="per-topic-colors" name="color-mode" value="per-topic">
-                        <label for="per-topic-colors">${languageResource.get("perTopic")}</label>
-                    </div>
-
-                    <div class="color-option">
-                        <input type="radio" id="gradient-range" name="color-mode" value="gradient">
-                        <label for="gradient-range">Gradient range</label>
-                    </div>
-
-                    <div class="color-pickers" style="display:none;">
+                <div class="key-topic-settings-panel" data-id="${document.getCorpusId()}">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h4 class="mb-0">${languageResource.get("topicSettings")}</h4>
                         <div>
-                            <input type="color" id="gradient-start-color">
-                            <div class="color-label">Min</div>
-                        </div>
-                        <div>
-                            <input type="color" id="gradient-end-color">
-                            <div class="color-label">Max</div>
+                            <button class="save-topic-setting btn btn-light btn-sm mr-2" title="Save" data-toggle="tooltip" data-placement="top" data-original-title="${languageResource.get("saveTopicSettings")}"><i class="fas fa-save"></i></button>
+                            <button class="upload-topic-setting btn btn-light btn-sm" title="Upload" data-toggle="tooltip" data-placement="top" data-original-title="${languageResource.get("uploadTopicSettings")}"><i class="fas fa-upload"></i></button>
                         </div>
                     </div>
 
-                    <div class="key-topic-color-grid" style="display:none;">
+                    <div class="setting-group">
+                        <label for="topic-count">${languageResource.get("numTopics")}</label>
+                        <select id="topic-count" class="form-control">
+                        </select>
                     </div>
-                </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button class="key-topics-setting-apply-btn">${languageResource.get("apply")}</button>
-                    <button class="key-topics-setting-reset-btn">${languageResource.get("reset")}</button>
+                    <div class="setting-group">
+                        <label>${languageResource.get("topicColorMode")}</label>
+
+                        <div class="color-option">
+                            <input type="radio" id="per-topic-colors" name="color-mode" value="per-topic">
+                            <label for="per-topic-colors">${languageResource.get("perTopic")}</label>
+                        </div>
+
+                        <div class="color-option">
+                            <input type="radio" id="gradient-range" name="color-mode" value="gradient">
+                            <label for="gradient-range">Gradient range</label>
+                        </div>
+
+                        <div class="color-pickers" style="display:none;">
+                            <div>
+                                <input type="color" id="gradient-start-color">
+                                <div class="color-label">Min</div>
+                            </div>
+                            <div>
+                                <input type="color" id="gradient-end-color">
+                                <div class="color-label">Max</div>
+                            </div>
+                        </div>
+
+                        <div class="key-topic-color-grid" style="display:none;">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="key-topics-setting-apply-btn">${languageResource.get("apply")}</button>
+                        <button class="key-topics-setting-reset-btn">${languageResource.get("reset")}</button>
+                    </div>
                 </div>
             </div>
+
         </div>
-
     </div>
-</div>
-</body>
+    </div>
 
-<#--<script type="module">
-    <#include "*/js/corpusUniverse.js">
-</script>-->
-<script type="module">
-    <#include "*/js/graphViz.js">
-    <#include "*/js/flowViz.js">
-</script>
+    <#--<script type="module">
+        <#include "*/js/corpusUniverse.js">
+    </script>-->
+    <script type="module">
+        <#include "*/js/graphViz.js">
+        <#include "*/js/flowViz.js">
+    </script>
+
+    <script>
+        <#include "*/js/site.js">
+        <#include "*/js/documentReader.js">
+        <#include "*/js/customContextMenu.js">
+        <#include "*/js/feedbackView.js">
+    </script>
+
+</#if>
 
 <script>
-    <#include "*/js/site.js">
-    <#include "*/js/documentReader.js">
-    <#include "*/js/customContextMenu.js">
+    (function() {
+        const nav = document.querySelector('.view-mode-nav');
+        const toggle = document.querySelector('.view-mode-toggle');
+        if (!nav || !toggle) return;
+        const close = () => nav.classList.remove('is-open');
+        toggle.addEventListener('click', () => nav.classList.toggle('is-open'));
+        nav.querySelectorAll('a').forEach(link => link.addEventListener('click', close));
+    })();
 </script>
 
-
+</body>
 </html>
-</#if>

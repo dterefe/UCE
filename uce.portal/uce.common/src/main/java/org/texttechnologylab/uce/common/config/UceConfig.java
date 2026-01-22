@@ -24,5 +24,38 @@ public class UceConfig {
         return config;
     }
 
+    public void applyEnvironmentOverrides() {
+        if (settings == null) {
+            return;
+        }
+
+        var port = System.getenv("UCE_PORT");
+        if (port != null && !port.isBlank()) {
+            try {
+                settings.setPort(Integer.parseInt(port));
+            } catch (NumberFormatException ignored) {
+                // Keep the existing port value if parsing fails.
+            }
+        }
+
+        var auth = settings.getAuthentication();
+        if (auth != null) {
+            var authEnabled = System.getenv("UCE_AUTH_ENABLED");
+            if (authEnabled != null && !authEnabled.isBlank()) {
+                auth.setActivated(Boolean.parseBoolean(authEnabled));
+            }
+
+            var authPublicUrl = System.getenv("UCE_AUTH_PUBLIC_URL");
+            if (authPublicUrl != null && !authPublicUrl.isBlank()) {
+                auth.setPublicUrl(authPublicUrl);
+            }
+
+            var authRedirectUrl = System.getenv("UCE_AUTH_REDIRECT_URL");
+            if (authRedirectUrl != null && !authRedirectUrl.isBlank()) {
+                auth.setRedirectUrl(authRedirectUrl);
+            }
+        }
+    }
+
     public UceConfig(){}
 }

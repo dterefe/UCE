@@ -10,10 +10,12 @@ import java.util.UUID;
 import static java.util.stream.Collectors.groupingBy;
 
 import org.joda.time.DateTime;
+import org.texttechnologylab.uce.common.config.CommonConfig;
 import org.texttechnologylab.uce.common.config.CorpusConfig;
 import org.texttechnologylab.uce.common.models.authentication.UceUser;
 import org.texttechnologylab.uce.common.models.corpus.Document;
 import org.texttechnologylab.uce.common.models.corpus.UCEMetadata;
+import org.texttechnologylab.uce.common.models.corpus.UCEMetadataValueType;
 import org.texttechnologylab.uce.common.models.dto.UCEMetadataFilterDto;
 import org.texttechnologylab.uce.common.models.search.AnnotationSearchResult;
 import org.texttechnologylab.uce.common.models.search.CacheItem;
@@ -32,6 +34,7 @@ import com.google.gson.Gson;
  * A class that holds all states of a biofid search. We can use this class to serialize the search. It shouldn't hold any services.
  */
 public class SearchState extends CacheItem {
+    private CommonConfig config;
     private UUID searchId;
     private final DateTime created;
     private boolean proModeActivated;
@@ -40,6 +43,7 @@ public class SearchState extends CacheItem {
      */
     private String searchQuery;
     private String enrichedSearchQuery;
+    private boolean enrichedSearchQueryIsCutoff;
     private String dbSchema = "public";
     private String sourceTable = "page";
     private List<EnrichedSearchToken> enrichedSearchTokens;
@@ -63,7 +67,6 @@ public class SearchState extends CacheItem {
     private ArrayList<AnnotationSearchResult> foundNamedEntities = new ArrayList<>();
     private ArrayList<AnnotationSearchResult> foundTimes = new ArrayList<>();
     private ArrayList<AnnotationSearchResult> foundTaxons = new ArrayList<>();
-
     // Negation
     private ArrayList<AnnotationSearchResult> foundScopes = new ArrayList<>();
     private ArrayList<AnnotationSearchResult> foundCues = new ArrayList<>();
@@ -71,20 +74,15 @@ public class SearchState extends CacheItem {
     private ArrayList<AnnotationSearchResult> foundFoci = new ArrayList<>();
     private ArrayList<AnnotationSearchResult> foundEvents = new ArrayList<>();
 
-
-
     /**
      * This is only filled when the search layer contains embeddings
      */
     private ArrayList<DocumentChunkEmbeddingSearchResult> foundDocumentChunkEmbeddings;
-
     private String primarySearchLayer;
-
     /**
      * These are the current, paginated list of documents
      */
     private List<Document> currentDocuments;
-
     /**
      * This is currently not used.
      */
@@ -97,6 +95,7 @@ public class SearchState extends CacheItem {
         this.searchType = searchType;
         this.searchId = UUID.randomUUID();
         this.created = DateTime.now();
+        this.config = new CommonConfig();
     }
 
     public void dispose(){ }
@@ -107,6 +106,14 @@ public class SearchState extends CacheItem {
 
     public void setSessionUser(String sessionUser) {
         this.sessionUser = sessionUser;
+    }
+
+    public boolean isEnrichedSearchQueryIsCutoff() {
+        return enrichedSearchQueryIsCutoff;
+    }
+
+    public void setEnrichedSearchQueryIsCutoff(boolean enrichedSearchQueryIsCutoff) {
+        this.enrichedSearchQueryIsCutoff = enrichedSearchQueryIsCutoff;
     }
 
     public LayeredSearch getLayeredSearch() {
@@ -524,6 +531,7 @@ public class SearchState extends CacheItem {
                 .stream()
                 .map(Document::getUceMetadataWithoutJson)
                 .flatMap(Collection::stream)
+                .filter(m -> m.getValueType() == UCEMetadataValueType.NUMBER || m.getValueType() == UCEMetadataValueType.DATE)
                 .collect(groupingBy(UCEMetadata::getKey));
 
         Map<String, Object> data = new HashMap<>();

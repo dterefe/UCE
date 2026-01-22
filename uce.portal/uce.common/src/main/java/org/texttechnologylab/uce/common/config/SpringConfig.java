@@ -15,7 +15,7 @@ import org.texttechnologylab.uce.common.services.S3StorageService;
 import org.texttechnologylab.uce.common.services.WikiService;
 
 @Configuration
-@Import(DocumentAccessConfig.class)
+@Import({DocumentAccessConfig.class})
 public class SpringConfig {
 
     @Bean
