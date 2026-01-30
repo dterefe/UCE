@@ -22,6 +22,10 @@ if [ -z "${UCE_PUBLIC_URL:-}" ]; then
   exit 1
 fi
 
+# Optional: set/align the OIDC client secret (confidential client).
+# UCE uses KEYCLOAK_CREDENTIALS_SECRET at runtime; keeping this in sync prevents `unauthorized_client`.
+KC_CLIENT_SECRET="${KC_CLIENT_SECRET:-${KEYCLOAK_CREDENTIALS_SECRET:-}}"
+
 echo "Waiting for Keycloak at ${KC_BASE_URL}..."
 KC_MGMT_URL="${KC_MGMT_URL:-}"
 if [ -z "${KC_MGMT_URL}" ]; then
@@ -125,11 +129,32 @@ CLIENT_JSON="$(
 UPDATED="$(
   echo "$CLIENT_JSON" | jq \
     --arg uceUrl "${UCE_PUBLIC_URL}" \
+    --arg clientSecret "${KC_CLIENT_SECRET}" \
     '
     .rootUrl = $uceUrl
     | .baseUrl = $uceUrl
     | .redirectUris = ([($uceUrl + "/auth/*")] + (.redirectUris // []) | unique)
     | .webOrigins = ([$uceUrl] + (.webOrigins // []) | unique)
+    | .attributes = (.attributes // {})
+    | .attributes["post.logout.redirect.uris"] = (
+        # Keycloak expects a string here. Multiple entries are typically separated by "##".
+        # Keep whatever is already there, but ensure `$uceUrl/auth/logout` is present.
+        ( .attributes["post.logout.redirect.uris"] // "" ) as $existing
+        | ($uceUrl + "/auth/logout") as $want
+        | if ($existing | tostring) == "" or ($existing | tostring) == "+"
+          then $want
+          elif ($existing | tostring | contains($want))
+          then ($existing | tostring)
+          else (($existing | tostring) + "##" + $want)
+          end
+      )
+    | (if ($clientSecret | length) > 0
+        then
+          .publicClient = false
+          | .clientAuthenticatorType = "client-secret"
+          | .secret = $clientSecret
+        else .
+      end)
     '
 )"
 

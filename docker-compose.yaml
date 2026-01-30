@@ -10,8 +10,10 @@ services:
   nginx:
     container_name: uce-nginx
     image: nginxproxy/nginx-proxy:1.6-alpine
+    profiles:
+      - proxy
     ports:
-      - "80:80"
+      - "${NGINX_PROXY_HTTP_PORT:-80}:80"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
     depends_on:
@@ -54,10 +56,10 @@ services:
     env_file:
       - .env
     environment:
-      VIRTUAL_HOST: ${UCE_VIRTUAL_HOST}
-      VIRTUAL_PORT: 4567
+      VIRTUAL_HOST: ${UCE_VIRTUAL_HOST:-}
+      VIRTUAL_PORT: ${UCE_VIRTUAL_PORT:-4567}
     ports:
-      - "${UCE_PORT:-8397}:4567"
+      - "${UCE_PUBLISHED_PORT:-8397}:4567"
     depends_on:
       uce-postgresql-db:
         condition: service_healthy
@@ -157,8 +159,8 @@ services:
       - --import-realm
       - --import-path=${KEYCLOAK_IMPORT_PATH:-/opt/keycloak/data/import/uce-realm.json}
     environment:
-      VIRTUAL_HOST: ${KEYCLOAK_VIRTUAL_HOST}
-      VIRTUAL_PORT: 8080
+      VIRTUAL_HOST: ${KEYCLOAK_VIRTUAL_HOST:-}
+      VIRTUAL_PORT: ${KEYCLOAK_VIRTUAL_PORT:-8080}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PW:-admin}
       KC_HOSTNAME_STRICT_BACKCHANNEL: ${KC_HOSTNAME_STRICT_BACKCHANNEL:-true}
@@ -194,8 +196,36 @@ services:
       KC_ADMIN_USERNAME: ${KC_ADMIN_USERNAME:-admin}
       KC_ADMIN_PW: ${KC_ADMIN_PW:-admin}
       UCE_PUBLIC_URL: ${UCE_PUBLIC_URL:-http://localhost:8008}
+      KEYCLOAK_CREDENTIALS_SECRET: ${KEYCLOAK_CREDENTIALS_SECRET:-}
       KC_SSL_REQUIRED: ${KC_SSL_REQUIRED:-}
       KC_SSO_SESSION_IDLE_TIMEOUT: ${KC_SSO_SESSION_IDLE_TIMEOUT:-}
+    networks:
+      - app_net
+
+  uce-keycloak-sync-from-csv:
+    container_name: uce-keycloak-sync-from-csv
+    profiles:
+      - keycloak-sync
+    build:
+      context: .
+      dockerfile: ./deploy/keycloak-sync-from-csv.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      uce-keycloak-auth:
+        condition: service_healthy
+    environment:
+      KC_BASE_URL: ${KC_BASE_URL:-http://uce-keycloak-auth:8080}
+      KC_REALM: ${KC_REALM:-uce}
+      KC_ADMIN_USERNAME: ${KC_ADMIN_USERNAME:-admin}
+      KC_ADMIN_PW: ${KC_ADMIN_PW:-admin}
+      CSV_PATH: ${KEYCLOAK_SYNC_CSV_PATH_CONTAINER:-/data/principals.csv}
+      DRY_RUN: ${KEYCLOAK_SYNC_DRY_RUN:-false}
+      CREATE_GROUPS: ${KEYCLOAK_SYNC_CREATE_GROUPS:-true}
+      CREATE_USERS: ${KEYCLOAK_SYNC_CREATE_USERS:-true}
+      UPDATE_USERS: ${KEYCLOAK_SYNC_UPDATE_USERS:-true}
+    volumes:
+      - ${KEYCLOAK_SYNC_CSV_PATH_HOST:-./principals.csv}:${KEYCLOAK_SYNC_CSV_PATH_CONTAINER:-/data/principals.csv}:ro
     networks:
       - app_net
 
