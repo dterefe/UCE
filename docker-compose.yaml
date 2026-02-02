@@ -87,29 +87,31 @@ services:
     ]
 
 
-  # uce-importer:
-  #   container_name: uce-importer
-  #   build:
-  #     context: .
-  #     dockerfile: ./uce.portal/uce.corpus-importer/Dockerfile
-  #   depends_on:
-  #     uce-postgresql-db:
-  #       condition: service_healthy
-  #   networks:
-  #     - app_net
-  #   volumes:
-  #     - "./database:/app/database"
-  #     # MOUNT HERE ALL UIMA CORPORA INTO THE '/app/input/corpora/' PATH - EXAMPLE BELOW FOR ZOBODAT CORPUS: 
-  #     # - "./../test_data/corpora/zobodat:/app/input/corpora/zobodat"
-  #     - "${IMPORTER_CORPORA_HOST_PATH}:${IMPORTER_CORPORA_CONTAINER_PATH}"
-  #   command: [
-  #     "java",
-  #     "-jar",
-  #     "./target/importer.jar",
-  #     "-srcDir", "/app/input/corpora/",
-  #     "-num", "1",
-  #     "-t", "${IMPORTER_THREADS:-4}"
-  #   ]
+  uce-importer:
+    container_name: uce-importer
+    profiles:
+      - importer-only
+    image: ${IMPORTER_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-importer:0.1.1}
+    # build:
+    #   context: .
+    #   dockerfile: ./uce.portal/uce.corpus-importer/Dockerfile
+    env_file:
+      - .env
+    networks:
+      - app_net
+    volumes:
+      # Optional: DB scripts for triggers/procedures. The importer will attempt to run them; if missing it continues.
+      - "./database:/app/database:ro"
+      # Mount the corpus input directory (XMI/archives + corpusConfig.json)
+      - "${IMPORTER_CORPORA_HOST_PATH:-./data/importer}:/app/input:ro"
+    command: [
+      "java",
+      "-jar",
+      "./target/importer.jar",
+      "-src", "${IMPORTER_IMPORT_SRC:-/app/input}",
+      "-num", "${IMPORTER_NUMBER:-1}",
+      "-t", "${IMPORTER_THREADS:-4}"
+    ]
 
   uce-postgresql-db:
     container_name: uce-postgresql-db
@@ -214,20 +216,22 @@ services:
     container_name: uce-keycloak-sync-from-csv
     profiles:
       - keycloak-sync
-    build:
-      context: .
-      dockerfile: ./deploy/keycloak-sync-from-csv.Dockerfile
+    image: ${KEYCLOAK_SYNC_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-sync-from-csv:0.1.1}
+    # build:
+    #   context: .
+    #   dockerfile: ./deploy/keycloak-sync-from-csv.Dockerfile
     env_file:
       - .env
     depends_on:
       uce-keycloak-auth:
         condition: service_healthy
     environment:
-      KC_BASE_URL: ${KC_BASE_URL:-http://uce-keycloak-auth:8080}
+      KC_BASE_URL: ${UCE_AUTH_PUBLIC_URL:-http://uce-keycloak-auth:8080}
       KC_REALM: ${KC_REALM:-uce}
       KC_ADMIN_USERNAME: ${KC_ADMIN_USERNAME:-admin}
       KC_ADMIN_PW: ${KC_ADMIN_PW:-admin}
       CSV_PATH: ${KEYCLOAK_SYNC_CSV_PATH_CONTAINER:-/data/principals.csv}
+      MAX_ROWS: ${KEYCLOAK_SYNC_MAX_ROWS:-}
       DRY_RUN: ${KEYCLOAK_SYNC_DRY_RUN:-false}
       CREATE_GROUPS: ${KEYCLOAK_SYNC_CREATE_GROUPS:-true}
       CREATE_USERS: ${KEYCLOAK_SYNC_CREATE_USERS:-true}

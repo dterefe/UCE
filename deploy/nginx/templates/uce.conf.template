@@ -20,7 +20,7 @@ server {
     proxy_set_header X-Forwarded-Host  $host;
     proxy_set_header X-Forwarded-Port  $uce_x_forwarded_port;
     proxy_set_header X-Forwarded-Proto $uce_x_forwarded_proto;
-    proxy_pass http://uce-web:${UCE_PORT};
+    proxy_pass http://uce-web:${UCE_INTERNAL_PORT};
   }
 }
 

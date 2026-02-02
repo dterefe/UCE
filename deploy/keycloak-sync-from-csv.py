@@ -20,6 +20,15 @@ def _env_bool(name: str, default: bool) -> bool:
         return default
     return value.lower() in {"1", "true", "yes", "y", "on"}
 
+def _env_int(name: str, default: int | None = None) -> int | None:
+    value = _env(name)
+    if value is None:
+        return default
+    try:
+        return int(value, 10)
+    except Exception:
+        raise ValueError(f"{name} must be an integer, got: {value!r}")
+
 
 class KeycloakClient:
     def __init__(self, base_url: str, realm: str, token: str):
@@ -205,6 +214,13 @@ def main() -> int:
     create_groups = _env_bool("CREATE_GROUPS", True)
     create_users = _env_bool("CREATE_USERS", True)
     update_users = _env_bool("UPDATE_USERS", True)
+    # Limit how many CSV data rows to process (excluding the header).
+    # Prefer MAX_ROWS (container/internal), but support KEYCLOAK_SYNC_MAX_ROWS (compose/.env-friendly).
+    max_rows = _env_int("MAX_ROWS")
+    if max_rows is None:
+        max_rows = _env_int("KEYCLOAK_SYNC_MAX_ROWS")
+    if max_rows is not None and max_rows < 0:
+        raise ValueError("MAX_ROWS / KEYCLOAK_SYNC_MAX_ROWS must be >= 0")
 
     token = get_admin_token(base_url, admin_user, admin_pw)
     kc = KeycloakClient(base_url, realm, token)
@@ -244,7 +260,13 @@ def main() -> int:
             print(f"CSV missing required columns: {', '.join(sorted(missing))}", file=sys.stderr)
             return 2
 
+        rows_processed = 0
         for row in reader:
+            rows_processed += 1
+            if max_rows is not None and rows_processed > max_rows:
+                print(f"max rows reached ({max_rows}), stopping.")
+                break
+
             type_raw = (row.get("type") or "").strip().upper()
             name = (row.get("name") or "").strip()
             if not type_raw or not name:
@@ -316,4 +338,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
