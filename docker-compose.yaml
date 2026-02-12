@@ -76,6 +76,8 @@ services:
     volumes:
       - "${UCE_CONFIG_PATH:-./uce.portal/uce.common/src/main/resources/defaultUceConfig.json}:/app/config/uceConfig.json:ro"
       - "./database:/app/database"
+      # External templates (host-mounted) so UI can be edited without rebuilding the image
+      - "${UCE_TEMPLATES_HOST_PATH:-./uce.portal/resources/templates}:/app/uce.portal/resources/templates:ro"
     command: [
       "java",
       "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -91,7 +93,7 @@ services:
     container_name: uce-importer
     profiles:
       - importer-only
-    image: ${IMPORTER_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-importer:0.1.1}
+    image: ${IMPORTER_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-importer:latest}
     # build:
     #   context: .
     #   dockerfile: ./uce.portal/uce.corpus-importer/Dockerfile
@@ -163,6 +165,8 @@ services:
       - "${KEYCLOAK_PUBLISHED_PORT:-8080}:${KEYCLOAK_INTERNAL_PORT:-8080}"
     volumes:
       - ${KC_REALM_IMPORT_PATH:-./auth/uce-realm.json}:/opt/keycloak/data/import/uce-realm.json
+      # Persist Keycloak data (incl. embedded DB) outside the container
+      - ${KEYCLOAK_DATA_HOST_PATH:-./data/keycloak}:/opt/keycloak/data
     command:
       - ${KEYCLOAK_START_CMD:-start}
       - --features=${KEYCLOAK_FEATURES:-scripts}
