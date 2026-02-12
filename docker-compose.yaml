@@ -60,7 +60,7 @@ services:
     # build:
     #   context: .
     #   dockerfile: ./uce.portal/uce.web/Dockerfile
-    image: ${UCE_WEB_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-web:0.1.2}
+    image: ${UCE_WEB_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-web:0.1.4}
     env_file:
       - .env
     environment:
@@ -77,7 +77,7 @@ services:
       - "${UCE_CONFIG_PATH:-./uce.portal/uce.common/src/main/resources/defaultUceConfig.json}:/app/config/uceConfig.json:ro"
       - "./database:/app/database"
       # External templates (host-mounted) so UI can be edited without rebuilding the image
-      - "${UCE_TEMPLATES_HOST_PATH:-./uce.portal/resources/templates}:/app/uce.portal/resources/templates:ro"
+      - "${UCE_TEMPLATES_HOST_PATH:-./uce.portal/resources/templates}:/app/uce.portal/resources/templates"
     command: [
       "java",
       "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -139,22 +139,22 @@ services:
         start_period: 10s
         retries: 20
 
-  uce-minio-storage:
-    image: minio/minio
-    container_name: minio
-    env_file:
-      - .env
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=12345678
-    volumes:
-      - ${MINIO_STORAGE_DATA:-./data/minio}:/data
-    command: server /data --console-address ":9001"
-    networks:
-      - app_net
+  # uce-minio-storage:
+  #   image: minio/minio
+  #   container_name: minio
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   environment:
+  #     - MINIO_ROOT_USER=admin
+  #     - MINIO_ROOT_PASSWORD=12345678
+  #   volumes:
+  #     - ${MINIO_STORAGE_DATA:-./data/minio}:/data
+  #   command: server /data --console-address ":9001"
+  #   networks:
+  #     - app_net
 
   uce-keycloak-auth:
     container_name: uce-keycloak-auth
@@ -180,7 +180,7 @@ services:
       KC_HOSTNAME_STRICT_BACKCHANNEL: ${KC_HOSTNAME_STRICT_BACKCHANNEL:-true}
       KC_HOSTNAME_STRICT: ${KC_HOSTNAME_STRICT:-false}
       KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH:-/}
-      KC_HTTP_ENABLED: ${KC_HTTP_ENABLED:-true}
+      KC_HTTP_ENABLED: ${KC_HsTTP_ENABLED:-true}
       KC_HEALTH_ENABLED: ${KC_HEALTH_ENABLED:-true}
       KC_METRICS_ENABLED: ${KC_METRICS_ENABLED:-true}
     extra_hosts:
@@ -195,7 +195,7 @@ services:
       - app_net
 
   uce-keycloak-config:
-    image: ${KEYCLOAK_CONFIG_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-config:0.1.1}
+    image: ${KEYCLOAK_CONFIG_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-config:0.1.2}
     container_name: uce-keycloak-config
     env_file:
       - .env

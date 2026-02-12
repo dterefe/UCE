@@ -256,7 +256,17 @@ function openNewDocumentReadView(id, searchId) {
     if (id === undefined || id === '') {
         return;
     }
-    window.open("/documentReader?id=" + id + "&searchId=" + searchId, '_blank');
+    const params = new URLSearchParams();
+    params.set("id", String(id));
+
+    if (searchId !== undefined && searchId !== null) {
+        const raw = String(searchId).trim();
+        if (raw !== "" && raw.toLowerCase() !== "undefined" && raw.toLowerCase() !== "null") {
+            params.set("searchId", raw);
+        }
+    }
+
+    window.open("/documentReader?" + params.toString(), '_blank');
 }
 
 function activatePopovers() {
