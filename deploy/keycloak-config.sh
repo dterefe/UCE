@@ -1,6 +1,16 @@
 #!/bin/sh
 set -eu
 
+strip_trailing_slashes() {
+  # Strip trailing slashes but keep a single "/" if the whole string is "/".
+  v="${1:-}"
+  v="$(printf %s "$v" | sed 's/[[:space:]]*$//')"
+  while [ "${#v}" -gt 1 ] && [ "${v%/}" != "$v" ]; do
+    v="${v%/}"
+  done
+  printf %s "$v"
+}
+
 if [ -z "${KC_BASE_URL:-}" ]; then
   echo "KC_BASE_URL is required (e.g. http://uce-keycloak-auth:8080)"
   exit 1
@@ -22,6 +32,10 @@ if [ -z "${UCE_PUBLIC_URL:-}" ]; then
   exit 1
 fi
 
+# Normalize URL bases early so we never generate double slashes.
+KC_BASE_URL="$(strip_trailing_slashes "${KC_BASE_URL}")"
+UCE_PUBLIC_URL="$(strip_trailing_slashes "${UCE_PUBLIC_URL}")"
+
 # Optional: set/align the OIDC client secret (confidential client).
 # UCE uses KEYCLOAK_CREDENTIALS_SECRET at runtime; keeping this in sync prevents `unauthorized_client`.
 KC_CLIENT_SECRET="${KC_CLIENT_SECRET:-${KEYCLOAK_CREDENTIALS_SECRET:-}}"
@@ -31,14 +45,27 @@ KC_MGMT_URL="${KC_MGMT_URL:-}"
 if [ -z "${KC_MGMT_URL}" ]; then
   # Keycloak exposes health endpoints on the management interface (default port 9000).
   # Derive the management URL from KC_BASE_URL (which points to the main HTTP port, usually 8080).
-  KC_MGMT_URL="$(echo "${KC_BASE_URL}" | sed -E 's#:[0-9]+$#:9000#')"
+  # Only do a safe port substitution when KC_BASE_URL ends with :<port>. Otherwise require KC_MGMT_URL explicitly.
+  if printf %s "${KC_BASE_URL}" | grep -Eq ':[0-9]+$'; then
+    KC_MGMT_URL="$(printf %s "${KC_BASE_URL}" | sed -E 's#:[0-9]+$#:9000#')"
+  else
+    echo "KC_MGMT_URL is required when KC_BASE_URL has no explicit port (expected ...:8080)" >&2
+    exit 1
+  fi
 fi
+KC_MGMT_URL="$(strip_trailing_slashes "${KC_MGMT_URL}")"
+READY=0
 for i in $(seq 1 120); do
   if curl -fsS "${KC_MGMT_URL}/health/ready" >/dev/null 2>&1; then
+    READY=1
     break
   fi
   sleep 1
 done
+if [ "$READY" -ne 1 ]; then
+  echo "Keycloak did not become ready in time at ${KC_MGMT_URL}/health/ready" >&2
+  exit 1
+fi
 
 echo "Requesting admin token..."
 TOKEN="$(
@@ -111,7 +138,7 @@ CLIENT_UUID="$(
   curl -fsS \
     -H "Authorization: Bearer ${TOKEN}" \
     "${KC_BASE_URL}/admin/realms/${KC_REALM}/clients?clientId=${KC_CLIENT_ID}" \
-  | jq -r '.[0].id'
+  | jq -r --arg cid "${KC_CLIENT_ID}" 'map(select(.clientId == $cid)) | .[0].id'
 )"
 
 if [ -z "$CLIENT_UUID" ] || [ "$CLIENT_UUID" = "null" ]; then

@@ -60,7 +60,7 @@ services:
     # build:
     #   context: .
     #   dockerfile: ./uce.portal/uce.web/Dockerfile
-    image: ${UCE_WEB_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-web:0.1.4}
+    image: ${UCE_WEB_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-web:latest}
     env_file:
       - .env
     environment:
@@ -195,7 +195,7 @@ services:
       - app_net
 
   uce-keycloak-config:
-    image: ${KEYCLOAK_CONFIG_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-config:0.1.2}
+    image: ${KEYCLOAK_CONFIG_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-config:latest}
     container_name: uce-keycloak-config
     env_file:
       - .env
