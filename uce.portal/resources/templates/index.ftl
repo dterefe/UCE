@@ -156,11 +156,11 @@
                 </#if>
 
                 <!-- right side buttons -->
-                <div class="flexed align-items-center nav-container">
-                    <#if (uceConfig.settings.ui.mainPage.showNavButtons)!true>
-                        <div class="flexed align-items-center nav-buttons">
+                <div class="flexed align-items-center nav-container pr-3">
+                    <div class="flexed align-items-center nav-buttons">
                             <a class="switch-view-btn btn text" data-id="search" data-trigger="hover" data-toggle="popover"
                                data-placement="bottom" data-content="Portal"><i class="fas fa-globe-europe color-prime"></i></a>
+                            <#if (uceConfig.settings.ui.mainPage.showNavButtons)!true>
                             <a class="switch-view-btn btn text" data-id="lexicon" data-trigger="hover" data-toggle="popover"
                                data-placement="bottom" data-content="${languageResource.get("lexicon")}"><i
                                         class="fas fa-atlas color-prime"></i></a>
@@ -174,15 +174,15 @@
                                    data-placement="bottom" data-content="${languageResource.get("analysis")}"><i
                                             class="fas fa-chart-pie color-prime"></i>
                                 </a>
-                            </#if>
                             <a class="switch-view-btn btn text" data-id="team" data-trigger="hover" data-toggle="popover"
-                               data-placement="bottom" data-content="${languageResource.get("team")}"><i
+                            data-placement="bottom" data-content="${languageResource.get("team")}"><i
                                         class="fas fa-users color-prime"></i></a>
-                        </div>
-                    </#if>
+                            </#if>
+                        </#if>
+                    </div>
 
                     <#if (uceConfig.settings.ui.mainPage.showLanguageSelector)!true>
-                        <select class="form-control bg-default rounded-0 color-prime border-right-0 large-font switch-language-select">
+                        <select class="form-control bg-default rounded-0 color-prime large-font switch-language-select">
                             <option data-lang="en-EN">Englisch</option>
                             <option data-lang="de-DE">Deutsch</option>
                         </select>

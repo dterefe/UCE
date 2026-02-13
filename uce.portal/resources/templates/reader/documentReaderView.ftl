@@ -140,8 +140,7 @@
             <ul class='custom-menu'>
                 <li data-action="open-more"><i class="fab fa-readme mr-2"></i> ${languageResource.get("more")}</li>
                 <!--<li data-action="search"><i class="fas fa-search mr-2"></i> ${languageResource.get("search")}</li>-->
-                <li data-action="highlight" data-target=""><i
-                            class="fas fa-highlighter mr-2"></i> ${languageResource.get("highlight")}</li>
+                <li data-action="highlight" data-target=""><i class="fas fa-highlighter mr-2"></i> ${languageResource.get("highlight")}</li>
             </ul>
         </#if>
 

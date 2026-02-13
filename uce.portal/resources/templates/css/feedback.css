@@ -1,13 +1,5 @@
 /* Feedback presentation styling */
 
-body,
-body.no-cursor,
-.site-container,
-.site-container.with-view-nav,
-.reader-container,
-.reader-container.container {
-  background-color: var(--fb-bg) !important;
-}
 
 :root {
     --fb-bg: #f5f6f7;
@@ -19,8 +11,21 @@ body.no-cursor,
     /* --fb-shadow: 0 1px 3px rgba(17, 24, 39, 0.06); */
 }
 
+body {
+    background: var(--fb-card);
+}
+
+body,
+body.no-cursor,
+.site-container,
+.site-container.with-view-nav,
+.reader-container,
+.reader-container.container {
+  background-color: var(--fb-bg) !important;
+}
+
+
 /* consistent spacing between feedback blocks */
-.feedback-header,
 .feedback-overview,
 .feedback-urls,
 .feedback-content {
@@ -44,6 +49,7 @@ body.no-cursor,
 }
 
 .feedback-main {
+    background: var(--fb-bg);
     max-width: 1200px;
     margin: 0 auto;
     display: flex;
@@ -52,9 +58,14 @@ body.no-cursor,
 }
 
 .feedback-header {
+    background: var(--fb-card);
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding: 2rem 2rem 1rem 2rem;
+    border: 1px solid var(--fb-border);
+    border-radius: 5;
+    box-shadow: var(--fb-shadow);
 }
 
 .feedback-header h1 {
