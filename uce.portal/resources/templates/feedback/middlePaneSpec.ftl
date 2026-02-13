@@ -7,8 +7,8 @@
 
 <#assign md = middlePaneModel.metadata!{} >
 
-<section class="feedback-header">
-    <h1>${(middlePaneModel.documentTitle!md.document_title!md.documentTitle!"")?replace("\\s*\\(Erhebung:.*\\)\\s*$", "", "r")}</h1>
+<div class="header ">
+    <h3>${(middlePaneModel.documentTitle!md.document_title!md.documentTitle!"")?replace("\\s*\\(Erhebung:.*\\)\\s*$", "", "r")}</h1>
     <p class="subtitle">${md.assessment_phase_name!""} • ${md.assessment_name!""}</p>
     <div class="badges">
         <span class="badge">
@@ -28,7 +28,7 @@
             <#include "../permissionBadge.ftl">
         </#if>
     </div>
-</section>
+</div>
 
 <#-- Overview cards (same shape as old template, but values are read directly from metadata) -->
 <section class="feedback-overview">
@@ -57,25 +57,41 @@
 <#-- Top URLs are expected as md.top_urls = [{rank,url,...}, ...] -->
 <#if md.top_urls?has_content>
 <section class="feedback-urls">
-    <h2>Top URLs</h2>
-    <table>
-        <thead><tr><th>Rank</th><th>URL</th></tr></thead>
-        <tbody>
-        <#list md.top_urls as url>
-            <tr>
-                <td>${url.rank!""}</td>
-                <td><a href="${url.url}" target="_blank">${url.url}</a></td>
-            </tr>
-        </#list>
-        </tbody>
-    </table>
+  <h2>Top URLs</h2>
+  <table class="top-urls">
+  <colgroup>
+    <col style="width: 5rem;">
+    <col style="width: 6rem;">
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Hits</th>
+      <th>URL</th>
+    </tr>
+  </thead>
+  <tbody>
+    <#list md.top_urls as row>
+      <tr>
+        <td>${row.rank!""}</td>
+        <td>${row.hits!""}</td>
+        <td class="url-cell">
+          <a class="url-ellipsis" href="${row.url}" target="_blank" title="${row.url}">${row.url}</a>
+        </td>
+      </tr>
+    </#list>
+  </tbody>
+</table>
+
 </section>
 </#if>
 
+
 <#-- Images are passed as middlePaneModel.images = [{htmlImgSrc, mimeType, ...}, ...] -->
 <#if middlePaneModel.images?has_content>
-<section class="feedback-content">
-    <h3>Auswertung</h3>
+<section  class="feedback-urls">
+    <h2>Auswertung </h2>
     <#list middlePaneModel.images as img>
         <article class="chart-card">
             <div class="chart-viewport">
