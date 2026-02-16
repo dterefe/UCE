@@ -158,26 +158,27 @@
                 <!-- right side buttons -->
                 <div class="flexed align-items-center nav-container pr-3">
                     <div class="flexed align-items-center nav-buttons">
-                            <a class="switch-view-btn btn text" data-id="search" data-trigger="hover" data-toggle="popover"
-                               data-placement="bottom" data-content="Portal"><i class="fas fa-globe-europe color-prime"></i></a>
-                            <#if (uceConfig.settings.ui.mainPage.showNavButtons)!true>
+                        <a class="switch-view-btn btn text" data-id="search" data-trigger="hover" data-toggle="popover"
+                            data-placement="bottom" data-content="Portal"><i class="fas fa-globe-europe color-prime"></i></a>
+                        <#if (uceConfig.settings.ui.mainPage.showNavButtons)!true>
                             <a class="switch-view-btn btn text" data-id="lexicon" data-trigger="hover" data-toggle="popover"
-                               data-placement="bottom" data-content="${languageResource.get("lexicon")}"><i
+                            data-placement="bottom" data-content="${languageResource.get("lexicon")}"><i
                                         class="fas fa-atlas color-prime"></i></a>
                             <a class="switch-view-btn btn text" data-id="timeline-map" data-trigger="hover"
-                               data-toggle="popover"
-                               data-placement="bottom" data-content="${languageResource.get("map")}"><i
+                            data-toggle="popover"
+                            data-placement="bottom" data-content="${languageResource.get("map")}"><i
                                         class="fas fa-map-marked-alt color-prime"></i></a>
                             <#if uceConfig.getSettings().getAnalysis().isEnableAnalysisEngine()>
                                 <a class="switch-view-btn btn text" data-id="analysis" data-trigger="hover"
-                                   data-toggle="popover"
-                                   data-placement="bottom" data-content="${languageResource.get("analysis")}"><i
+                                data-toggle="popover"
+                                data-placement="bottom" data-content="${languageResource.get("analysis")}"><i
                                             class="fas fa-chart-pie color-prime"></i>
                                 </a>
-                            <a class="switch-view-btn btn text" data-id="team" data-trigger="hover" data-toggle="popover"
-                            data-placement="bottom" data-content="${languageResource.get("team")}"><i
-                                        class="fas fa-users color-prime"></i></a>
                             </#if>
+                            <a class="switch-view-btn btn text" data-id="team" data-trigger="hover" data-toggle="popover"
+                            data-placement="bottom" data-content="${languageResource.get("team")}">
+                                <i class="fas fa-users color-prime"></i>
+                            </a>
                         </#if>
                     </div>
 

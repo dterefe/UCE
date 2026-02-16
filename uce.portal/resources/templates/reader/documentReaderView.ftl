@@ -116,7 +116,7 @@
             </div>
         </#if>
 
-        <#if (uceConfig.settings.ui.documentReader.showWikiModal)!true>
+        <#if (uceConfig.settings.ui.mainPage.showWikiModal)!true>
             <#include "*/wiki/components/wikiPageModal.ftl">
         </#if>
 
@@ -168,7 +168,7 @@
                             <div class="header ">
                                 <div class="text-center flexed align-items-center justify-content-around w-100">
                                     <div class="flexed align-items-center">
-                                        <#if (uceConfig.settings.ui.documentReader.showWikiModal)!true>
+                                        <#if (uceConfig.settings.ui.mainPage.showWikiModal)!true>
                                             <a class="header-btn open-wiki-page color-prime" data-wid="${document.getWikiId()}">
                                                 <i class="large-font m-0 fab fa-wikipedia-w"></i>
                                             </a>
@@ -200,7 +200,7 @@
                                     </div>
                                     <#if document.hasJsonUceMetadata()>
                                         <div class="flexed align-items-center justify-content-center text-center mt-1">
-                                            <#if (uceConfig.settings.ui.documentReader.showWikiModal)!true>
+                                            <#if (uceConfig.settings.ui.mainPage.showWikiModal)!true>
                                                 <a class="btn bg-lightgray rounded light-border xsmall-font open-wiki-page
                                                 align-items-center flexed hoverable"
                                                 data-wid="${document.getWikiId()}">

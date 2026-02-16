@@ -163,6 +163,7 @@
                             <#assign embedding = documentChunkEmbedding.getDocumentChunkEmbedding()>
                             <#assign documentIdx = 999999>
                             <#assign searchId = searchState.getSearchId()>
+                            <#assign showFeatureValuesInCard = (uceConfig.settings.ui.corpusInspector.showAnnotations)!true>
 
                             <div class="document-card">
                                 <div class="content">
