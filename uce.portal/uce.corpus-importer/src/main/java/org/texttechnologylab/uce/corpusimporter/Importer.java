@@ -233,6 +233,19 @@ public class Importer {
         try (var reader = new FileReader(Paths.get(folderName, "corpusConfig.json").toString(), StandardCharsets.UTF_8)) {
             corpusConfig = gson.fromJson(reader, CorpusConfig.class);
             try {
+                if (corpusConfig.isDeleteExistingCorpusBeforeImport()) {
+                    var existingCorpusByName = db.getCorpusByName(corpusConfig.getName());
+                    if (existingCorpusByName != null) {
+                        logger.info("deleteExistingCorpusBeforeImport=true: deleting existing corpus \"{}\" (id={}) before import.",
+                                existingCorpusByName.getName(),
+                                existingCorpusByName.getId());
+                        db.deleteCorpusDataById(existingCorpusByName.getId());
+                    } else {
+                        logger.info("deleteExistingCorpusBeforeImport=true: no existing corpus with name \"{}\" found; nothing to delete.",
+                                corpusConfig.getName());
+                    }
+                }
+
                 Corpus existingCorpus = CreateDBCorpus(corpus, corpusConfig, db);
                 if (existingCorpus != null) {
                     corpus = existingCorpus;

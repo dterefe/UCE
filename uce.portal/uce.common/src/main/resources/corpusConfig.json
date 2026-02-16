@@ -4,6 +4,7 @@
   "language": "[de-DE, en-EN, ...]",
   "description": "",
   "addToExistingCorpus": true,
+  "deleteExistingCorpusBeforeImport": false,
   "annotations": {
     "annotatorMetadata": false,
     "uceMetadata": false,

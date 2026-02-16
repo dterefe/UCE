@@ -19,6 +19,7 @@ public class CorpusConfig {
     private String description;
     private CorpusAnnotationConfig annotations;
     private boolean addToExistingCorpus;
+    private boolean deleteExistingCorpusBeforeImport;
     private OtherConfig other;
     private List<RenderModeConfig> renderModes = new ArrayList<>();
 

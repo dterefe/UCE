@@ -410,6 +410,46 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         });
     }
 
+    /**
+     * Deletes all data belonging to a corpus and then removes the corpus itself.
+     * This is intended for importer maintenance flows (e.g. delete-before-import).
+     */
+    public void deleteCorpusDataById(long corpusId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        executeOperationSafely(session -> {
+            String[] deleteStatements = new String[] {
+                    "DELETE FROM documentchunkembeddings USING document WHERE documentchunkembeddings.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM documentembeddings USING document WHERE documentembeddings.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM documentsentenceembeddings USING document WHERE documentsentenceembeddings.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM ucemetadata USING document WHERE ucemetadata.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM ucemetadatafilter WHERE ucemetadatafilter.corpusid = :corpusId",
+                    "DELETE FROM biofidtaxon USING document WHERE biofidtaxon.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM lemma USING document WHERE lemma.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM namedentity USING document WHERE namedentity.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM geoname USING document WHERE geoname.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM time USING document WHERE time.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM sentence USING document WHERE sentence.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM srlink USING document WHERE srlink.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM gazetteertaxon USING document WHERE gazetteertaxon.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM gnfindertaxon USING document WHERE gnfindertaxon.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM page USING document WHERE page.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM documentpermissions USING document WHERE documentpermissions.document_id = document.id AND document.corpusid = :corpusId",
+                    "DELETE FROM documentlink WHERE documentlink.corpusid = :corpusId",
+                    "DELETE FROM annotationlink WHERE annotationlink.corpusid = :corpusId",
+                    "DELETE FROM documenttoannotationlink WHERE documenttoannotationlink.corpusid = :corpusId",
+                    "DELETE FROM annotationtodocumentlink WHERE annotationtodocumentlink.corpusid = :corpusId",
+                    "DELETE FROM document WHERE corpusid = :corpusId",
+                    "DELETE FROM corpus WHERE id = :corpusId"
+            };
+
+            for (String sql : deleteStatements) {
+                session.createNativeQuery(sql)
+                        .setParameter("corpusId", corpusId)
+                        .executeUpdate();
+            }
+            return null;
+        });
+    }
+
     @Override
     public CorpusTsnePlot getCorpusTsnePlotByCorpusId(long corpusId) throws DatabaseOperationException, DocumentAccessDeniedException {
         return executeOperationSafely((session) -> {
