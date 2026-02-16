@@ -10,6 +10,7 @@ services:
   nginx:
     container_name: uce-nginx
     image: nginx:1.27-alpine
+    pull_policy: always
     profiles:
       - proxy
     ports:
@@ -61,6 +62,7 @@ services:
     #   context: .
     #   dockerfile: ./uce.portal/uce.web/Dockerfile
     image: ${UCE_WEB_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-web:latest}
+    pull_policy: always
     env_file:
       - .env
     environment:
@@ -94,6 +96,7 @@ services:
     profiles:
       - importer-only
     image: ${IMPORTER_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-importer:latest}
+    pull_policy: always
     # build:
     #   context: .
     #   dockerfile: ./uce.portal/uce.corpus-importer/Dockerfile
@@ -117,7 +120,8 @@ services:
 
   uce-postgresql-db:
     container_name: uce-postgresql-db
-    image: ${POSTGRES_IMAGE:-docker.texttechnologylab.org/uce/uce-postgresql:0.0.1}
+    image: ${POSTGRES_IMAGE:-docker.texttechnologylab.org/uce/uce-postgresql:latest}
+    pull_policy: always
     env_file:
       - .env
     environment:
@@ -159,6 +163,7 @@ services:
   uce-keycloak-auth:
     container_name: uce-keycloak-auth
     image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.2.5}
+    pull_policy: always
     env_file:
       - .env
     ports:
@@ -166,7 +171,7 @@ services:
     volumes:
       - ${KC_REALM_IMPORT_PATH:-./auth/uce-realm.json}:/opt/keycloak/data/import/uce-realm.json
       # Persist Keycloak data (incl. embedded DB) outside the container
-      - ${KEYCLOAK_DATA_HOST_PATH:-./data/keycloak}:/opt/keycloak/data
+      # - ${KEYCLOAK_DATA_HOST_PATH:-./data/keycloak}:/opt/keycloak/data
     command:
       - ${KEYCLOAK_START_CMD:-start}
       - --features=${KEYCLOAK_FEATURES:-scripts}
@@ -196,6 +201,7 @@ services:
 
   uce-keycloak-config:
     image: ${KEYCLOAK_CONFIG_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-config:latest}
+    pull_policy: always
     container_name: uce-keycloak-config
     env_file:
       - .env
@@ -220,7 +226,8 @@ services:
     container_name: uce-keycloak-sync-from-csv
     profiles:
       - keycloak-sync
-    image: ${KEYCLOAK_SYNC_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-sync-from-csv:0.1.1}
+    image: ${KEYCLOAK_SYNC_IMAGE:-docker.texttechnologylab.org/uce-core-feedback-keycloak-sync-from-csv:latest}
+    pull_policy: always
     # build:
     #   context: .
     #   dockerfile: ./deploy/keycloak-sync-from-csv.Dockerfile

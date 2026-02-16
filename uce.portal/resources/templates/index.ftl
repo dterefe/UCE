@@ -158,8 +158,10 @@
                 <!-- right side buttons -->
                 <div class="flexed align-items-center nav-container pr-3">
                     <div class="flexed align-items-center nav-buttons">
-                        <a class="switch-view-btn btn text" data-id="search" data-trigger="hover" data-toggle="popover"
-                            data-placement="bottom" data-content="Portal"><i class="fas fa-globe-europe color-prime"></i></a>
+                        <#if (uceConfig.settings.ui.corpusInspector.showSearchHint)!true>
+                            <a class="switch-view-btn btn text" data-id="search" data-trigger="hover" data-toggle="popover"
+                                data-placement="bottom" data-content="Portal"><i class="fas fa-globe-europe color-prime"></i></a>
+                        </#if>
                         <#if (uceConfig.settings.ui.mainPage.showNavButtons)!true>
                             <a class="switch-view-btn btn text" data-id="lexicon" data-trigger="hover" data-toggle="popover"
                             data-placement="bottom" data-content="${languageResource.get("lexicon")}"><i
