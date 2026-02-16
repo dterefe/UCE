@@ -36,12 +36,12 @@
         <#assign overviewCards = [
             {"title":"Seiten gesamt", "value":md.pages_count!0, "min":md.pages_all_min!0, "max":md.pages_all_max!0, "mean":md.pages_all_mean!0, "stdDev":md.pages_all_std!0, "diffPercent":md.pages_percentage_diff!0},
             {"title":"Seiten einzigartig", "value":md.pages_count_unique!0, "min":md.pages_all_min_unique!0, "max":md.pages_all_max_unique!0, "mean":md.pages_all_mean_unique!0, "stdDev":md.pages_all_std_unique!0, "diffPercent":md.pages_percentage_diff_unique!0},
-            {"title":"Bearbeitungszeit", "value":md.time_count!0, "min":md.time_all_min!0, "max":md.time_all_max!0, "mean":md.time_all_mean!0, "stdDev":md.time_all_std!0, "diffPercent":md.time_percentage_diff!0}
+            {"title":"Bearbeitungszeit", "value":md.time_count!0, "min":md.time_all_min!0, "max":md.time_all_max!0, "mean":md.time_all_mean!0, "stdDev":md.time_all_std!0, "diffPercent":md.time_percentage_diff!0, "unit":"Minuten"}
         ] >
         <#list overviewCards as card>
             <article class="metric-card">
                 <header>${card.title}</header>
-                <div class="value">${card.value?string["#,##0.##"]}</div>
+                <div class="value">${card.value?string["#,##0.##"]}<#if card.unit??> ${card.unit}</#if></div>
                 <div class="metric-chips">
                     <span>Min ${card.min}</span>
                     <span>Ø ${card.mean?string["#,##0.##"]}</span>
@@ -73,7 +73,7 @@
         </tr>
     </thead>
     <tbody>
-        <#list md.top_urls as row>
+        <#list md.top_urls?take(10) as row>
         <tr>
             <td>${row.rank!""}</td>
             <td>${row.hits!""}</td>
@@ -103,4 +103,3 @@
     </section>
     </#if>
 </div>
-
