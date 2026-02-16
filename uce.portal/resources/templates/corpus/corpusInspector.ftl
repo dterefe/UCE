@@ -6,20 +6,24 @@
     <!-- corpus statistics -->
     <div class="col-md-4 p-0 m-0">
         <#if (uceConfig.settings.ui.corpusInspector.showHeader)!true>
-            <div class="cheader w-100 flexed align-items-center justify-content-between p-4">
-                <a class="btn" onclick="$('.corpus-inspector-include').hide(150)">
-                    <i class="fas fa-long-arrow-alt-left m-0 color-prime"></i>
-                </a>
-                <div class="text-center">
+            <div class="cheader w-100 flexed align-items-center p-4">
+                <div class="cheader-side">
+                    <a class="btn" onclick="$('.corpus-inspector-include').hide(150)">
+                        <i class="fas fa-long-arrow-alt-left m-0 color-prime"></i>
+                    </a>
+                </div>
+                <div class="cheader-center text-center">
                     <h5 class="mb-1 color-prime">${corpus.getName()}</h5>
                     <hr class="mt-0 mb-1 text"/>
                     <p class="text mb-0 font-italic">${languageResource.get("corpusInspector")}</p>
                 </div>
-                <#if (uceConfig.settings.ui.mainPage.showWikiModal)!true>
-                    <a class="w-rounded-btn open-wiki-page" data-wid="${corpus.getWikiId()}" data-wcovered="${corpus.getName()}">
-                        <i class="fab fa-wikipedia-w m-0 color-prime large-font"></i>
-                    </a>
-                </#if>
+                <div class="cheader-side">
+                    <#if (uceConfig.settings.ui.mainPage.showWikiModal)!true>
+                        <a class="w-rounded-btn open-wiki-page" data-wid="${corpus.getWikiId()}" data-wcovered="${corpus.getName()}">
+                            <i class="fab fa-wikipedia-w m-0 color-prime large-font"></i>
+                        </a>
+                    </#if>
+                </div>
             </div>
         </#if>
 
