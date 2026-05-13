@@ -10,9 +10,7 @@
     <name>uce.portal</name>
     <url>http://maven.apache.org</url>
     <modules>
-        <module>uce.common</module>
-        <module>uce.duui</module>
-        <module>uce.corpus-importer</module>
+        <module>uce.common</module>        <module>uce.corpus-importer</module>
         <module>uce.web</module>
         <module>uce.search</module>
         <module>uce.analysis</module>

@@ -174,6 +174,10 @@ public class Importer {
         initServices(serviceContext);
     }
 
+    public void setContinuation(DocumentImportContinuation continuation) {
+        this.continuation = continuation;
+    }
+
     private void initServices(ApplicationContext serviceContext) {
         this.goetheUniversityService = serviceContext.getBean(GoetheUniversityService.class);
         this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);

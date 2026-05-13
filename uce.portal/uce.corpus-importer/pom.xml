@@ -88,12 +88,6 @@
         <!-- local projects-->
         <dependency>
             <groupId>org.texttechnologylab</groupId>
-            <artifactId>uce.duui</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.texttechnologylab</groupId>
             <artifactId>uce.common</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
@@ -117,9 +111,9 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.texttechnologylab</groupId>
+            <groupId>org.texttechnologylab</groupId>
             <artifactId>DockerUnifiedUIMAInterface</artifactId>
-            <version>1.5.5</version>
+            <version>1.5.3</version>
         </dependency>
 
     </dependencies>
