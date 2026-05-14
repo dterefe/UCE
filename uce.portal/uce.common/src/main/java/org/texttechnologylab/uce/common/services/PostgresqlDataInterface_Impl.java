@@ -64,6 +64,7 @@ import java.util.stream.IntStream;
 public final class PostgresqlDataInterface_Impl implements DataInterface {
     private static final Logger logger = LogManager.getLogger(PostgresqlDataInterface_Impl.class);
 
+    private final CommonConfig config = new CommonConfig();
     private final SessionFactory sessionFactory;
 
     @Autowired
@@ -2756,6 +2757,26 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
      * @return
      */
     private <T> T executeOperationSafely(SessionOperation<T> operation) throws DatabaseOperationException, DocumentAccessDeniedException {
+        DatabaseOperationException last = null;
+        for (int attempt = 1; attempt <= config.getPostgresqlOperationRetryMaxAttempts(); attempt++) {
+            try {
+                return executeOperationOnce(operation);
+            } catch (DocumentAccessDeniedException ex) {
+                throw ex;
+            } catch (DatabaseOperationException ex) {
+                last = ex;
+                if (!isRetryableDatabaseFailure(ex) || attempt >= config.getPostgresqlOperationRetryMaxAttempts()) {
+                    throw ex;
+                }
+                sleepBackoff(config.getPostgresqlOperationRetryBackoffMs(), attempt);
+            }
+        }
+        throw last == null
+                ? new DatabaseOperationException("Database operation failed without a recorded cause.")
+                : last;
+    }
+
+    private <T> T executeOperationOnce(SessionOperation<T> operation) throws DatabaseOperationException, DocumentAccessDeniedException {
         Session session = null;
         Transaction transaction = null;
         try {
@@ -2766,14 +2787,10 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
             transaction.commit();
             return result;
         } catch (DocumentAccessDeniedException dade) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
+            rollbackQuietly(transaction, dade);
             throw dade;
         } catch (Exception ex) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
+            rollbackQuietly(transaction, ex);
 
             var accessDenied = findCause(ex, DocumentAccessDeniedException.class);
             if (accessDenied != null) {
@@ -2792,6 +2809,54 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
             if (session != null) {
                 session.close();
             }
+        }
+    }
+
+    private void rollbackQuietly(Transaction transaction, Exception original) {
+        if (transaction == null) {
+            return;
+        }
+        try {
+            transaction.rollback();
+        } catch (Exception rollbackFailure) {
+            original.addSuppressed(rollbackFailure);
+        }
+    }
+
+    private boolean isRetryableDatabaseFailure(Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            String className = current.getClass().getName();
+            if (current instanceof java.sql.SQLException sqlException && isRetryableSqlState(sqlException.getSQLState())) {
+                return true;
+            }
+            if (current instanceof java.sql.SQLTransientException
+                    || current instanceof java.sql.SQLRecoverableException
+                    || className.equals("org.hibernate.exception.JDBCConnectionException")
+                    || className.equals("org.hibernate.exception.LockAcquisitionException")
+                    || className.equals("org.hibernate.exception.GenericJDBCException")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isRetryableSqlState(String sqlState) {
+        return sqlState != null && (sqlState.startsWith("08")
+                || sqlState.equals("40001")
+                || sqlState.equals("40P01")
+                || sqlState.equals("55P03")
+                || sqlState.equals("53300"));
+    }
+
+    private void sleepBackoff(int baseBackoffMs, int attempt) throws DatabaseOperationException {
+        if (baseBackoffMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep((long) baseBackoffMs * attempt);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new DatabaseOperationException("Interrupted while waiting to retry database operation.", ex);
         }
     }
 

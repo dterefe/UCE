@@ -205,9 +205,19 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.dterefe</groupId>
-            <artifactId>UIMATypeSystem</artifactId>
-            <version>5bf9fca9cff4</version>
+            <groupId>org.texttechnologylab.annotation</groupId>
+            <artifactId>typesystem</artifactId>
+            <version>3.0.14</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-api-lexmorph-asl</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-api-segmentation-asl</artifactId>
+            <version>2.4.0</version>
         </dependency>
       
         <dependency>

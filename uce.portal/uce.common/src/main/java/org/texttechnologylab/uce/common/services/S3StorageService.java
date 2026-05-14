@@ -72,17 +72,20 @@ public class S3StorageService {
         }
         byte[] data = baos.toByteArray();
 
-        // Upload to MinIO
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
-            minioClient.putObject(
+        String finalObjectName = objectName;
+        robustMinioCall(() -> {
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
+                minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(config.getMinioBucket())
-                            .object(objectName)
+                            .object(finalObjectName)
                             .stream(bais, data.length, -1)
                             .contentType(contentType)
                             .userMetadata(metadata != null ? metadata : new HashMap<>())
                             .build());
-        }
+            }
+            return null;
+        });
     }
 
     /**
@@ -94,12 +97,12 @@ public class S3StorageService {
      */
     public InputStream downloadObject(String objectName) throws Exception {
         if(!SystemStatus.S3StorageStatus.isAlive()) return null;
-        objectName = objectName.replace("%20", " ");
-        return minioClient.getObject(
+        String finalObjectName = objectName.replace("%20", " ");
+        return robustMinioCall(() -> minioClient.getObject(
                 GetObjectArgs.builder()
                         .bucket(config.getMinioBucket())
-                        .object(objectName)
-                        .build());
+                        .object(finalObjectName)
+                        .build()));
     }
 
     /**
@@ -107,13 +110,13 @@ public class S3StorageService {
      */
     public String getContentTypeOfObject(String objectName) throws Exception {
         if(!SystemStatus.S3StorageStatus.isAlive()) return null;
-        objectName = objectName.replace("%20", " ");
-        StatObjectResponse stat = minioClient.statObject(
+        String finalObjectName = objectName.replace("%20", " ");
+        StatObjectResponse stat = robustMinioCall(() -> minioClient.statObject(
                 StatObjectArgs.builder()
                         .bucket(config.getMinioBucket())
-                        .object(objectName)
+                        .object(finalObjectName)
                         .build()
-        );
+        ));
         return stat.contentType();
     }
 
@@ -149,14 +152,17 @@ public class S3StorageService {
      */
     public boolean objectExists(String objectName) {
         if(!SystemStatus.S3StorageStatus.isAlive()) return false;
-        objectName = objectName.replace("%20", " ");
+        String finalObjectName = objectName.replace("%20", " ");
         try {
-            this.minioClient.statObject(
+            robustMinioCall(() -> {
+                this.minioClient.statObject(
                     StatObjectArgs.builder()
                             .bucket(config.getMinioBucket())
-                            .object(objectName)
+                            .object(finalObjectName)
                             .build()
-            );
+                );
+                return null;
+            });
             return true;
         } catch (ErrorResponseException e) {
             if (e.errorResponse().code().equals("NoSuchKey")) {
@@ -177,11 +183,48 @@ public class S3StorageService {
      */
     public void deleteObject(String objectName) throws Exception {
         if(!SystemStatus.S3StorageStatus.isAlive()) return;
-        objectName = objectName.replace("%20", " ");
-        minioClient.removeObject(
+        String finalObjectName = objectName.replace("%20", " ");
+        robustMinioCall(() -> {
+            minioClient.removeObject(
                 RemoveObjectArgs.builder()
                         .bucket(config.getMinioBucket())
-                        .object(objectName)
+                        .object(finalObjectName)
                         .build());
+            return null;
+        });
+    }
+
+    private <T> T robustMinioCall(ThrowingSupplier<T> operation) throws Exception {
+        if (config == null || minioClient == null || !SystemStatus.S3StorageStatus.isAlive()) {
+            TestConnection();
+        }
+        int attempts = config == null ? 3 : config.getMinioRetryMaxAttempts();
+        int backoffMs = config == null ? 250 : config.getMinioRetryBackoffMs();
+        Exception last = null;
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                return operation.get();
+            } catch (Exception ex) {
+                last = ex;
+                if (attempt >= attempts) {
+                    break;
+                }
+                TestConnection();
+                sleepBackoff(backoffMs, attempt);
+            }
+        }
+        throw last;
+    }
+
+    private static void sleepBackoff(int baseBackoffMs, int attempt) throws InterruptedException {
+        if (baseBackoffMs <= 0) {
+            return;
+        }
+        Thread.sleep((long) baseBackoffMs * attempt);
+    }
+
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws Exception;
     }
 }

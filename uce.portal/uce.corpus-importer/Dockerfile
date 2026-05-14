@@ -6,7 +6,6 @@ WORKDIR /app
 COPY ./uce.portal/pom.xml ./uce.portal/pom.xml
 COPY ./uce.portal/settings.xml ./uce.portal/settings.xml
 COPY ./uce.portal/uce.common/pom.xml ./uce.portal/uce.common/pom.xml
-COPY ./uce.portal/uce.duui/pom.xml ./uce.portal/uce.duui/pom.xml
 COPY ./uce.portal/uce.corpus-importer/pom.xml ./uce.portal/uce.corpus-importer/pom.xml
 COPY ./uce.portal/uce.web/pom.xml ./uce.portal/uce.web/pom.xml
 COPY ./uce.portal/uce.search/pom.xml ./uce.portal/uce.search/pom.xml

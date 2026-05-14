@@ -642,6 +642,22 @@ public class JenaSparqlService {
      * @return
      */
     private <T extends RDFRequestDto> T executeCommand(String command, Class<T> clazz) throws IOException {
+        IOException last = null;
+        for (int attempt = 1; attempt <= config.getSparqlRetryMaxAttempts(); attempt++) {
+            try {
+                return executeCommandOnce(command, clazz);
+            } catch (IOException ex) {
+                last = ex;
+                if (attempt >= config.getSparqlRetryMaxAttempts()) {
+                    break;
+                }
+                sleepBackoff(config.getSparqlRetryBackoffMs(), attempt);
+            }
+        }
+        throw last;
+    }
+
+    private <T extends RDFRequestDto> T executeCommandOnce(String command, Class<T> clazz) throws IOException {
         // Put our prefixes into the command
         command = StringUtils.ConvertSparqlQuery(command);
         command = "PREFIX bio: <https://www.biofid.de/bio-ontologies/gbif/>\n" + command;
@@ -654,6 +670,8 @@ public class JenaSparqlService {
         try {
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(config.getSparqlConnectTimeoutMs());
+            conn.setReadTimeout(config.getSparqlReadTimeoutMs());
 
             int responseCode = conn.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -675,6 +693,18 @@ public class JenaSparqlService {
             }
         } finally {
             conn.disconnect();
+        }
+    }
+
+    private static void sleepBackoff(int baseBackoffMs, int attempt) throws IOException {
+        if (baseBackoffMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep((long) baseBackoffMs * attempt);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while waiting to retry SPARQL request.", ex);
         }
     }
 

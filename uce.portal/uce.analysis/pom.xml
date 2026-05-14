@@ -48,13 +48,29 @@
                     <groupId>com.sparkjava</groupId>
                     <artifactId>spark-core</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.github.texttechnologylab</groupId>
+                    <artifactId>UIMATypeSystem</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.dterefe</groupId>
+                    <artifactId>UIMATypeSystem</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.mevbagci</groupId>
+                    <artifactId>UIMATypeSystem</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.uima</groupId>
+                    <artifactId>uimaj-document-annotation</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
 
         <dependency>
-            <groupId>com.github.dterefe</groupId>
-            <artifactId>UIMATypeSystem</artifactId>
-            <version>5bf9fca9cff4</version>
+            <groupId>org.texttechnologylab.annotation</groupId>
+            <artifactId>typesystem</artifactId>
+            <version>3.0.14</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.springframework/spring-beans -->
