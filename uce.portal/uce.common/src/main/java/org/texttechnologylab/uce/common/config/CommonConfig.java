@@ -246,6 +246,18 @@ public class CommonConfig {
         return Math.max(0, Integer.parseInt(value));
     }
 
+    public int getPostgresqlOperationRetryMaxAttempts() {
+        var value = getPostgresqlProperty("operation.retry.max.attempts");
+        if (value == null || value.isBlank()) return 3;
+        return Math.max(1, Integer.parseInt(value));
+    }
+
+    public int getPostgresqlOperationRetryBackoffMs() {
+        var value = getPostgresqlProperty("operation.retry.backoff.ms");
+        if (value == null || value.isBlank()) return 250;
+        return Math.max(0, Integer.parseInt(value));
+    }
+
     public String getGbifOccurrencesSearchUrl() {
         return getProperty("gbif.occurrences.search.url");
     }
@@ -270,6 +282,42 @@ public class CommonConfig {
         var value = getProperty("sparql.concurrent.requests.max");
         if (value == null || value.isBlank()) return 8;
         return Math.max(1, Integer.parseInt(value));
+    }
+
+    public int getSparqlConnectTimeoutMs() {
+        var value = getProperty("sparql.connect.timeout.ms");
+        if (value == null || value.isBlank()) return 10000;
+        return Math.max(1000, Integer.parseInt(value));
+    }
+
+    public int getSparqlReadTimeoutMs() {
+        var value = getProperty("sparql.read.timeout.ms");
+        if (value == null || value.isBlank()) return 60000;
+        return Math.max(1000, Integer.parseInt(value));
+    }
+
+    public int getSparqlRetryMaxAttempts() {
+        var value = getProperty("sparql.retry.max.attempts");
+        if (value == null || value.isBlank()) return 3;
+        return Math.max(1, Integer.parseInt(value));
+    }
+
+    public int getSparqlRetryBackoffMs() {
+        var value = getProperty("sparql.retry.backoff.ms");
+        if (value == null || value.isBlank()) return 250;
+        return Math.max(0, Integer.parseInt(value));
+    }
+
+    public int getMinioRetryMaxAttempts() {
+        var value = getProperty("minio.retry.max.attempts");
+        if (value == null || value.isBlank()) return 3;
+        return Math.max(1, Integer.parseInt(value));
+    }
+
+    public int getMinioRetryBackoffMs() {
+        var value = getProperty("minio.retry.backoff.ms");
+        if (value == null || value.isBlank()) return 250;
+        return Math.max(0, Integer.parseInt(value));
     }
 
     public int getQueryCacheMaxEntries() {
