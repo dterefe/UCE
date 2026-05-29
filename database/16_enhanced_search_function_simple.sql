@@ -307,3 +307,4 @@ $$ LANGUAGE plpgsql;
 -- Test the safe function
 COMMENT ON FUNCTION uce_search_layer_fulltext_safe IS 
     'Safe search function with robust tsquery construction and error handling';
+*/

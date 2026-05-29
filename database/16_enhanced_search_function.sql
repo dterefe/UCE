@@ -401,3 +401,4 @@ COMMENT ON FUNCTION uce_search_layer_fulltext_enhanced IS
 
 COMMENT ON FUNCTION uce_search_layer_fulltext_wrapper IS 
     'Wrapper that maintains original interface but uses enhanced implementation';
+*/

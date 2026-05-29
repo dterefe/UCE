@@ -10,17 +10,18 @@ public class ApiRegistry {
     private final Map<Class<? extends UceApi>, UceApi> apis;
 
     public ApiRegistry(ApplicationContext context, Configuration configuration, int DUUIInputCounter) {
-        this.apis = Map.of(
-                SearchApi.class, new SearchApi(context, configuration),
-                DocumentApi.class, new DocumentApi(context, configuration),
-                RAGApi.class, new RAGApi(context, configuration),
-                CorpusUniverseApi.class, new CorpusUniverseApi(context, configuration),
-                WikiApi.class, new WikiApi(context, configuration),
-                ImportExportApi.class, new ImportExportApi(context),
-                AnalysisApi.class, new AnalysisApi(context, configuration, DUUIInputCounter),
-                MapApi.class, new MapApi(context, configuration),
-                AuthenticationApi.class, new AuthenticationApi(context, configuration),
-                McpApi.class, new McpApi(context, configuration)
+        this.apis = Map.ofEntries(
+                Map.entry(SearchApi.class, new SearchApi(context, configuration)),
+                Map.entry(DocumentApi.class, new DocumentApi(context, configuration)),
+                Map.entry(RAGApi.class, new RAGApi(context, configuration)),
+                Map.entry(CorpusUniverseApi.class, new CorpusUniverseApi(context, configuration)),
+                Map.entry(WikiApi.class, new WikiApi(context, configuration)),
+                Map.entry(ImportExportApi.class, new ImportExportApi(context)),
+                Map.entry(AnalysisApi.class, new AnalysisApi(context, configuration, DUUIInputCounter)),
+                Map.entry(MapApi.class, new MapApi(context, configuration)),
+                Map.entry(AuthenticationApi.class, new AuthenticationApi(context, configuration)),
+                Map.entry(McpApi.class, new McpApi(context, configuration)),
+                Map.entry(DomainApi.class, new DomainApi(context, configuration))
         );
     }
 

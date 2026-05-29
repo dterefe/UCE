@@ -1,5 +1,7 @@
 .git
 .dev/storage
 uce.portal/**/target
+!uce.portal/uce.corpus-importer/target
+!uce.portal/uce.corpus-importer/target/importer.jar
 uce.portal/uce.corpus-importer/logs
 node_modules

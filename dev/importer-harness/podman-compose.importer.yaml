@@ -1,0 +1,82 @@
+services:
+  uce-postgresql-db:
+    container_name: uce-postgresql-db
+    image: ${POSTGRES_IMAGE:-docker.texttechnologylab.org/uce/uce-postgresql:latest}
+    env_file:
+      - ../../${UCE_IMPORTER_ENV_FILE:-.env.importer}
+    environment:
+      POSTGRES_DB: ${DB_NAME:-uce_import_test}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-55432}:${DB_INTERNAL_PORT:-5432}"
+    volumes:
+      - uce_importer_postgres_data:/var/lib/postgresql/data
+      - ../../${POSTGRESQL_CONFIG:-database/postgresql.conf}:/etc/postgresql.conf:ro
+    command: -c config_file=/etc/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-uce_import_test}"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 20
+    networks:
+      - uce_importer_net
+
+  uce-fuseki-sparql:
+    container_name: uce-fuseki-sparql
+    image: docker.texttechnologylab.org/uce/uce-fuseki-sparql:0.0.1
+    user: "0:0"
+    profiles:
+      - fuseki
+    ports:
+      - "${FUSEKI_PORT:-8030}:5430"
+    volumes:
+      - uce_importer_tdb_data:/fuseki/databases/${TDB2_ENDPOINT:-biofid-search}
+    environment:
+      JAVA_OPTIONS: ${JAVA_OPTIONS:-Xmx4g}
+    command: --update --tdb2 --port 5430 --loc /fuseki/databases/${TDB2_ENDPOINT:-biofid-search} /${TDB2_ENDPOINT:-biofid-search}
+    networks:
+      - uce_importer_net
+
+  uce-importer:
+    container_name: uce-importer
+    image: uce-importer:local-fast
+    build:
+      context: ../..
+      dockerfile: ./dev/importer-harness/Dockerfile.importer-local
+    env_file:
+      - ../../${UCE_IMPORTER_ENV_FILE:-.env.importer}
+    environment:
+      POSTGRESQL_HIBERNATE_CONNECTION_URL: jdbc:postgresql://${DB_HOST:-uce-postgresql-db}:${DB_RUNTIME_PORT:-5432}/${DB_NAME:-uce_import_test}
+      POSTGRESQL_HIBERNATE_CONNECTION_USERNAME: ${DB_USER:-postgres}
+      POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - ../../${IMPORTER_DATABASE_HOST_PATH:-database}:/app/database:ro
+      - ${IMPORTER_CORPORA_HOST_PATH:-../../.dev/importer-harness/corpora/domain-sample}:/app/input:ro
+    depends_on:
+      - uce-postgresql-db
+    networks:
+      - uce_importer_net
+    command:
+      - java
+      - --add-opens=java.base/java.util=ALL-UNNAMED
+      - -cp
+      - ./target/importer.jar
+      - org.texttechnologylab.uce.corpusimporter.DUUIImporter
+      - -src
+      - ${IMPORTER_IMPORT_SRC:-/app/input}
+      - -num
+      - "${IMPORTER_NUMBER:-1}"
+      - -t
+      - "${IMPORTER_THREADS:-1}"
+
+networks:
+  uce_importer_net:
+    name: uce_importer_net
+
+volumes:
+  uce_importer_postgres_data:
+    name: uce_importer_postgres_data
+  uce_importer_tdb_data:
+    name: uce_importer_tdb_data

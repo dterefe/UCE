@@ -136,6 +136,9 @@ function navigateToView(id, options = {}) {
     if (id === 'search' && typeof ensureSearchViewStateOnEnter === 'function') {
         window.setTimeout(() => ensureSearchViewStateOnEnter(), 0);
     }
+    if (id === 'domain' && window.domainPlayground && typeof window.domainPlayground.reload === 'function') {
+        window.setTimeout(() => window.domainPlayground.reload(), 0);
+    }
 }
 
 function setCorpusInspectorRouteState(corpusId) {

@@ -45,6 +45,8 @@ import org.texttechnologylab.annotation.uce.Permission;
 import org.texttechnologylab.duui.artifact.DUUIArtifact;
 import org.texttechnologylab.duui.artifact.DUUIArtifactEmitter;
 import org.texttechnologylab.duui.artifact.DUUIArtifactType;
+import org.texttechnologylab.duui.orchestration.DUUIDispatchMode;
+import org.texttechnologylab.duui.orchestration.DUUIDispatchPolicy;
 import org.texttechnologylab.duui.pipeline.DUUIComponent;
 import org.texttechnologylab.duui.pipeline.DUUIAdapter;
 import org.texttechnologylab.duui.pipeline.DUUIFork;
@@ -263,27 +265,32 @@ public class DUUIImporter {
         );
 
         String pipelineId = "uce-importer-" + runtime.importId;
+        DUUIDispatchPolicy importerIo = DUUIDispatchPolicy.of(DUUIDispatchMode.IO, runtime.numThreads);
         try (var duui = DUUI.system(runtime.importId)) {
             try (DUUIPipelineScope pipeline = duui.pipeline(pipelineId)) {
                     try (DUUIGeneratorScope<UCEImportArtifact> runtimeScope = new RuntimeSeedGenerator(runtime).open(pipeline)) {
                         try (DUUIStageScope<UCEImportArtifact> stage = runtimeScope.linear("runtime-prepare")) {
+                        stage.dispatchPolicy(importerIo);
                         stage.lambda(lambda(UCE_IMPORT, "prepare-import-environment", this::prepareImportEnvironment));
                     }
                     try (DUUIAdapterScope<UCEImportArtifact, UCECorpusArtifact> corpusScope = RuntimeToCorpus.builder().open(runtimeScope)) {
                         try (DUUIStageScope<UCECorpusArtifact> stage = corpusScope.linear("corpus-init")) {
+                            stage.dispatchPolicy(importerIo);
                             stage.lambda(lambda(UCE_CORPUS, "load-corpus-config-and-ensure-corpus", this::loadCorpusConfigAndEnsureCorpus));
                             stage.lambda(lambda(UCE_CORPUS, "initialize-document-import-continuation", this::initializeContinuation));
                         }
                         try (DUUIForkScope<UCECorpusArtifact, UCEDocumentArtifact> documents = CorpusToDocuments.builder().open(corpusScope)) {
                             try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-read")) {
+                                stage.dispatchPolicy(importerIo);
                                 stage.lambda(lambda(UCE_DOCUMENT, "wait-for-batch", this::waitForBatch));
                             }
-                            try (DUUIAdapterScope<UCEDocumentArtifact, JCasArtifact> jcasScope = DocumentToJCas.builder(this).open(documents)) {
-                                try (DUUIStageScope<JCasArtifact> stage = jcasScope.linear("document-analysis")) {
-                                    // analysis engine / v1 components can be inserted here
-                                }
-                                try (DUUIAdapterScope<JCasArtifact, UCEDocumentArtifact> persistedDocScope = JCasToDocument.builder(this).open(jcasScope)) {
-                                    try (DUUIStageScope<UCEDocumentArtifact> stage = persistedDocScope.parallel("document-independent-extraction")) {
+                            try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-jcas")) {
+                                stage.dispatchPolicy(importerIo);
+                                stage.lambda(lambda(UCE_DOCUMENT, "open-document-jcas", this::openDocumentJCas));
+                                stage.lambda(lambda(UCE_DOCUMENT, "initialize-document-shell", this::initializeDocumentShell));
+                            }
+                                    try (DUUIStageScope<UCEDocumentArtifact> stage = documents.parallel("document-independent-extraction")) {
+                                        stage.dispatchPolicy(importerIo);
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-uce-metadata", this::extractUceMetadata));
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-sentences", this::extractSentences));
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-named-entities", this::extractNamedEntities));
@@ -299,29 +306,33 @@ public class DUUIImporter {
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-images", this::extractImages));
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-permissions", this::extractPermissions));
                                     }
-                                    try (DUUIStageScope<UCEDocumentArtifact> stage = persistedDocScope.linear("document-dependent-extraction")) {
+                                    try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-dependent-extraction")) {
+                                        stage.dispatchPolicy(importerIo);
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-geonames", this::extractGeoNames));
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-pages", this::extractPages));
                                         stage.lambda(lambda(UCE_DOCUMENT, "extract-logical-links", this::extractLogicLinks));
                                     }
-                                    try (DUUIStageScope<UCEDocumentArtifact> stage = persistedDocScope.linear("document-domain-capture")) {
+                                    try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-domain-capture")) {
+                                        stage.dispatchPolicy(importerIo);
                                         stage.lambda(lambda(UCE_DOCUMENT, "capture-uce-document-domains", this::captureUceDocumentDomains));
                                     }
-                                    try (DUUIStageScope<UCEDocumentArtifact> stage = persistedDocScope.linear("document-persist")) {
+                                    try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-persist")) {
+                                        stage.dispatchPolicy(importerIo);
                                         stage.lambda(lambda(UCE_DOCUMENT, "persist-document", this::persistDocument));
                                         stage.lambda(lambda(UCE_DOCUMENT, "persist-domain-association-graph", this::persistDomainAssociationGraph));
                                     }
-                                }
-                            }
                             try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-post")) {
+                                stage.dispatchPolicy(importerIo);
                                 stage.lambda(lambda(UCE_DOCUMENT, "post-process-document-and-batch", this::postProcessDocumentAndBatch));
                             }
                         }
                         try (DUUIStageScope<UCECorpusArtifact> stage = corpusScope.linear("corpus-finalize")) {
+                            stage.dispatchPolicy(importerIo);
                             stage.lambda(lambda(UCE_CORPUS, "finalize-corpus", this::finalizeCorpus));
                         }
                     }
                     try (DUUIStageScope<UCEImportArtifact> stage = runtimeScope.linear("runtime-finalize")) {
+                        stage.dispatchPolicy(importerIo);
                         stage.lambda(lambda(UCE_IMPORT, "finalize-import-environment", this::finalizeImportEnvironment));
                     }
                 }
@@ -510,6 +521,42 @@ public class DUUIImporter {
         return artifact;
     }
 
+    private DUUIArtifact<UCEDocumentArtifact> openDocumentJCas(DUUIArtifact<UCEDocumentArtifact> artifact) throws Exception {
+        UCEDocumentArtifact work = artifact.payload();
+        ImportRuntimeState runtime = work.corpus.runtime;
+        if (work.mainCasDocument) {
+            var metadata = JCasUtil.selectSingle(runtime.inputCas, DocumentMetaData.class);
+            work.documentId = metadata.getDocumentId();
+            work.filePath = Path.of("DUUI-CAS-Import-" + work.documentId + ".xmi");
+            work.jCas = runtime.casView == null ? runtime.inputCas : runtime.inputCas.getView(runtime.casView);
+        } else {
+            work.jCas = openJCas(work.filePath.toString(), runtime.casView);
+            if (work.jCas == null) {
+                logImportError("Unable to read XMI into JCas.", null, work.filePath.toString());
+                return artifact;
+            }
+            var metadata = JCasUtil.selectSingle(work.jCas, DocumentMetaData.class);
+            work.documentId = metadata.getDocumentId();
+        }
+        return artifact;
+    }
+
+    private DUUIArtifact<UCEDocumentArtifact> initializeDocumentShell(DUUIArtifact<UCEDocumentArtifact> artifact) {
+        UCEDocumentArtifact work = artifact.payload();
+        if (work.jCas == null) {
+            return artifact;
+        }
+        work.document = xmiToDocument(
+                work.jCas,
+                work.corpus.corpus,
+                work.filePath.toString(),
+                work.documentId,
+                work.corpus.runtime.casView,
+                work.corpus.runtime
+        );
+        return artifact;
+    }
+
     private JCas openJCas(String filename, String casView) {
         try (InputStream inputStream = openInputStreamBasedOnExtension(filename)) {
             if (inputStream == null) {
@@ -595,7 +642,7 @@ public class DUUIImporter {
 
             setMetadataTitleInfo(document, jCas, corpusConfig);
 
-            if (corpusConfig.getOther().isEnableS3Storage()) {
+            if (corpusConfig.getOther() != null && corpusConfig.getOther().isEnableS3Storage()) {
                 var fileExtension = StringUtils.getFileExtension(filePath);
                 var contentType = StringUtils.getContentTypeByExtension(fileExtension);
                 var minioObjectName = this.s3StorageService.buildCasXmiObjectName(corpus.getId(), document.getDocumentId());
@@ -970,7 +1017,7 @@ public class DUUIImporter {
 
     private void setMetadataTitleInfo(Document document, JCas jCas, CorpusConfig corpusConfig) {
         var metadataTitleInfo = new MetadataTitleInfo();
-        if (corpusConfig.getOther().isAvailableOnFrankfurtUniversityCollection()) {
+        if (corpusConfig.getOther() != null && corpusConfig.getOther().isAvailableOnFrankfurtUniversityCollection()) {
             metadataTitleInfo = ExceptionUtils.tryCatchLog(
                     () -> goetheUniversityService.scrapeDocumentTitleInfo(document.getDocumentId()),
                     (ex) -> logger.error("Error scraping the metadata info of the document with id: " + document.getDocumentId(), ex));
@@ -1004,7 +1051,7 @@ public class DUUIImporter {
                 pageAdapters.add(new PageAdapterImpl(p, pageCount.get()));
                 pageCount.getAndIncrement();
             });
-            java.util.Collection<AnnotationComment> annotationComments = JCasUtil.select(jCas, AnnotationComment.class);
+            java.util.Collection<AnnotationComment> annotationComments = selectOptional(jCas, AnnotationComment.class);
             for (var p : pageAdapters) {
                 var page = new Page(p.getBegin(), p.getEnd(), p.getPageNumber(), p.getPageId());
                 page.setDocument(document);
@@ -1037,6 +1084,15 @@ public class DUUIImporter {
         }
         if (document.getPages() != null && !document.getPages().isEmpty()) {
             updateAnnotationsWithPageId(document, document.getPages().getLast(), true);
+        }
+    }
+
+    private <T extends org.apache.uima.jcas.cas.TOP> java.util.Collection<T> selectOptional(JCas jCas, Class<T> type) {
+        try {
+            return JCasUtil.select(jCas, type);
+        } catch (IllegalArgumentException ex) {
+            logger.debug("Optional UIMA type not present in CAS: {}", type.getName());
+            return java.util.Collections.emptyList();
         }
     }
 
@@ -1737,59 +1793,6 @@ public class DUUIImporter {
                     documentDomainId
             ));
         }
-
-        for (Annotation annotation : annotations) {
-            String typeName = annotation.getType().getName();
-            String featureJson = featureJson(annotation, Set.of());
-            String annotationDomainId = documentDomainId
-                    + ":annotation:" + stableHash(typeName + ":" + annotation.getBegin() + ":" + annotation.getEnd() + ":" + nullToEmpty(annotation.getCoveredText()) + ":" + nullToEmpty(featureJson));
-            recordDomain(work.corpus.runtime, new UceDomainRecord(
-                    UCE_ANNOTATION_TYPE,
-                    annotationDomainId,
-                    shortTypeName(typeName),
-                    null,
-                    mapOf("typeName", typeName,
-                            "beginOffset", String.valueOf(annotation.getBegin()),
-                            "endOffset", String.valueOf(annotation.getEnd()),
-                            "coveredText", nullToEmpty(annotation.getCoveredText()),
-                            "featureJson", nullToEmpty(featureJson)),
-                    corpusDomainId,
-                    documentDomainId
-            ));
-            recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                    MEMBERSHIP_TYPE,
-                    "document-annotation:" + documentDomainId + ":" + annotationDomainId,
-                    uceUid(UCE_DOCUMENT_TYPE, documentDomainId),
-                    uceUid(UCE_ANNOTATION_TYPE, annotationDomainId),
-                    "document-annotation",
-                    null,
-                    corpusDomainId,
-                    documentDomainId
-            ));
-            recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                    REFERENCE_TYPE,
-                    "annotation-type:" + annotationDomainId + ":" + typeName,
-                    uceUid(UCE_ANNOTATION_TYPE, annotationDomainId),
-                    uceUid(UCE_TYPE_TYPE, "type:" + typeName),
-                    "annotation-type",
-                    mapOf("role", "uima-type"),
-                    corpusDomainId,
-                    documentDomainId
-            ));
-            String pageDomainId = containingPageDomainId(work, documentDomainId, annotation.getBegin(), annotation.getEnd());
-            if (pageDomainId != null) {
-                recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                        MEMBERSHIP_TYPE,
-                        "page-annotation:" + pageDomainId + ":" + annotationDomainId,
-                        uceUid(UCE_PAGE_TYPE, pageDomainId),
-                        uceUid(UCE_ANNOTATION_TYPE, annotationDomainId),
-                        "page-annotation",
-                        null,
-                        corpusDomainId,
-                        documentDomainId
-                ));
-            }
-        }
     }
 
     private static void recordDomain(ImportRuntimeState runtime, UceDomainRecord record) {
@@ -1834,22 +1837,30 @@ public class DUUIImporter {
     private void persistRecordedUceDomains(UCEDocumentArtifact work,
                                            String corpusDomainId,
                                            String documentDomainId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
         for (UceDomainRecord record : work.corpus.runtime.uceDomains) {
             if (!recordApplies(record.corpusDomainId(), record.documentDomainId(), corpusDomainId, documentDomainId)) {
                 continue;
             }
-            upsertUceDomain(work, record.uimaType(), record.id(), record.name(), record.uri(), record.features());
+            nodes.add(uceDomainNode(work, record.uimaType(), record.id(), record.name(), record.uri(), record.features()));
+        }
+        if (!nodes.isEmpty()) {
+            work.corpus.runtime.ageGraphService.upsertDomainNodes(nodes);
         }
     }
 
     private void persistRecordedUceAssociations(UCEDocumentArtifact work,
                                                 String corpusDomainId,
                                                 String documentDomainId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        List<AgeGraphService.AssociationEdge> edges = new ArrayList<>();
         for (UceAssociationRecord record : work.corpus.runtime.uceAssociations) {
             if (!recordApplies(record.corpusDomainId(), record.documentDomainId(), corpusDomainId, documentDomainId)) {
                 continue;
             }
-            upsertUceEdge(work, record.uimaType(), record.id(), record.leftUid(), record.rightUid(), record.name(), record.features());
+            edges.add(uceAssociationEdge(work, record.uimaType(), record.id(), record.leftUid(), record.rightUid(), record.name(), record.features()));
+        }
+        if (!edges.isEmpty()) {
+            work.corpus.runtime.ageGraphService.upsertAssociationEdges(edges);
         }
     }
 
@@ -1866,6 +1877,7 @@ public class DUUIImporter {
     private void persistCorpusLevelUceGraph(UCECorpusArtifact work) throws DatabaseOperationException, DocumentAccessDeniedException {
         work.runtime.ageGraphService.ensureGraph();
         String corpusDomainId = corpusDomainId(work);
+        List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
         for (UceDomainRecord record : work.runtime.uceDomains) {
             if (record.documentDomainId() != null) {
                 continue;
@@ -1873,7 +1885,7 @@ public class DUUIImporter {
             if (record.corpusDomainId() != null && !record.corpusDomainId().equals(corpusDomainId)) {
                 continue;
             }
-            work.runtime.ageGraphService.upsertDomainNode(new AgeGraphService.DomainNode(
+            nodes.add(new AgeGraphService.DomainNode(
                     uceUid(record.uimaType(), record.id()),
                     record.uimaType(),
                     work.corpus.getId(),
@@ -1884,6 +1896,10 @@ public class DUUIImporter {
                     record.features() == null || record.features().isEmpty() ? null : gson.toJson(record.features())
             ));
         }
+        if (!nodes.isEmpty()) {
+            work.runtime.ageGraphService.upsertDomainNodes(nodes);
+        }
+        List<AgeGraphService.AssociationEdge> edges = new ArrayList<>();
         for (UceAssociationRecord record : work.runtime.uceAssociations) {
             if (record.documentDomainId() != null) {
                 continue;
@@ -1891,7 +1907,7 @@ public class DUUIImporter {
             if (record.corpusDomainId() != null && !record.corpusDomainId().equals(corpusDomainId)) {
                 continue;
             }
-            work.runtime.ageGraphService.upsertAssociationEdge(new AgeGraphService.AssociationEdge(
+            edges.add(new AgeGraphService.AssociationEdge(
                     record.uimaType() + ":" + record.id(),
                     record.uimaType(),
                     work.corpus.getId(),
@@ -1903,12 +1919,17 @@ public class DUUIImporter {
                     record.features() == null || record.features().isEmpty() ? null : gson.toJson(record.features())
             ));
         }
+        if (!edges.isEmpty()) {
+            work.runtime.ageGraphService.upsertAssociationEdges(edges);
+        }
     }
 
     private void persistUceOperationDomains(UCEDocumentArtifact work,
                                             String corpusDomainId,
                                             String documentDomainId,
                                             String importId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
+        List<AgeGraphService.AssociationEdge> edges = new ArrayList<>();
         for (ImportOperationRecord operation : work.corpus.runtime.operations) {
             if (operation.documentDomainId() != null && !operation.documentDomainId().equals(documentDomainId)) {
                 continue;
@@ -1918,39 +1939,47 @@ public class DUUIImporter {
             }
             String scope = operation.documentDomainId() == null ? "import" : operation.documentDomainId();
             String operationId = "operation:" + importId + ":" + scope + ":" + operation.name() + ":" + operation.startedAt();
-            upsertUceDomain(work, UCE_OPERATION_TYPE, operationId, operation.name(), null,
+            nodes.add(uceDomainNode(work, UCE_OPERATION_TYPE, operationId, operation.name(), null,
                     mapOf("operationName", operation.name(),
                             "status", operation.status(),
                             "retries", String.valueOf(operation.retries()),
                             "error", nullToEmpty(operation.error()),
                             "startedAt", String.valueOf(operation.startedAt()),
-                            "finishedAt", String.valueOf(operation.finishedAt())));
-            upsertUceEdge(work, REFERENCE_TYPE, "operation-import:" + operationId,
+                            "finishedAt", String.valueOf(operation.finishedAt()))));
+            edges.add(uceAssociationEdge(work, REFERENCE_TYPE, "operation-import:" + operationId,
                     uceUid(UCE_OPERATION_TYPE, operationId), uceUid(UCE_IMPORT_TYPE, "import:" + importId),
-                    "operation-import", mapOf("role", "import"));
+                    "operation-import", mapOf("role", "import")));
             if (operation.corpusDomainId() != null) {
-                upsertUceEdge(work, REFERENCE_TYPE, "operation-corpus:" + operationId,
+                edges.add(uceAssociationEdge(work, REFERENCE_TYPE, "operation-corpus:" + operationId,
                         uceUid(UCE_OPERATION_TYPE, operationId), uceUid(UCE_CORPUS_TYPE, operation.corpusDomainId()),
-                        "operation-corpus", mapOf("role", "corpus"));
+                        "operation-corpus", mapOf("role", "corpus")));
             }
             if (operation.documentDomainId() != null) {
-                upsertUceEdge(work, REFERENCE_TYPE, "operation-document:" + operationId,
+                edges.add(uceAssociationEdge(work, REFERENCE_TYPE, "operation-document:" + operationId,
                         uceUid(UCE_OPERATION_TYPE, operationId), uceUid(UCE_DOCUMENT_TYPE, operation.documentDomainId()),
-                        "operation-document", mapOf("role", "document"));
+                        "operation-document", mapOf("role", "document")));
             }
+        }
+        if (!nodes.isEmpty()) {
+            work.corpus.runtime.ageGraphService.upsertDomainNodes(nodes);
+        }
+        if (!edges.isEmpty()) {
+            work.corpus.runtime.ageGraphService.upsertAssociationEdges(edges);
         }
     }
 
     private void persistCorpusOperationGraph(UCECorpusArtifact work) throws DatabaseOperationException, DocumentAccessDeniedException {
         work.runtime.ageGraphService.ensureGraph();
         String importUid = uceUid(UCE_IMPORT_TYPE, "import:" + work.runtime.importId);
-        String corpusDomainId = "corpus:" + work.corpus.getId();
+        String corpusDomainId = corpusDomainId(work);
         String corpusUid = uceUid(UCE_CORPUS_TYPE, corpusDomainId);
+        List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
+        List<AgeGraphService.AssociationEdge> edges = new ArrayList<>();
         for (ImportOperationRecord operation : work.runtime.operations) {
             String scope = operation.documentDomainId() == null ? "import" : operation.documentDomainId();
             String operationId = "operation:" + work.runtime.importId + ":" + scope + ":" + operation.name() + ":" + operation.startedAt();
             String operationUid = uceUid(UCE_OPERATION_TYPE, operationId);
-            work.runtime.ageGraphService.upsertDomainNode(new AgeGraphService.DomainNode(
+            nodes.add(new AgeGraphService.DomainNode(
                     operationUid,
                     UCE_OPERATION_TYPE,
                     work.corpus.getId(),
@@ -1965,7 +1994,7 @@ public class DUUIImporter {
                             "startedAt", String.valueOf(operation.startedAt()),
                             "finishedAt", String.valueOf(operation.finishedAt())))
             ));
-            work.runtime.ageGraphService.upsertAssociationEdge(new AgeGraphService.AssociationEdge(
+            edges.add(new AgeGraphService.AssociationEdge(
                     REFERENCE_TYPE + ":operation-import:" + operationId,
                     REFERENCE_TYPE,
                     work.corpus.getId(),
@@ -1977,7 +2006,7 @@ public class DUUIImporter {
                     gson.toJson(mapOf("role", "import"))
             ));
             if (operation.corpusDomainId() != null || operation.documentDomainId() != null) {
-                work.runtime.ageGraphService.upsertAssociationEdge(new AgeGraphService.AssociationEdge(
+                edges.add(new AgeGraphService.AssociationEdge(
                         REFERENCE_TYPE + ":operation-corpus:" + operationId,
                         REFERENCE_TYPE,
                         work.corpus.getId(),
@@ -1990,7 +2019,7 @@ public class DUUIImporter {
                 ));
             }
             if (operation.documentDomainId() != null) {
-                work.runtime.ageGraphService.upsertAssociationEdge(new AgeGraphService.AssociationEdge(
+                edges.add(new AgeGraphService.AssociationEdge(
                         REFERENCE_TYPE + ":operation-document:" + operationId,
                         REFERENCE_TYPE,
                         work.corpus.getId(),
@@ -2003,18 +2032,25 @@ public class DUUIImporter {
                 ));
             }
         }
+        if (!nodes.isEmpty()) {
+            work.runtime.ageGraphService.upsertDomainNodes(nodes);
+        }
+        if (!edges.isEmpty()) {
+            work.runtime.ageGraphService.upsertAssociationEdges(edges);
+        }
     }
 
     private void persistAnnotatedDomainGraph(UCEDocumentArtifact work) throws DatabaseOperationException, DocumentAccessDeniedException {
         long corpusId = work.corpus.corpus.getId();
         long documentRowId = work.document.getId();
         var domains = JCasUtil.select(work.jCas, Domain.class);
+        List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
         for (Domain domain : domains) {
             String uid = domainUid(domain);
             if (uid == null) {
                 continue;
             }
-            work.corpus.runtime.ageGraphService.upsertDomainNode(new AgeGraphService.DomainNode(
+            nodes.add(new AgeGraphService.DomainNode(
                     uid,
                     domain.getType().getName(),
                     corpusId,
@@ -2025,8 +2061,12 @@ public class DUUIImporter {
                     featureJson(domain, Set.of("id", "name", "uri", "metadata"))
             ));
         }
+        if (!nodes.isEmpty()) {
+            work.corpus.runtime.ageGraphService.upsertDomainNodes(nodes);
+        }
 
         var associations = JCasUtil.select(work.jCas, Association.class);
+        List<AgeGraphService.AssociationEdge> edges = new ArrayList<>();
         for (Association association : associations) {
             Domain left = leftAssociationDomain(association);
             Domain right = rightAssociationDomain(association);
@@ -2039,7 +2079,7 @@ public class DUUIImporter {
             if (edgeUid == null || edgeUid.isBlank()) {
                 edgeUid = association.getType().getName() + ":" + leftUid + "->" + rightUid + ":" + nullToEmpty(association.getName());
             }
-            work.corpus.runtime.ageGraphService.upsertAssociationEdge(new AgeGraphService.AssociationEdge(
+            edges.add(new AgeGraphService.AssociationEdge(
                     edgeUid,
                     association.getType().getName(),
                     corpusId,
@@ -2050,6 +2090,9 @@ public class DUUIImporter {
                     association.getMetadata(),
                     featureJson(association, Set.of("id", "name", "metadata"))
             ));
+        }
+        if (!edges.isEmpty()) {
+            work.corpus.runtime.ageGraphService.upsertAssociationEdges(edges);
         }
     }
 
@@ -2097,7 +2140,16 @@ public class DUUIImporter {
                                  String name,
                                  String uri,
                                  java.util.Map<String, String> features) throws DatabaseOperationException, DocumentAccessDeniedException {
-        work.corpus.runtime.ageGraphService.upsertDomainNode(new AgeGraphService.DomainNode(
+        work.corpus.runtime.ageGraphService.upsertDomainNode(uceDomainNode(work, uimaType, id, name, uri, features));
+    }
+
+    private AgeGraphService.DomainNode uceDomainNode(UCEDocumentArtifact work,
+                                                     String uimaType,
+                                                     String id,
+                                                     String name,
+                                                     String uri,
+                                                     java.util.Map<String, String> features) {
+        return new AgeGraphService.DomainNode(
                 uceUid(uimaType, id),
                 uimaType,
                 work.corpus.corpus.getId(),
@@ -2106,7 +2158,7 @@ public class DUUIImporter {
                 uri,
                 null,
                 features == null || features.isEmpty() ? null : gson.toJson(features)
-        ));
+        );
     }
 
     private void upsertUceEdge(UCEDocumentArtifact work,
@@ -2116,7 +2168,17 @@ public class DUUIImporter {
                                String rightUid,
                                String name,
                                java.util.Map<String, String> features) throws DatabaseOperationException, DocumentAccessDeniedException {
-        work.corpus.runtime.ageGraphService.upsertAssociationEdge(new AgeGraphService.AssociationEdge(
+        work.corpus.runtime.ageGraphService.upsertAssociationEdge(uceAssociationEdge(work, uimaType, id, leftUid, rightUid, name, features));
+    }
+
+    private AgeGraphService.AssociationEdge uceAssociationEdge(UCEDocumentArtifact work,
+                                                               String uimaType,
+                                                               String id,
+                                                               String leftUid,
+                                                               String rightUid,
+                                                               String name,
+                                                               java.util.Map<String, String> features) {
+        return new AgeGraphService.AssociationEdge(
                 uimaType + ":" + id,
                 uimaType,
                 work.corpus.corpus.getId(),
@@ -2126,7 +2188,7 @@ public class DUUIImporter {
                 name,
                 null,
                 features == null || features.isEmpty() ? null : gson.toJson(features)
-        ));
+        );
     }
 
     private String uceUid(String typeName, String id) {
@@ -2169,7 +2231,8 @@ public class DUUIImporter {
     }
 
     private String corpusDomainId(UCECorpusArtifact work) {
-        return "corpus:" + work.corpus.getId();
+        String config = work.corpus == null ? null : work.corpus.getCorpusJsonConfig();
+        return "corpus:" + stableHash(config);
     }
 
     private String corpusDomainId(UCEDocumentArtifact work) {

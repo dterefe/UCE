@@ -16,6 +16,7 @@
         <#include "*/css/kwic.css">
         <#include "*/css/drawflow.css">
         <#include "*/css/analysis.css">
+        <#include "*/css/domain-playground.css">
 
         <#-- leaflet specific requirements -->
         <#include "*/css/leaflet/MarkerCluster.css">
@@ -166,6 +167,10 @@
                             <a class="switch-view-btn btn text" data-id="lexicon" data-trigger="hover" data-toggle="popover"
                             data-placement="bottom" data-content="${languageResource.get("lexicon")}"><i
                                         class="fas fa-atlas color-prime"></i></a>
+                            <a class="switch-view-btn btn text" data-id="domain" data-trigger="hover"
+                            data-toggle="popover"
+                            data-placement="bottom" data-content="Domain Playground"><i
+                                        class="fas fa-project-diagram color-prime"></i></a>
                             <a class="switch-view-btn btn text" data-id="timeline-map" data-trigger="hover"
                             data-toggle="popover"
                             data-placement="bottom" data-content="${languageResource.get("map")}"><i
@@ -434,6 +439,11 @@
             </#if>
         </div>
 
+        <!-- Domain playground -->
+        <div class="view display-none" data-id="domain">
+            <#include "*/domain/domainPlayground.ftl" />
+        </div>
+
         <!-- team -->
         <div class="view display-none" data-id="team">
             <div class="container pb-5" style="margin-top: 5rem">
@@ -576,6 +586,7 @@
     <#include "js/keywordInContext.js">
     <#include "js/analysis.js">
     <#include "js/analysisAPI.js">
+    <#include "js/domainPlayground.js">
 </script>
 
 </html>

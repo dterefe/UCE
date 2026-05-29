@@ -57,6 +57,7 @@ import org.texttechnologylab.uce.web.routes.AnalysisApi;
 import org.texttechnologylab.uce.web.routes.AuthenticationApi;
 import org.texttechnologylab.uce.web.routes.CorpusUniverseApi;
 import org.texttechnologylab.uce.web.routes.DocumentApi;
+import org.texttechnologylab.uce.web.routes.DomainApi;
 import org.texttechnologylab.uce.web.routes.ImportExportApi;
 import org.texttechnologylab.uce.web.routes.MapApi;
 import org.texttechnologylab.uce.web.routes.McpApi;
@@ -502,6 +503,9 @@ public class App {
                     // A corpus World View
                     get("/globe", (ctx) -> (registry.get(DocumentApi.class)).get3dGlobe(ctx));
 
+                    // Graph-capable domain scope explorer
+                    get("/domainPlayground", (ctx) -> (registry.get(DomainApi.class)).getPlaygroundView(ctx));
+
 
                     path("/auth", () -> {
                         get("/login", (ctx) -> (registry.get(AuthenticationApi.class)).loginCallback(ctx));
@@ -542,6 +546,15 @@ public class App {
                                 post("/linkedOccurrences", (ctx) -> (registry.get(MapApi.class)).getLinkedOccurrences(ctx));
                                 post("/linkedOccurrenceClusters", (ctx) -> (registry.get(MapApi.class)).getLinkedOccurrenceClusters(ctx));
                             });
+                        });
+
+                        path("/domain", () -> {
+                            get("/types", (ctx) -> (registry.get(DomainApi.class)).types(ctx));
+                            post("/nodes", (ctx) -> (registry.get(DomainApi.class)).nodes(ctx));
+                            post("/associations", (ctx) -> (registry.get(DomainApi.class)).associations(ctx));
+                            post("/scope/preview", (ctx) -> (registry.get(DomainApi.class)).scopePreview(ctx));
+                            post("/scope/search", (ctx) -> (registry.get(DomainApi.class)).scopeSearch(ctx));
+                            post("/ego", (ctx) -> (registry.get(DomainApi.class)).ego(ctx));
                         });
 
                         path("/search", () -> {

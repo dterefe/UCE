@@ -43,6 +43,7 @@ import org.texttechnologylab.uce.common.models.topic.TopicValueBase;
 import org.texttechnologylab.uce.common.models.topic.TopicWord;
 import org.texttechnologylab.uce.common.models.topic.UnifiedTopic;
 import org.texttechnologylab.uce.common.models.util.HealthStatus;
+import org.texttechnologylab.uce.common.metrics.UCEProfileRecorder;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
 import org.texttechnologylab.uce.common.utils.ReflectionUtils;
 import org.texttechnologylab.uce.common.utils.StringUtils;
@@ -53,6 +54,7 @@ import javax.persistence.criteria.Order;
 import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import java.sql.Array;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -241,6 +243,7 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         executeOperationSafely(session -> {
             session.doWork(connection -> {
                 try (var stmt = connection.prepareStatement(sql)) {
+                    stmt.setQueryTimeout(postgresqlStatementTimeoutSeconds());
                     stmt.executeUpdate();
                 }
             });
@@ -2720,6 +2723,8 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         executeOperationSafely((session) -> {
             session.doWork(connection -> {
                 try (var statement = connection.createStatement()) {
+                    statement.setQueryTimeout(postgresqlStatementTimeoutSeconds());
+                    statement.execute("SET LOCAL statement_timeout = " + config.getPostgresqlSearchStatementTimeoutMs());
                     statement.execute(sql);
                 }
             });
@@ -2731,6 +2736,8 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         executeOperationSafely((session) -> {
             session.doWork(connection -> {
                 try (var statement = connection.createStatement()) {
+                    statement.setQueryTimeout(postgresqlStatementTimeoutSeconds());
+                    statement.execute("SET LOCAL statement_timeout = " + config.getPostgresqlSearchStatementTimeoutMs());
                     for (String sql : sqlStatements) {
                         statement.execute(sql);
                     }
@@ -2740,6 +2747,23 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         });
     }
 
+    public void executeNativeWork(JdbcWork work) throws DatabaseOperationException, DocumentAccessDeniedException {
+        executeOperationSafely((session) -> {
+            session.doWork(connection -> {
+                try (var statement = connection.createStatement()) {
+                    statement.setQueryTimeout(postgresqlStatementTimeoutSeconds());
+                    statement.execute("SET LOCAL statement_timeout = " + config.getPostgresqlSearchStatementTimeoutMs());
+                }
+                work.apply(connection);
+            });
+            return null;
+        });
+    }
+
+    private int postgresqlStatementTimeoutSeconds() {
+        return Math.max(1, (int) Math.ceil(config.getPostgresqlSearchStatementTimeoutMs() / 1000.0));
+    }
+
     public List<?> executeNativeQuery(String sql) throws DatabaseOperationException, DocumentAccessDeniedException {
         return executeOperationSafely((session) -> session.createNativeQuery(sql).getResultList());
     }
@@ -2747,6 +2771,11 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
     @FunctionalInterface
     private interface SessionOperation<T> {
         T apply(Session session) throws DocumentAccessDeniedException;
+    }
+
+    @FunctionalInterface
+    public interface JdbcWork {
+        void apply(Connection connection) throws SQLException;
     }
 
     /**
@@ -2760,11 +2789,15 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         DatabaseOperationException last = null;
         for (int attempt = 1; attempt <= config.getPostgresqlOperationRetryMaxAttempts(); attempt++) {
             try {
-                return executeOperationOnce(operation);
+                UCEProfileRecorder.event("postgresql.operation", "postgresql", "attempt", "started", attempt, null);
+                T result = executeOperationOnce(operation);
+                UCEProfileRecorder.event("postgresql.operation", "postgresql", "attempt", "completed", attempt, null);
+                return result;
             } catch (DocumentAccessDeniedException ex) {
                 throw ex;
             } catch (DatabaseOperationException ex) {
                 last = ex;
+                UCEProfileRecorder.event("postgresql.operation", "postgresql", "attempt", "failed", attempt, ex.getMessage());
                 if (!isRetryableDatabaseFailure(ex) || attempt >= config.getPostgresqlOperationRetryMaxAttempts()) {
                     throw ex;
                 }
@@ -2779,12 +2812,19 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
     private <T> T executeOperationOnce(SessionOperation<T> operation) throws DatabaseOperationException, DocumentAccessDeniedException {
         Session session = null;
         Transaction transaction = null;
-        try {
-            session = sessionFactory.openSession();
-            transaction = session.beginTransaction();
-            T result = operation.apply(session);
+        try (var total = UCEProfileRecorder.scope("postgresql.operation.total", "postgresql", "service_total")) {
+            try (var acquire = UCEProfileRecorder.scope("postgresql.connection.acquire", "postgresql", "resource_wait")) {
+                session = sessionFactory.openSession();
+                transaction = session.beginTransaction();
+            }
+            T result;
+            try (var execute = UCEProfileRecorder.scope("postgresql.operation.execute", "postgresql", "service_execution")) {
+                result = operation.apply(session);
+            }
             result = enrichDocumentPublicationFallback(result, session);
-            transaction.commit();
+            try (var commit = UCEProfileRecorder.scope("postgresql.transaction.commit", "postgresql", "service_execution")) {
+                transaction.commit();
+            }
             return result;
         } catch (DocumentAccessDeniedException dade) {
             rollbackQuietly(transaction, dade);
@@ -2852,7 +2892,7 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         if (baseBackoffMs <= 0) {
             return;
         }
-        try {
+        try (var ignored = UCEProfileRecorder.scope("postgresql.retry.backoff", "postgresql", "retry_backoff")) {
             Thread.sleep((long) baseBackoffMs * attempt);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();

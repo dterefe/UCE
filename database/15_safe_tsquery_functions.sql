@@ -240,3 +240,4 @@ COMMENT ON FUNCTION build_safe_search_query(regconfig, text[], text, boolean, in
 
 COMMENT ON FUNCTION chunk_array(text[], integer) IS 
     'Splits text array into chunks of specified size';
+*/

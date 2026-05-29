@@ -11,6 +11,7 @@ import org.texttechnologylab.uce.common.models.dto.rdf.RDFNodeDto;
 import org.texttechnologylab.uce.common.models.dto.rdf.RDFRequestDto;
 import org.texttechnologylab.uce.common.models.dto.rdf.RDFSelectQueryDto;
 import org.texttechnologylab.uce.common.models.util.HealthStatus;
+import org.texttechnologylab.uce.common.metrics.UCEProfileRecorder;
 import org.texttechnologylab.uce.common.utils.QueryResultCache;
 import org.texttechnologylab.uce.common.utils.RDFNodeDtoJsonDeserializer;
 import org.texttechnologylab.uce.common.utils.StringUtils;
@@ -645,9 +646,13 @@ public class JenaSparqlService {
         IOException last = null;
         for (int attempt = 1; attempt <= config.getSparqlRetryMaxAttempts(); attempt++) {
             try {
-                return executeCommandOnce(command, clazz);
+                UCEProfileRecorder.event("sparql.request", "fuseki", "attempt", "started", attempt, null);
+                T result = executeCommandOnce(command, clazz);
+                UCEProfileRecorder.event("sparql.request", "fuseki", "attempt", "completed", attempt, null);
+                return result;
             } catch (IOException ex) {
                 last = ex;
+                UCEProfileRecorder.event("sparql.request", "fuseki", "attempt", "failed", attempt, ex.getMessage());
                 if (attempt >= config.getSparqlRetryMaxAttempts()) {
                     break;
                 }
@@ -658,25 +663,32 @@ public class JenaSparqlService {
     }
 
     private <T extends RDFRequestDto> T executeCommandOnce(String command, Class<T> clazz) throws IOException {
-        // Put our prefixes into the command
-        command = StringUtils.ConvertSparqlQuery(command);
-        command = "PREFIX bio: <https://www.biofid.de/bio-ontologies/gbif/>\n" + command;
-        var endPoint = config.getSparqlHost()
-                + config.getSparqlEndpoint()
-                + "?query="
-                + URLEncoder.encode(command, StandardCharsets.UTF_8);
-        var url = new URL(endPoint);
-        var conn = (HttpURLConnection) url.openConnection();
-        try {
+        try (var total = UCEProfileRecorder.scope("sparql.request.total", "fuseki", "service_total")) {
+            // Put our prefixes into the command
+            try (var serialization = UCEProfileRecorder.scope("sparql.request.serialize", "fuseki", "request_serialization")) {
+                command = StringUtils.ConvertSparqlQuery(command);
+                command = "PREFIX bio: <https://www.biofid.de/bio-ontologies/gbif/>\n" + command;
+            }
+            var endPoint = config.getSparqlHost()
+                    + config.getSparqlEndpoint()
+                    + "?query="
+                    + URLEncoder.encode(command, StandardCharsets.UTF_8);
+            var url = new URL(endPoint);
+            var conn = (HttpURLConnection) url.openConnection();
+            try {
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/json");
             conn.setConnectTimeout(config.getSparqlConnectTimeoutMs());
             conn.setReadTimeout(config.getSparqlReadTimeoutMs());
 
-            int responseCode = conn.getResponseCode();
+            int responseCode;
+            try (var request = UCEProfileRecorder.scope("sparql.request.execute", "fuseki", "service_execution")) {
+                responseCode = conn.getResponseCode();
+            }
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 // Parse the returned json
-                try (var reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                try (var parse = UCEProfileRecorder.scope("sparql.response.deserialize", "fuseki", "response_deserialization");
+                     var reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
                     StringBuilder response = new StringBuilder();
                     String line;
                     while ((line = reader.readLine()) != null) {
@@ -691,8 +703,9 @@ public class JenaSparqlService {
             } else {
                 throw new HttpStatusException("Fuseki server returned error status: ", responseCode, endPoint);
             }
-        } finally {
-            conn.disconnect();
+            } finally {
+                conn.disconnect();
+            }
         }
     }
 
@@ -700,7 +713,7 @@ public class JenaSparqlService {
         if (baseBackoffMs <= 0) {
             return;
         }
-        try {
+        try (var ignored = UCEProfileRecorder.scope("sparql.retry.backoff", "fuseki", "retry_backoff")) {
             Thread.sleep((long) baseBackoffMs * attempt);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();

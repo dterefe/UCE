@@ -1,0 +1,5 @@
+FROM eclipse-temurin:21-jdk
+
+WORKDIR /app/uce.portal/uce.corpus-importer
+
+COPY uce.portal/uce.corpus-importer/target/importer.jar ./target/importer.jar

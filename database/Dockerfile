@@ -2,7 +2,7 @@ FROM postgres:16
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg2 curl ca-certificates lsb-release \
-    build-essential git postgresql-server-dev-16 \
+    build-essential git flex bison postgresql-server-dev-16 \
  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg \
  && echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
