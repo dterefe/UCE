@@ -43,6 +43,26 @@
     "de-DE": "Suche",
     "en-EN": "Search"
   },
+  "promodeOperatorAnd": {
+    "de-DE": "UND",
+    "en-EN": "AND"
+  },
+  "promodeOperatorOr": {
+    "de-DE": "ODER",
+    "en-EN": "OR"
+  },
+  "promodeOperatorNot": {
+    "de-DE": "NICHT",
+    "en-EN": "NOT"
+  },
+  "promodeOperatorFollowedBy": {
+    "de-DE": "GEFOLGT VON",
+    "en-EN": "FOLLOWED BY"
+  },
+  "promodeOperatorDistance": {
+    "de-DE": "DISTANZ",
+    "en-EN": "DISTANCE"
+  },
   "annotations": {
     "de-DE": "Annotationen",
     "en-EN": "Annotations"

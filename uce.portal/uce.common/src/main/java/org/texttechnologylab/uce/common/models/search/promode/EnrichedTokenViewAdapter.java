@@ -20,6 +20,12 @@ public class EnrichedTokenViewAdapter {
             String op = switch (b.operator()) {
                 case AND -> "&";
                 case OR -> "|";
+                case LESS_THAN -> "<";
+                case LESS_THAN_OR_EQUAL -> "<=";
+                case GREATER_THAN -> ">";
+                case GREATER_THAN_OR_EQUAL -> ">=";
+                case EQUAL -> "=";
+                case NOT_EQUAL -> "!=";
                 case FOLLOWED_BY -> b.followDistance() <= 1 ? "<->" : "<" + b.followDistance() + ">";
             };
             out.add(new EnrichedSearchToken(op, EnrichedSearchTokenType.OPERATOR));
@@ -32,9 +38,18 @@ public class EnrichedTokenViewAdapter {
             return;
         }
         if (expression instanceof ProGroupNode g) {
-            out.add(new EnrichedSearchToken("(", EnrichedSearchTokenType.OPERATOR));
+            out.add(new EnrichedSearchToken("(", EnrichedSearchTokenType.GROUP_OPEN));
             walk(g.inner(), out);
-            out.add(new EnrichedSearchToken(")", EnrichedSearchTokenType.OPERATOR));
+            out.add(new EnrichedSearchToken(")", EnrichedSearchTokenType.GROUP_CLOSE));
+            return;
+        }
+        if (expression instanceof ProTermNode t && t.hasSlashModifier()) {
+            var token = new EnrichedSearchToken(
+                    t.value() + t.slashModifier(),
+                    t.enrichment().getTokenType() != EnrichedSearchTokenType.TOKEN
+                            ? t.enrichment().getTokenType()
+                            : EnrichedSearchTokenType.TEXT_MODIFIER);
+            out.add(token);
             return;
         }
         if (expression instanceof ProQueryOperand o) {

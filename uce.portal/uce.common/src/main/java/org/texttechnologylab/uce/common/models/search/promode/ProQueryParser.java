@@ -11,6 +11,12 @@ public class ProQueryParser {
             "Y::", "M::", "D::", "E::", "T::"
     );
 
+    private static final Set<String> SLASH_MODIFIERS = Set.of(
+            "/l", "/c", "/r",
+            "/s", "/p", "/n", "/w",
+            "/t", "/f", "/d", "/o"
+    );
+
     private List<ProQueryToken> tokens;
     private int pos;
 
@@ -36,13 +42,42 @@ public class ProQueryParser {
     }
 
     private ProQueryExpression parseAnd() {
-        ProQueryExpression left = parseFollowedBy();
+        ProQueryExpression left = parseComparison();
         while (match(ProQueryTokenType.AND)) {
             ProQueryToken op = previous();
-            ProQueryExpression right = parseFollowedBy();
+            ProQueryExpression right = parseComparison();
             left = new ProBinaryNode(ProBinaryOperator.AND, 0, left, right, SourceSpan.of(left.span().startInclusive(), right.span().endExclusive()));
         }
         return left;
+    }
+
+    private ProQueryExpression parseComparison() {
+        ProQueryExpression left = parseFollowedBy();
+        while (matchComparisonOperator()) {
+            ProQueryToken op = previous();
+            ProQueryExpression right = parseFollowedBy();
+            ProBinaryOperator operator = switch (op.type()) {
+                case LESS_THAN -> ProBinaryOperator.LESS_THAN;
+                case LESS_THAN_OR_EQUAL -> ProBinaryOperator.LESS_THAN_OR_EQUAL;
+                case GREATER_THAN -> ProBinaryOperator.GREATER_THAN;
+                case GREATER_THAN_OR_EQUAL -> ProBinaryOperator.GREATER_THAN_OR_EQUAL;
+                case EQUAL -> ProBinaryOperator.EQUAL;
+                case NOT_EQUAL -> ProBinaryOperator.NOT_EQUAL;
+                default -> throw syntax("Expected comparison operator", op);
+            };
+            left = new ProBinaryNode(operator, 0, left, right,
+                    SourceSpan.of(left.span().startInclusive(), right.span().endExclusive()));
+        }
+        return left;
+    }
+
+    private boolean matchComparisonOperator() {
+        return match(ProQueryTokenType.LESS_THAN)
+                || match(ProQueryTokenType.LESS_THAN_OR_EQUAL)
+                || match(ProQueryTokenType.GREATER_THAN)
+                || match(ProQueryTokenType.GREATER_THAN_OR_EQUAL)
+                || match(ProQueryTokenType.EQUAL)
+                || match(ProQueryTokenType.NOT_EQUAL);
     }
 
     private ProQueryExpression parseFollowedBy() {
@@ -75,21 +110,36 @@ public class ProQueryParser {
 
         if (match(ProQueryTokenType.QUOTED)) {
             ProQueryToken token = previous();
-            return new ProTermNode(token.text(), true, false, token.span());
+            return new ProTermNode(token.text(), true, false, null, token.span());
         }
 
         if (match(ProQueryTokenType.TERM)) {
             ProQueryToken token = previous();
             String text = token.text();
+
             String commandPrefix = commandPrefix(text);
             if (commandPrefix != null) {
                 String command = commandPrefix;
-                String value = text.length() > command.length() ? text.substring(command.length()) : "";
-                if (value.isBlank()) {
+                StringBuilder value = new StringBuilder(text.length() > command.length() ? text.substring(command.length()) : "");
+                int endExclusive = token.span().endExclusive();
+                while (canExtendCommandValue(command, current())) {
+                    ProQueryToken valueToken = tokens.get(pos++);
+                    if (!value.isEmpty()) value.append(" ");
+                    value.append(valueToken.text());
+                    endExclusive = valueToken.span().endExclusive();
+                }
+                String commandValue = value.toString();
+                if (commandValue.isBlank()) {
                     throw syntax("Command '" + command + "' requires a value", token);
                 }
-                validateCommandValue(command, value, token);
-                return new ProCommandNode(command, value, token.span());
+                validateCommandValue(command, commandValue, token);
+                return new ProCommandNode(command, commandValue, SourceSpan.of(token.span().startInclusive(), endExclusive));
+            }
+
+            String slashModifier = extractSlashModifier(text);
+            if (slashModifier != null) {
+                String base = text.substring(0, text.length() - slashModifier.length());
+                return new ProTermNode(base, false, false, slashModifier, token.span());
             }
 
             boolean prefixSearch = text.endsWith(":*");
@@ -100,14 +150,10 @@ public class ProQueryParser {
             if (normalized.isBlank()) {
                 throw syntax("Empty term is not allowed", token);
             }
-            return new ProTermNode(normalized, false, prefixSearch, token.span());
+            return new ProTermNode(normalized, false, prefixSearch, null, token.span());
         }
 
         throw syntax("Expected a term, phrase, command or group", current());
-    }
-
-    private boolean looksLikeCommand(String text) {
-        return commandPrefix(text) != null;
     }
 
     private String commandPrefix(String text) {
@@ -119,6 +165,22 @@ public class ProQueryParser {
                 .orElse(null);
     }
 
+    private String extractSlashModifier(String text) {
+        if (text == null || text.isBlank()) return null;
+        return SLASH_MODIFIERS.stream()
+                .filter(text::endsWith)
+                .filter(m -> text.length() > m.length())
+                .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean canExtendCommandValue(String command, ProQueryToken token) {
+        if (!"S::".equals(command)) return false;
+        if (token.type() != ProQueryTokenType.TERM && token.type() != ProQueryTokenType.QUOTED) return false;
+        return commandPrefix(token.text()) == null;
+    }
+
     private void validateCommandValue(String command, String value, ProQueryToken token) {
         if ("R::".equals(command)) {
             if (!(value.contains("lng=") && value.contains("lat=") && value.contains("r="))) {
@@ -128,6 +190,12 @@ public class ProQueryParser {
         if ("T::".equals(command)) {
             if (!value.matches("\\d{1,4}\\s*-\\s*\\d{1,4}")) {
                 throw syntax("T:: command must use format <year>-<year>", token);
+            }
+        }
+        if ("LOC::".equals(command)) {
+            String v = value.trim();
+            if (v.isEmpty()) {
+                throw syntax("LOC:: command requires a feature class code", token);
             }
         }
     }

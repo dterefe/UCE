@@ -17,6 +17,7 @@
         <#include "*/css/drawflow.css">
         <#include "*/css/analysis.css">
         <#include "*/css/domain-playground.css">
+        <#include "*/css/proModeSearchBar.css">
 
         <#-- leaflet specific requirements -->
         <#include "*/css/leaflet/MarkerCluster.css">
@@ -282,8 +283,15 @@
                 <!-- Search bar and menu -->
                 <div class="w-100 position-relative">
                     <div class="w-100 flexed align-items-center">
-                        <input type="text" class="search-input form-control large-font w-100 rounded-0"
-                               placeholder="${languageResource.get("searchPlaceholder")}"/>
+                        <!-- Standard search input (visible when pro-mode is OFF) -->
+                        <div class="search-input-container w-100">
+                            <input type="text" class="search-input form-control large-font w-100 rounded-0"
+                                   placeholder="${languageResource.get("searchPlaceholder")}"/>
+                        </div>
+                        <!-- Pro-mode search bar (visible when pro-mode is ON) -->
+                        <div class="promode-search-component-host w-100 display-none">
+                            <#include "*/search/components/proModeSearchBar.ftl">
+                        </div>
                         <div class="open-documentation-btn pr-2 pl-2">
                             <i class="fas fa-question-circle large-font clickable open-wiki-page color-secondary"
                                data-trigger="hover" data-toggle="popover" data-placement="top" data-html="true"
@@ -586,6 +594,7 @@
     <#include "js/keywordInContext.js">
     <#include "js/analysis.js">
     <#include "js/analysisAPI.js">
+    <#include "js/proModeSearchBar.js">
     <#include "js/domainPlayground.js">
 </script>
 

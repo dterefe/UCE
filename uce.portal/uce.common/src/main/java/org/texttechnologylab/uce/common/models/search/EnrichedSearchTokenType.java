@@ -8,5 +8,10 @@ public enum EnrichedSearchTokenType {
     LOCATION,
     LOCATION_COMMAND,
     TIME,
-    TIME_COMMAND
+    TIME_COMMAND,
+    TEXT_MODIFIER,
+    SPAN_PROXIMITY,
+    ANNOTATION_METADATA,
+    GROUP_OPEN,
+    GROUP_CLOSE
 }

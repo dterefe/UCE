@@ -209,9 +209,10 @@ function restoreSearchFromRouteIfNeeded() {
         }
     }
 
-    if (routeProMode === 'true') $('#proModeSwitch').prop('checked', true);
-    if (routeProMode === 'false') $('#proModeSwitch').prop('checked', false);
+    if (routeProMode === 'true') { $('#proModeSwitch').prop('checked', true); $('#proModeSwitch').trigger('change'); }
+    if (routeProMode === 'false') { $('#proModeSwitch').prop('checked', false); $('#proModeSwitch').trigger('change'); }
     $('.search-input').val(routeQuery);
+    if (window.promodeSearchBar && routeQuery) window.promodeSearchBar.setValue(routeQuery);
 
     if (routeLayeredState && window.layeredSearchHandler && typeof window.layeredSearchHandler.hydrateFromRouteState === 'function') {
         window.layeredSearchHandler.hydrateFromRouteState(routeLayeredState);
@@ -254,10 +255,28 @@ function applySearchStateFromRoute() {
     }
 }
 
+function getSearchInput() {
+    const proMode = $('#proModeSwitch').is(':checked');
+    if (proMode && window.promodeSearchBar) {
+        return window.promodeSearchBar.getValue();
+    }
+    return String($('.search-input').val() || '').trim();
+}
+
 function getCurrentSearchQueryForRoute() {
-    const inputVal = String($('.search-input').val() || '').trim();
-    if (inputVal !== '') return inputVal;
-    const tokenVal = String($('.search-result-container .search-token').first().text() || '').trim();
+    const inputVal = getSearchInput();
+    if (!inputVal) {
+        return '';
+    }
+    let tokenVal = inputVal.trim().replace(/[\r\n]+/g, ' ');
+    tokenVal = tokenVal.replace(/\s+/g, ' ');
+    const proMode = window.promodeSearchBar && window.promodeSearchBar.$root.is(':visible');
+    if (!proMode) {
+        const inputEl = $('.search-input').get(0);
+        if (inputEl && !inputEl.validity.valid) {
+            tokenVal = '';
+        }
+    }
     return tokenVal;
 }
 
@@ -343,7 +362,7 @@ function ensureSearchViewStateOnEnter() {
     if (!selectedOption || !selectedOption.getAttribute("data-id")) return;
 
     searchViewBootstrapInProgress = true;
-    startNewSearch(String($('.search-input').val() || ''), false);
+    startNewSearch(getSearchInput(), false);
     window.setTimeout(() => {
         searchViewBootstrapInProgress = false;
     }, 2000);
@@ -907,7 +926,11 @@ function updateSearchHistoryUI() {
  * Handles the inserting of a search item into the searchbar
  */
 $('body').on('click', '.search-history-div .search-history-entry', function () {
-    $('.search-input').val($(this).find('.content').text());
+    var text = $(this).find('.content').text();
+    $('.search-input').val(text);
+    if (window.promodeSearchBar && window.promodeSearchBar.$root.is(':visible')) {
+        window.promodeSearchBar.setValue(text);
+    }
 })
 
 /**
@@ -1180,8 +1203,9 @@ $(window).on('scroll', function () {
 });
 
 $(document).ready(function () {
+    // Initialize pro-mode toggle FIRST so the handler is registered before route restoration
+    initProModeToggle();
     refreshPaginationControls();
-    // Prevent blank search view after reload: restore from route/search context if needed.
     restoreSearchFromRouteIfNeeded();
     ensureSearchViewStateOnEnter();
 });
@@ -1190,3 +1214,65 @@ $(window).on('hashchange pageshow', function () {
     restoreSearchFromRouteIfNeeded();
     ensureSearchViewStateOnEnter();
 });
+
+/**
+ * Initializes the pro-mode toggle: swaps between standard input and pro-mode chip bar.
+ */
+function initProModeToggle() {
+    var $switch = $('#proModeSwitch');
+    var $stdContainer = $('.search-input-container');
+    var $proContainer = $('.promode-search-component-host');
+
+    function applyToggle(isPro) {
+        if (isPro) {
+            $stdContainer.hide();
+            $proContainer.show();
+            if (!window.promodeSearchBar) {
+                window.promodeSearchBar = new ProModeSearchBar('#proModeSearchBar');
+            }
+            if (window.promodeSearchBar) {
+                window.promodeSearchBar.showPersistentToolbar();
+                window.promodeSearchBar.focus();
+            }
+            $('.search-menu-div').hide();
+        } else {
+            $stdContainer.show();
+            $proContainer.hide();
+            if (window.promodeSearchBar) {
+                window.promodeSearchBar.hideDetachedHelpers();
+            }
+        }
+    }
+
+    applyToggle($switch.is(':checked'));
+
+    $switch.on('change', function () {
+        applyToggle($(this).is(':checked'));
+    });
+
+    // Trigger search on Enter in pro-mode inline text input
+    $('body').on('keydown', '.promode-text-input', function (e) {
+        if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            e.preventDefault();
+            var val = window.promodeSearchBar ? window.promodeSearchBar.$textInput.val() : '';
+            if (val && val.trim() && window.promodeSearchBar) {
+                window.promodeSearchBar._commitText(val.trim());
+            }
+            $('.search-btn').click();
+        }
+    });
+
+    // Trigger search on Enter in the pro-mode search bar root area
+    $('body').on('keydown', '#proModeSearchBar', function (e) {
+        if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            if ($(e.target).is('input.promode-cmd-slot')) return;
+            if ($(e.target).is('.promode-text-input')) return;
+            e.preventDefault();
+            var val = window.promodeSearchBar ? window.promodeSearchBar.$textInput.val() : '';
+            if (val && val.trim() && window.promodeSearchBar) {
+                window.promodeSearchBar._commitText(val.trim());
+            }
+            $('.search-btn').click();
+        }
+    });
+}

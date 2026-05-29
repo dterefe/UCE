@@ -13,6 +13,7 @@ public class ProTsQueryCompiler {
             String op = switch (b.operator()) {
                 case AND -> " & ";
                 case OR -> " | ";
+                case LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, EQUAL, NOT_EQUAL -> " & ";
                 case FOLLOWED_BY -> (b.followDistance() <= 1 ? " <-> " : " <" + b.followDistance() + "> ");
             };
             String left = compileExpression(b.left(), false);

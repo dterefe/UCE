@@ -1,0 +1,759 @@
+.promode-search-component-host {
+    flex: 1 1 auto;
+    min-width: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.search-header > .w-100 > .flexed.align-items-center {
+    align-items: flex-start !important;
+}
+
+.search-header > .search-btn,
+.search-header .open-documentation-btn,
+.search-header .search-pro-mode-switch {
+    align-self: flex-start !important;
+    height: 41px !important;
+    min-height: 41px !important;
+    max-height: 41px !important;
+}
+
+.promode-search-bar-container {
+    width: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.promode-detached-helper-host {
+    display: none;
+    width: 100%;
+    position: relative;
+    z-index: 6;
+    background-color: #dedee2 !important;
+    padding: 12px 0 0 0;
+    box-sizing: border-box;
+}
+
+.promode-detached-helper-host.promode-detached-helper-visible {
+    display: block;
+}
+
+.promode-shortcut-bar {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: max-content;
+    max-width: var(--promode-helper-max-width, min(860px, 100%));
+    margin-left: var(--promode-helper-left, 0);
+    margin-bottom: 6px;
+    padding: 0;
+    font-size: 11px;
+}
+
+.promode-shortcut-bar.promode-shortcut-visible {
+    display: flex;
+}
+
+.promode-shortcut {
+    display: inline-flex;
+    align-items: stretch;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #c7c8ce;
+    background-color: #f3f3f6;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.promode-shortcut-key {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 5px;
+    color: #ffffff;
+    background-color: #59616d;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.promode-shortcut-info {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    color: #374151;
+    background-color: #f7f7fa;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.promode-shortcut.promode-shortcut-active .promode-shortcut-key {
+    background-color: #1a7a5a;
+}
+
+.promode-shortcut.promode-shortcut-off .promode-shortcut-key {
+    background-color: #9a3c00;
+}
+
+/* ===== SEARCH BAR: position relative for overlay positioning ===== */
+.promode-search-bar {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-height: 41px;
+    background-color: ghostwhite;
+    border: 1px solid transparent;
+    border-left: 1px lightgrey solid;
+    border-top: 0;
+    border-bottom: 0;
+    border-right: 0;
+    border-radius: 0;
+    cursor: text;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    user-select: none;
+    z-index: 20;
+}
+
+.promode-search-bar:focus-within {
+    border-color: var(--prime);
+    border-top: 1px solid var(--prime);
+    border-bottom: 1px solid var(--prime);
+    box-shadow: none;
+}
+
+.promode-search-bar ::selection {
+    background: rgba(104, 142, 22, 0.18);
+}
+
+/* ===== CHIP ROW ===== */
+.promode-search-bar .promode-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    box-sizing: border-box;
+    height: 41px;
+    min-height: 41px;
+    flex: 0 0 auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: thin;
+}
+
+/* ===== INLINE EDITOR ===== */
+.promode-search-bar .promode-inline-editor {
+    display: inline-flex;
+    flex: 1;
+    min-width: 80px;
+    align-items: center;
+}
+
+.promode-search-bar .promode-text-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    min-width: 60px;
+    font-size: 1rem;
+    padding: 2px 4px;
+    color: #1a1a2e;
+    caret-color: var(--prime);
+}
+
+.promode-search-bar .promode-text-input::placeholder {
+    color: #9aa0ab;
+}
+
+.promode-search-bar .promode-text-input.promode-command-mode::placeholder {
+    color: rgba(44, 111, 187, 0.4);
+}
+
+/* ===== CHIP BASE ===== */
+.promode-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 2px 8px;
+    white-space: nowrap;
+    cursor: default;
+    transition: background-color 0.12s, box-shadow 0.12s, opacity 0.1s;
+    border: 1px solid transparent;
+    position: relative;
+    user-select: none;
+}
+
+.promode-chip:hover {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== CHIP DELETE BUTTON ===== */
+.promode-chip .promode-chip-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    margin-left: 4px;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.1s, background-color 0.1s;
+    color: #555;
+}
+
+.promode-chip:hover .promode-chip-delete {
+    opacity: 0.5;
+}
+
+.promode-chip .promode-chip-delete:hover {
+    opacity: 1;
+    background-color: rgba(220, 38, 38, 0.15);
+    color: #dc2626;
+}
+
+/* ===== CHIP: Plain Text Term ===== */
+.promode-chip.promode-chip-term {
+    background-color: #e8e8e8;
+    border-color: rgba(148, 163, 184, 0.18);
+    color: #334155;
+}
+
+.promode-chip.promode-chip-term:hover {
+    background-color: #dcdcdc;
+}
+
+.promode-chip .promode-slash-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 3px;
+    color: #6a1b9a;
+    background: rgba(106, 27, 154, 0.09);
+    border: 1px solid rgba(106, 27, 154, 0.13);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+/* ===== CHIP: Enjoined Badge Commands ===== */
+.promode-chip.promode-chip-command {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    overflow: hidden;
+    padding: 0;
+    gap: 0;
+    border: none;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.promode-chip.promode-chip-command .promode-cmd-badge-key {
+    padding: 2px 6px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    border-radius: 4px 0 0 4px;
+}
+
+.promode-chip.promode-chip-command .promode-cmd-badge-value {
+    padding: 2px 6px;
+    white-space: nowrap;
+    font-weight: 400;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Taxon Commands (green/teal) */
+.promode-chip-command.promode-command-taxon .promode-cmd-badge-key {
+    background-color: #1a7a5a;
+    color: #ffffff;
+}
+
+.promode-chip-command.promode-command-taxon .promode-cmd-badge-value {
+    background-color: #e8f5e9;
+    color: #1a7a5a;
+}
+
+/* Location Commands (blue) */
+.promode-chip-command.promode-command-location .promode-cmd-badge-key {
+    background-color: #1565c0;
+    color: #ffffff;
+}
+
+.promode-chip-command.promode-command-location .promode-cmd-badge-value {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+/* Time Commands (amber/gold) */
+.promode-chip-command.promode-command-time .promode-cmd-badge-key {
+    background-color: #c79100;
+    color: #ffffff;
+}
+
+.promode-chip-command.promode-command-time .promode-cmd-badge-value {
+    background-color: #fff8e1;
+    color: #c79100;
+}
+
+.promode-chip-command:hover {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.promode-chip-command .promode-chip-delete {
+    margin-right: 4px;
+    margin-left: 2px;
+}
+
+/* ===== CHIP: Multi-slot (R::, T::) ===== */
+.promode-chip.promode-chip-multislot {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    border-radius: 4px;
+    overflow: visible;
+    padding: 0;
+}
+
+.promode-chip.promode-chip-multislot .promode-cmd-badge-key {
+    padding: 2px 6px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    border-radius: 4px 0 0 4px;
+}
+
+.promode-chip.promode-chip-multislot .promode-slot-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 4px;
+}
+
+.promode-chip.promode-chip-multislot .promode-slot-sep {
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.25);
+    padding: 0 1px;
+}
+
+.promode-chip.promode-chip-multislot .promode-cmd-slot {
+    min-width: 30px;
+    max-width: 70px;
+    font-size: 12px;
+    border: none;
+    outline: none;
+    background: transparent;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.15);
+    padding: 1px 4px;
+    color: inherit;
+}
+
+.promode-chip.promode-chip-multislot .promode-cmd-slot:focus {
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+    border-bottom-color: transparent;
+    outline: none;
+}
+
+/* ===== OPERATOR TEXT (inline between chips, NOT chips) ===== */
+.promode-operator-chip {
+    display: inline-flex;
+    align-items: center;
+    color: #9a3c00;
+    background: rgba(230, 81, 0, 0.11);
+    border: 1px solid rgba(230, 81, 0, 0.18);
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    padding: 1px 5px;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+}
+
+.promode-operator-chip.promode-operator-swappable,
+.promode-followedby-chip.promode-operator-swappable {
+    gap: 2px;
+    padding: 1px 5px;
+    cursor: pointer;
+}
+
+.promode-operator-chip.promode-operator-swappable:hover,
+.promode-followedby-chip.promode-operator-swappable:hover {
+    filter: brightness(0.97);
+}
+
+.promode-operator-chip.promode-operator-swappable:focus-visible,
+.promode-followedby-chip.promode-operator-swappable:focus-visible {
+    outline: 2px solid rgba(44, 111, 187, 0.65);
+    outline-offset: 2px;
+}
+
+.promode-op-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 2px;
+}
+
+.promode-distance-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 0 2px;
+}
+
+.promode-distance-prefix {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.promode-distance-input {
+    width: 24px;
+    height: 13px;
+    padding: 0 2px;
+    border: 0;
+    border-bottom: 1px solid rgba(106, 27, 154, 0.35);
+    outline: none;
+    color: #6a1b9a;
+    background: rgba(255, 255, 255, 0.66);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    line-height: 1;
+}
+
+.promode-distance-input:focus {
+    background: #ffffff;
+    border-bottom-color: #6a1b9a;
+}
+
+/* ===== FOLLOWED-BY TEXT (inline distance operators) ===== */
+.promode-followedby-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: #6a1b9a;
+    background: rgba(106, 27, 154, 0.07);
+    border: 1px solid rgba(106, 27, 154, 0.13);
+    border-radius: 4px;
+    font-size: 0.72rem;
+    line-height: 1.22;
+    padding: 1px 5px;
+    white-space: nowrap;
+    user-select: none;
+    cursor: default;
+}
+
+/* ===== PAREN TEXT (inline grouping) ===== */
+.promode-paren-text {
+    display: inline;
+    color: #4b5563;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 0 1px;
+    white-space: nowrap;
+    user-select: none;
+    cursor: default;
+}
+
+/* ===== TOOLBAR: detached bottom row below the search bar ===== */
+.promode-toolbar {
+    display: none;
+    grid-template-columns: auto 1fr;
+    gap: 2px 8px;
+    width: max-content;
+    max-width: var(--promode-helper-max-width, min(860px, 100%));
+    padding: 7px 12px;
+    margin-top: 0;
+    margin-left: var(--promode-helper-left, 0);
+    min-height: 26px;
+    background-color: #f3f3f6 !important;
+    background-clip: padding-box;
+    border: 1px solid #bfc0c6;
+    border-radius: 0;
+    font-size: 11px;
+    overflow-x: auto;
+    position: static;
+    z-index: auto;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.promode-toolbar.promode-toolbar-visible {
+    display: grid;
+}
+
+.promode-toolbar.promode-toolbar-operator-select {
+    outline: 1px solid rgba(230, 81, 0, 0.24);
+}
+
+.promode-toolbar .promode-toolbar-label {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 2px 4px;
+    white-space: nowrap;
+    align-self: center;
+    width: 90px;
+}
+
+.promode-toolbar .promode-toolbar-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 0 2px;
+    align-items: center;
+}
+
+.promode-toolbar .promode-toolbar-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.1s, transform 0.08s, opacity 0.1s;
+    border: 1px solid transparent;
+}
+
+.promode-toolbar .promode-toolbar-chip:hover {
+    opacity: 0.8;
+    transform: scale(1.04);
+}
+
+.promode-toolbar .promode-toolbar-chip:active {
+    transform: scale(0.98);
+}
+
+.promode-toolbar .promode-toolbar-chip.promode-tb-focused {
+    outline: 2px solid var(--prime, #2c6fbb);
+    outline-offset: 1px;
+    transform: scale(1.04);
+}
+
+.promode-toolbar .promode-toolbar-chip .promode-kbd-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    padding: 0 2px;
+    border-radius: 2px;
+    margin-left: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    letter-spacing: 0;
+}
+
+/* Toolbar chip category colors */
+.promode-toolbar-chip.promode-tb-taxon {
+    background-color: rgba(26, 122, 90, 0.09);
+    border-color: rgba(26, 122, 90, 0.15);
+    color: #1a7a5a;
+}
+
+.promode-toolbar-chip.promode-tb-location {
+    background-color: rgba(21, 101, 192, 0.08);
+    border-color: rgba(21, 101, 192, 0.14);
+    color: #1565c0;
+}
+
+.promode-toolbar-chip.promode-tb-time {
+    background-color: rgba(199, 145, 0, 0.08);
+    border-color: rgba(199, 145, 0, 0.14);
+    color: #c79100;
+}
+
+.promode-toolbar-chip.promode-tb-operator {
+    background-color: rgba(230, 81, 0, 0.08);
+    border-color: rgba(230, 81, 0, 0.14);
+    color: #e65100;
+}
+
+.promode-toolbar-chip.promode-tb-modifier {
+    background-color: rgba(106, 27, 154, 0.07);
+    border-color: rgba(106, 27, 154, 0.13);
+    color: #6a1b9a;
+}
+
+/* ===== ENUM ROW: detached bottom row below the search bar ===== */
+.promode-enum-dropdown {
+    display: none;
+    flex-wrap: wrap;
+    gap: 3px;
+    width: max-content;
+    max-width: var(--promode-helper-max-width, min(860px, 100%));
+    padding: 7px 12px;
+    margin-top: 0;
+    margin-left: var(--promode-helper-left, 0);
+    background-color: #f3f3f6 !important;
+    background-clip: padding-box;
+    border: 1px solid #bfc0c6;
+    position: static;
+    z-index: auto;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.promode-enum-dropdown.promode-enum-visible {
+    display: flex;
+}
+
+.promode-enum-dropdown .promode-enum-chip {
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+    color: #475569;
+    background: rgba(148, 163, 184, 0.09);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.promode-enum-dropdown .promode-enum-chip:hover {
+    background: rgba(148, 163, 184, 0.18);
+}
+
+/* ===== SYNTAX ERROR DISPLAY ===== */
+.promode-syntax-error {
+    display: none;
+    padding: 4px 10px;
+    margin-top: 0;
+    margin-left: var(--promode-helper-left, 0);
+    width: max-content;
+    max-width: var(--promode-helper-max-width, min(860px, 100%));
+    font-size: 12px;
+    color: #dc2626;
+    background-color: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    position: static;
+    z-index: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.promode-syntax-error.promode-error-visible {
+    display: block;
+}
+
+/* ===== GROUP SELECTION OVERLAY (shift+drag) ===== */
+.promode-grouping-overlay {
+    position: absolute;
+    border: 1.5px dashed rgba(107, 114, 128, 0.5);
+    background: rgba(107, 114, 128, 0.04);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 10;
+    display: none;
+}
+
+/* ===== QUOTATION JOIN OVERLAY (ctrl+drag) ===== */
+.promode-join-overlay {
+    position: absolute;
+    border: 1.5px dashed rgba(26, 122, 90, 0.4);
+    background: rgba(26, 122, 90, 0.04);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 11;
+    display: none;
+}
+
+/* ===== SELECTED CHIPS (during drag-select) ===== */
+.promode-chip.promode-chip-selected {
+    box-shadow: 0 0 0 2px rgba(44, 111, 187, 0.3);
+    background-color: rgba(44, 111, 187, 0.06);
+}
+
+.promode-chip.promode-chip-join-selected {
+    box-shadow: 0 0 0 2px rgba(26, 122, 90, 0.3);
+    background-color: rgba(26, 122, 90, 0.06);
+}
+
+/* ===== COMMAND INPUT MODE INDICATOR ===== */
+.promode-search-bar .promode-command-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    animation: promode-fade-in 0.12s ease-out;
+}
+
+@keyframes promode-fade-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.promode-command-indicator.promode-cmd-hint-taxon {
+    background-color: rgba(26, 122, 90, 0.1);
+    color: #1a7a5a;
+}
+
+.promode-command-indicator.promode-cmd-hint-location {
+    background-color: rgba(21, 101, 192, 0.1);
+    color: #1565c0;
+}
+
+.promode-command-indicator.promode-cmd-hint-time {
+    background-color: rgba(199, 145, 0, 0.1);
+    color: #c79100;
+}
+
+/* ===== ANIMATION FOR CHIP INSERTION ===== */
+.promode-chip.promode-chip-inserting {
+    animation: promode-chip-pop 0.15s ease-out;
+}
+
+@keyframes promode-chip-pop {
+    from { transform: scale(0.92); opacity: 0.6; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .promode-search-bar-container {
+        max-width: 100%;
+    }
+
+    .promode-search-bar .promode-chip-row {
+        gap: 3px;
+        padding: 4px 6px;
+    }
+
+    .promode-chip {
+        font-size: 12px;
+        padding: 2px 6px;
+    }
+
+    .promode-toolbar {
+        gap: 2px 4px;
+        padding: 3px 6px;
+    }
+
+    .promode-toolbar .promode-toolbar-label {
+        width: 70px;
+        font-size: 0.65rem;
+    }
+
+    .promode-toolbar .promode-toolbar-chip {
+        font-size: 0.65rem;
+        padding: 1px 4px;
+    }
+}

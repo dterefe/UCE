@@ -84,6 +84,8 @@ public class ProQueryParserTest extends TestCase {
         assertCommand("F::Cyperaceae", "F::", "Cyperaceae");
         assertCommand("G::Carex", "G::", "Carex");
         assertCommand("S::muricata", "S::", "muricata");
+        assertCommand("S::Bellis perennis", "S::", "Bellis perennis");
+        assertCommand("S::'Bellis perennis'", "S::", "Bellis perennis");
     }
 
     public void testParsesGeoCommands() {
@@ -143,7 +145,15 @@ public class ProQueryParserTest extends TestCase {
     }
 
     public void testRejectsWhitespaceInsideCommandValue() {
-        expectSyntaxErrorContains("S::Carex muricata", "Unexpected token");
+        expectSyntaxErrorContains("K::Animalia chordata", "Unexpected token");
+    }
+
+    public void testParsesSlashModifierSurfaceOnly() {
+        var ast = new ProQueryParser().parse("Carex/l");
+        assertTrue(ast.root() instanceof ProTermNode);
+        var root = (ProTermNode) ast.root();
+        assertEquals("Carex", root.value());
+        assertEquals("/l", root.slashModifier());
     }
 
     public void testRejectsInvalidRadiusCommand() {
@@ -158,6 +168,36 @@ public class ProQueryParserTest extends TestCase {
         var query = "(K::Animalia & LOC::H.CNL) | (!'Bellis perennis' & pere:* <10> T::1880-1900)";
         var ast = new ProQueryParser().parse(query);
         assertTrue(ast.root() instanceof ProBinaryNode);
+    }
+
+    public void testParsesTwentyWideRangingPromodeQueries() {
+        var parser = new ProQueryParser();
+        var queries = List.of(
+                "Carex",
+                "'Carex muricata'",
+                "\"Bellis perennis\"",
+                "Carex:*",
+                "Carex & muricata",
+                "Carex | Bellis",
+                "!Carex",
+                "(Carex | Bellis) & !Rosa",
+                "Carex <-> muricata",
+                "Carex <10> muricata",
+                "K::Animalia & P::Arthropoda & C::Insecta",
+                "O::Diptera & F::Muscidae",
+                "G::Bellis & S::Bellis perennis",
+                "LOC::H.CNL | LOC::H",
+                "R::lng=9;lat=50;r=70000",
+                "Y::1880 & M::March & D::15",
+                "E::Winter | T::1880-1900",
+                "Carex/l & Muricata/c & regex/r",
+                "Carex/s & Bellis/p & Rosa/n & Alba/w",
+                "Person/t & color/f & nsubj/d & fuzzy/o"
+        );
+
+        for (var query : queries) {
+            assertNotNull("Expected parser to accept query: " + query, parser.parse(query).root());
+        }
     }
 
     public void testParsesPromodequeryFixtureFile() throws IOException {

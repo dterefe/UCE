@@ -230,7 +230,7 @@ $('body').on('keydown', '.view .search-input', function (event) {
  * Start a new search by pressing the search btn
  */
 $('body').on('click', '.view .search-btn', function (event) {
-    startNewSearch($('.view .search-input').val());
+    startNewSearch(typeof getSearchInput === 'function' ? getSearchInput() : $('.view .search-input').val());
 })
 
 /**
