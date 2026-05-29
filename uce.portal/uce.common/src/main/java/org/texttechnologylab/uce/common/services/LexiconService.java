@@ -22,7 +22,7 @@ import java.util.List;
 @Service
 public class LexiconService {
 
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
     private final CommonConfig commonConfig;
     private static final Logger logger = LogManager.getLogger(LexiconService.class);
 
@@ -45,7 +45,7 @@ public class LexiconService {
                     XScope.class,
                     UnifiedTopic.class));
 
-    public LexiconService(PostgresqlDataInterface_Impl db) {
+    public LexiconService(DataInterface db) {
         this.db = db;
         this.commonConfig = new CommonConfig();
     }
@@ -85,7 +85,7 @@ public class LexiconService {
             }
         }
 
-        var insertedLex = ExceptionUtils.tryCatchLog(()->db.callLexiconRefresh(tables, forceRecalculate),
+        var insertedLex = ExceptionUtils.tryCatchLog(()->db.refreshLexicon(tables, forceRecalculate),
                 (ex) -> logger.error("Error updating the lexicon: ", ex));
         return insertedLex == null ? -1 : insertedLex;
     }

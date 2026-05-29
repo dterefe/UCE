@@ -12,7 +12,7 @@ import org.texttechnologylab.uce.common.models.dto.LayeredSearchSlotType;
 import org.texttechnologylab.uce.common.models.search.CacheItem;
 import org.texttechnologylab.uce.common.models.search.EnrichedSearchQuery;
 import org.texttechnologylab.uce.common.services.JenaSparqlService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,29 +24,14 @@ public class LayeredSearch extends CacheItem {
 
     private final String id;
     private List<LayeredSearchLayerDto> layers = new ArrayList<>();
-    private final PostgresqlDataInterface_Impl db;
+    private final StorageMaintenanceService storageMaintenance;
     private final JenaSparqlService jenaSparqlService;
     private static final Logger logger = LogManager.getLogger(LayeredSearch.class);
-
-    /**
-     * Cleans up and deletes all existing tables within the 'search' schema of the database.
-     * @throws DocumentAccessDeniedException 
-     */
-    public static void CleanupScheme(PostgresqlDataInterface_Impl db) throws DatabaseOperationException, DocumentAccessDeniedException {
-        var query = "DO $$ DECLARE\n" +
-                    "    r RECORD;\n" +
-                    "BEGIN\n" +
-                    "    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'search') LOOP\n" +
-                    "        EXECUTE 'DROP TABLE IF EXISTS search.' || quote_ident(r.tablename) || ' CASCADE';\n" +
-                    "    END LOOP;\n" +
-                    "END $$;";
-        db.executeSqlWithoutReturn(query);
-    }
 
     public LayeredSearch(ApplicationContext serviceContext, String id) {
         this.id = id;
         this.jenaSparqlService = serviceContext.getBean(JenaSparqlService.class);
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.storageMaintenance = serviceContext.getBean(StorageMaintenanceService.class);
     }
 
     public String getId() {
@@ -131,6 +116,11 @@ public class LayeredSearch extends CacheItem {
     }
 
     private boolean executeSingleLayerOnDb(LayeredSearchLayerDto layer) throws DatabaseOperationException, DocumentAccessDeniedException {
+        if (!storageMaintenance.supportsStorageStatements()) {
+            layer.setPageHits(0);
+            layer.setDocumentHits(0);
+            return true;
+        }
         dropTable(buildLayerTableName(layer.getDepth()));
         createSearchTableIfNotExists(buildLayerTableName(layer.getDepth()));
 
@@ -255,7 +245,7 @@ public class LayeredSearch extends CacheItem {
         }
 
         // Now execute the statements on our view
-        for (var statement : statements) db.executeSqlWithoutReturn(statement);
+        for (var statement : statements) storageMaintenance.executeStorageStatement(statement);
 
         return true;
     }
@@ -273,12 +263,17 @@ public class LayeredSearch extends CacheItem {
                     "    END IF;\n" +
                     "END $$;\n";
         query = query.replace("{NAME}", name);
-        db.executeSqlWithoutReturn(query);
+        storageMaintenance.executeStorageStatement(query);
     }
 
     private void calculateLayerCount(LayeredSearchLayerDto layer) throws DatabaseOperationException, DocumentAccessDeniedException {
         var query = "SELECT COUNT(DISTINCT id) AS p_count, COUNT(DISTINCT document_id) as d_count FROM search." + buildLayerTableName(layer.getDepth());
-        var resultList = db.executeSqlWithReturn(query);
+        if (!storageMaintenance.supportsStorageStatements()) {
+            layer.setPageHits(0);
+            layer.setDocumentHits(0);
+            return;
+        }
+        var resultList = storageMaintenance.executeStorageQuery(query);
         if (resultList.isEmpty()) return;
         else {
             var counts = (Object[]) resultList.getFirst();
@@ -303,13 +298,17 @@ public class LayeredSearch extends CacheItem {
                     "    END LOOP;\n" +
                     "END $$;";
         query = query.replace("{PREFIX}", "layered_search_" + this.id);
-        db.executeSqlWithoutReturn(query);
+        if (storageMaintenance.supportsStorageStatements()) {
+            storageMaintenance.executeStorageStatement(query);
+        }
     }
 
     private void dropTable(String name) throws DatabaseOperationException, DocumentAccessDeniedException {
         var query = "DROP TABLE IF EXISTS search.{NAME}";
         query = query.replace("{NAME}", name);
-        db.executeSqlWithoutReturn(query);
+        if (storageMaintenance.supportsStorageStatements()) {
+            storageMaintenance.executeStorageStatement(query);
+        }
     }
 
     private String buildLayerTableName(int depth) {

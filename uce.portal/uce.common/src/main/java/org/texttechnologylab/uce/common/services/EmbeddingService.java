@@ -38,15 +38,15 @@ import java.util.regex.Pattern;
 public class EmbeddingService {
 //    private static final Logger logger = LogManager.getLogger(EmbeddingService.class);
 
-    private PostgresqlDataInterface_Impl postgresqlDataInterfaceImpl = null;
+    private DataInterface dataInterface = null;
     private Connection vectorDbConnection = null;
     private CommonConfig config;
 
     private final DocumentAccessManager accessManager;
 
-    public EmbeddingService(PostgresqlDataInterface_Impl postgresqlDataInterfaceImpl) {
-        this.postgresqlDataInterfaceImpl = postgresqlDataInterfaceImpl;
-        this.accessManager = postgresqlDataInterfaceImpl.getAccessManager();
+    public EmbeddingService(DataInterface dataInterface, DocumentAccessManager accessManager) {
+        this.dataInterface = dataInterface;
+        this.accessManager = accessManager;
         TestConnection();
     }
 
@@ -785,7 +785,7 @@ public class EmbeddingService {
 
         // Get all documents of this corpus, loop through them, get the embeddings and
         // then send a request to our webserver.
-        var corpusDocuments = postgresqlDataInterfaceImpl.getDocumentsByCorpusId(corpusId, 0, 9999999);
+        var corpusDocuments = dataInterface.getDocumentsByCorpusId(corpusId, 0, 9999999);
         var labels = new ArrayList<String>();
         var embeddings = new ArrayList<float[]>();
         for (var document : corpusDocuments) {

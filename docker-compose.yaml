@@ -36,7 +36,7 @@ services:
     image: uce-web:local-fast
     build:
       context: .
-      dockerfile: ./uce.portal/uce.web/Dockerfile
+      dockerfile: ${UCE_WEB_DOCKERFILE:-./uce.portal/uce.web/Dockerfile}
     profiles:
       - local
       - remote
@@ -49,6 +49,9 @@ services:
     environment:
       VIRTUAL_HOST: ${UCE_PUBLIC_HOST:-}
       VIRTUAL_PORT: ${UCE_PUBLISHED_PORT:-}
+      UCE_STORAGE_BACKEND: ${UCE_STORAGE_BACKEND:-postgres}
+      UCE_DUA_STORE: ${UCE_DUA_STORE_CONTAINER_PATH:-/app/dua/uce-dua-store.bin}
+      UCE_DUA_FLUSH_EVERY_MUTATIONS: ${UCE_DUA_FLUSH_EVERY_MUTATIONS:-1}
       # Compose-derived legacy runtime vars (deduplicated from .env host/port primitives).
       UCE_AUTH_PUBLIC_URL: ${KEYCLOAK_PUBLIC_SCHEME:-http}://${KEYCLOAK_PUBLIC_HOST:-}:${KEYCLOAK_PUBLISHED_PORT:-}
       UCE_AUTH_REDIRECT_URL: ${UCE_SCHEME:-http}://${KEYCLOAK_PUBLIC_HOST:-}:${UCE_PUBLISHED_PORT:-}/auth
@@ -69,6 +72,7 @@ services:
       - "${UCE_DATABASE_SCRIPTS_HOST_PATH:-./database}:${DATABASE_SCRIPTS_LOCATION:-/app/database}"
       # External templates (host-mounted) so UI can be edited without rebuilding the image
       - "${UCE_TEMPLATES_HOST_PATH:-./uce.portal/resources/templates}:${TEMPLATES_LOCATION:-/app/uce.portal/resources/templates}"
+      - "${UCE_DUA_STORE_HOST_DIR:-./.dev/storage/dua}:${UCE_DUA_STORE_CONTAINER_DIR:-/app/dua}:rw"
     command: [
       "java",
       "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -142,10 +146,21 @@ services:
     image: uce-importer:local-fast
     build:
       context: .
-      dockerfile: ./uce.portal/uce.corpus-importer/Dockerfile
+      dockerfile: ${UCE_IMPORTER_DOCKERFILE:-./uce.portal/uce.corpus-importer/Dockerfile}
     env_file:
       - ${UCE_COMPOSE_ENV_FILE:-.env}
     environment:
+      UCE_STORAGE_BACKEND: ${UCE_STORAGE_BACKEND:-postgres}
+      UCE_DUA_STORE: ${UCE_DUA_STORE_CONTAINER_PATH:-/app/dua/uce-dua-store.bin}
+      UCE_DUA_FLUSH_EVERY_MUTATIONS: ${UCE_DUA_FLUSH_EVERY_MUTATIONS:-1}
+      UCE_DUUI_GNFINDER_ENABLED: ${UCE_DUUI_GNFINDER_ENABLED:-false}
+      UCE_DUUI_GNFINDER_IMAGE: ${UCE_DUUI_GNFINDER_IMAGE:-localhost/duui-py-gnfinder:latest}
+      UCE_DUUI_GNFINDER_VERIFY: ${UCE_DUUI_GNFINDER_VERIFY:-false}
+      UCE_DUUI_GNFINDER_LANG: ${UCE_DUUI_GNFINDER_LANG:-de}
+      UCE_DUUI_GNFINDER_SCALE: ${UCE_DUUI_GNFINDER_SCALE:-1}
+      UCE_DUUI_GNFINDER_CONCURRENCY: ${UCE_DUUI_GNFINDER_CONCURRENCY:-1}
+      CONTAINER_HOST: unix://${PODMAN_SOCKET_CONTAINER_PATH:-/run/podman/podman.sock}
+      PODMAN_SOCKET_PATH: ${PODMAN_SOCKET_CONTAINER_PATH:-/run/podman/podman.sock}
       POSTGRESQL_HIBERNATE_CONNECTION_URL: jdbc:postgresql://${DB_HOST:-}:${DB_RUNTIME_PORT:-5432}/${DB_NAME:-}
       POSTGRESQL_HIBERNATE_CONNECTION_USERNAME: ${DB_USER:-}
       POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD: ${DB_PASSWORD:-}
@@ -156,10 +171,14 @@ services:
       - "${IMPORTER_DATABASE_HOST_PATH:-./database}:/app/database:ro"
       # Mount the corpus input directory (XMI/archives + corpusConfig.json)
       - "${IMPORTER_CORPORA_HOST_PATH:-./data/importer}:/app/input:ro"
+      - "${BIOFID_XMI_SOURCE_HOST_PATH:-/dev/null}:${BIOFID_XMI_SOURCE_CONTAINER_PATH:-/resources/public/stoeckel/BIOfid/data/ttlab-processed/UB_biodiv_2025_03_24/xmi-nova-vnull}:ro"
+      - "${UCE_DUA_STORE_HOST_DIR:-./.dev/storage/dua}:${UCE_DUA_STORE_CONTAINER_DIR:-/app/dua}:rw"
+      - "${PODMAN_SOCKET_HOST_PATH:-/run/user/1000/podman/podman.sock}:${PODMAN_SOCKET_CONTAINER_PATH:-/run/podman/podman.sock}:rw"
     command: [
       "java",
-      "-jar",
+      "-cp",
       "./target/importer.jar",
+      "org.texttechnologylab.uce.corpusimporter.DUUIImporter",
       "-src", "${IMPORTER_IMPORT_SRC:-/app/input}",
       "-num", "${IMPORTER_NUMBER:-1}",
       "-t", "${IMPORTER_THREADS:-4}"
@@ -316,6 +335,7 @@ services:
   uce-fuseki-sparql:
     container_name: uce-fuseki-sparql
     image: docker.texttechnologylab.org/uce/uce-fuseki-sparql:0.0.1
+    user: "0:0"
     profiles:
       - fuseki
     ports:

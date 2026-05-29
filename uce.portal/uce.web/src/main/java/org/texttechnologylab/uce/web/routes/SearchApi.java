@@ -16,9 +16,8 @@ import org.texttechnologylab.uce.common.models.dto.UCEMetadataFilterDto;
 import org.texttechnologylab.uce.common.models.search.OrderByColumn;
 import org.texttechnologylab.uce.common.models.search.SearchLayer;
 import org.texttechnologylab.uce.common.models.search.SearchOrder;
-import org.texttechnologylab.uce.common.models.search.SearchType;
 import org.texttechnologylab.uce.common.models.search.promode.ProModeSyntaxException;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.search.*;
 import org.texttechnologylab.uce.web.CustomFreeMarkerEngine;
 import org.texttechnologylab.uce.web.LanguageResources;
@@ -28,18 +27,21 @@ import org.texttechnologylab.uce.web.freeMarker.AccessDeniedRenderer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class SearchApi implements UceApi {
     private static final Logger logger = LogManager.getLogger(SearchApi.class);
     private ApplicationContext context = null;
-    private PostgresqlDataInterface_Impl db = null;
+    private DataInterface db = null;
     private Configuration freemarkerConfig;
+    private SearchFactory searchFactory;
 
     public SearchApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
         this.freemarkerConfig = freemarkerConfig;
         this.context = serviceContext;
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
+        this.searchFactory = new SearchFactory(serviceContext);
     }
 
     public void activeSearchSort(Context ctx) {
@@ -48,8 +50,6 @@ public class SearchApi implements UceApi {
         try {
             var languageResources = LanguageResources.fromRequest(ctx);
             var searchId = ctx.queryParam("searchId");
-            var order = ctx.queryParam("order").toUpperCase();
-            var orderBy = ctx.queryParam("orderBy").toUpperCase();
             if (!SessionManager.ActiveSearches.containsKey(searchId)) {
                 logger.error("Issue fetching an active search state from the cache, id couldn't be found: " + searchId);
                 model.put("information", languageResources.get("searchStateNotFound"));
@@ -61,14 +61,9 @@ public class SearchApi implements UceApi {
 
             // Sort the current search state.
             var activeSearchState = (SearchState) SessionManager.ActiveSearches.get(searchId);
-            activeSearchState.setOrder(SearchOrder.valueOf(order));
-            activeSearchState.setOrderBy(OrderByColumn.valueOf(orderBy));
-            Search search = new Search_DefaultImpl();
-            if (activeSearchState.getSearchType() == SearchType.SEMANTICROLE) {
-                search = new Search_SemanticRoleImpl();
-            } else if (activeSearchState.getSearchType() == SearchType.NEG) {
-                search = new SearchCompleteNegation();
-            }
+            activeSearchState.setOrder(parseSearchOrder(ctx.queryParam("order"), activeSearchState.getOrder()));
+            activeSearchState.setOrderBy(parseOrderByColumn(ctx.queryParam("orderBy"), activeSearchState.getOrderBy()));
+            Search search = searchFactory.forState(activeSearchState);
             search.fromSearchState(this.context, languageResources.getDefaultLanguage(), activeSearchState);
             activeSearchState = search.getSearchHitsForPage(activeSearchState.getCurrentPage(), user);
 
@@ -80,6 +75,30 @@ public class SearchApi implements UceApi {
             return;
         }
         ctx.render("search/components/documentList.ftl", model);
+    }
+
+    private SearchOrder parseSearchOrder(String raw, SearchOrder fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback == null ? SearchOrder.DESC : fallback;
+        }
+        try {
+            return SearchOrder.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Ignoring invalid search sort order '{}'.", raw);
+            return fallback == null ? SearchOrder.DESC : fallback;
+        }
+    }
+
+    private OrderByColumn parseOrderByColumn(String raw, OrderByColumn fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback == null ? OrderByColumn.RANK : fallback;
+        }
+        try {
+            return OrderByColumn.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Ignoring invalid search sort column '{}'.", raw);
+            return fallback == null ? OrderByColumn.RANK : fallback;
+        }
     }
 
     public void activeSearchPage(Context ctx) {
@@ -103,12 +122,7 @@ public class SearchApi implements UceApi {
 
             // Get the next pages.
             var activeSearchState = (SearchState) SessionManager.ActiveSearches.get(searchId);
-            Search search = new Search_DefaultImpl();
-            if (activeSearchState.getSearchType() == SearchType.SEMANTICROLE) {
-                search = new Search_SemanticRoleImpl();
-            } else if (activeSearchState.getSearchType() == SearchType.NEG) {
-                search = new SearchCompleteNegation();
-            }
+            Search search = searchFactory.forState(activeSearchState);
             search.fromSearchState(this.context, languageResources.getDefaultLanguage(), activeSearchState);
             activeSearchState = search.getSearchHitsForPage(page, user);
 
@@ -151,7 +165,7 @@ public class SearchApi implements UceApi {
                 return;
             }
             var searchInput = requestBody.get("searchInput").toString();
-            var corpusId = Long.parseLong(requestBody.get("corpusId").toString());
+            var corpusId = longFromJsonNumber(requestBody.get("corpusId"), -1);
             if (corpusId <= 0) {
                 ctx.status(400);
                 ctx.result("No corpus selected.");
@@ -265,7 +279,7 @@ public class SearchApi implements UceApi {
             if(SessionManager.ActiveLayeredSearches.containsKey(searchId)){
                 layeredSearch = (LayeredSearch) SessionManager.ActiveLayeredSearches.get(searchId);
             } else{
-                layeredSearch = new LayeredSearch(this.context, searchId);
+                layeredSearch = searchFactory.layeredSearch(searchId);
                 layeredSearch.init();
                 SessionManager.ActiveLayeredSearches.put(layeredSearch.getId(), layeredSearch);
             }
@@ -336,7 +350,7 @@ public class SearchApi implements UceApi {
         Map<String, Object> requestBody = gson.fromJson(ctx.body(), Map.class);
 
         try {
-            var corpusId = Long.parseLong(requestBody.get("corpusId").toString());
+            var corpusId = longFromJsonNumber(requestBody.get("corpusId"), -1);
             model.put("corpusVm", db.getCorpusById(corpusId).getViewModel());
             var arg0 = (ArrayList<String>) requestBody.get("arg0");
             var arg1 = (ArrayList<String>) requestBody.get("arg1");
@@ -392,6 +406,24 @@ public class SearchApi implements UceApi {
         } catch (Exception ex) {
             logger.error("Error getting the semantic role query builder view.", ex);
             ctx.render("defaultError.ftl");
+        }
+    }
+
+    private static long longFromJsonNumber(Object value, long fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            String stringValue = value.toString();
+            if (stringValue.endsWith(".0")) {
+                stringValue = stringValue.substring(0, stringValue.length() - 2);
+            }
+            return Long.parseLong(stringValue);
+        } catch (NumberFormatException ex) {
+            return fallback;
         }
     }
 

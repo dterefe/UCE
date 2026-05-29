@@ -9,7 +9,7 @@ import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.authentication.UceUser;
 import org.texttechnologylab.uce.common.models.search.DocumentSearchResult;
 import org.texttechnologylab.uce.common.models.search.SearchType;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -22,7 +22,7 @@ import java.util.Arrays;
  */
 public class Search_SemanticRoleImpl implements Search {
     private static final Logger logger = LogManager.getLogger(Search_SemanticRoleImpl.class);
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private SemanticRoleSearchState searchState;
 
     public Search_SemanticRoleImpl(ApplicationContext serviceContext,
@@ -54,7 +54,7 @@ public class Search_SemanticRoleImpl implements Search {
 
     @Override
     public void fromSearchState(ApplicationContext serviceContext, String languageCode, SearchState searchState) throws URISyntaxException, IOException {
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.searchState = (SemanticRoleSearchState) searchState;
     }
 
@@ -101,7 +101,7 @@ public class Search_SemanticRoleImpl implements Search {
     }
 
     private void setDefaultSearchStateParameters(ApplicationContext serviceContext, long corpusId){
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.searchState.setCorpusId(corpusId);
         this.searchState.setCorpusConfig(ExceptionUtils.tryCatchLog(
                 () -> CorpusConfig.fromJson(db.getCorpusById(corpusId).getCorpusJsonConfig()),

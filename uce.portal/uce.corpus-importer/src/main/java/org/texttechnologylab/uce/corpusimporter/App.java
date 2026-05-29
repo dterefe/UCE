@@ -14,7 +14,8 @@ import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.imp.ImportStatus;
 import org.texttechnologylab.uce.common.models.imp.UCEImport;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
+import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 
 import java.io.File;
@@ -49,7 +50,7 @@ public class App {
             var commonConfig = new CommonConfig();
             logger.info("Executing external database scripts from " + commonConfig.getDatabaseScriptsLocation());
             ExceptionUtils.tryCatchLog(
-                    () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), context.getBean(PostgresqlDataInterface_Impl.class)),
+                    () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), context.getBean(StorageMaintenanceService.class)),
                     (ex) -> logger.warn("Couldn't read the db scripts in the external database scripts folder; path wasn't found or other IO problems. ", ex));
             logger.info("Finished with executing external database scripts.");
 
@@ -91,7 +92,7 @@ public class App {
                     var fileCount = ExceptionUtils.tryCatchLog(importer::getXMICountInPath,
                             (ex) -> logger.warn("There was an IO error counting the importable UIMA files - the import will probably fail at some point.", ex));
                     uceImport.setTotalDocuments(fileCount == null ? -1 : fileCount);
-                    context.getBean(PostgresqlDataInterface_Impl.class).saveOrUpdateUceImport(uceImport);
+                    context.getBean(DataInterface.class).saveOrUpdateUceImport(uceImport);
                 } else {
                     // TODO: This was meant to be prepared for the incorporation into DUUI, but this isn't decided yet.
                     ;

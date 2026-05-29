@@ -96,6 +96,20 @@
             <groupId>org.texttechnologylab.annotation</groupId>
             <artifactId>typesystem</artifactId>
             <version>3.0.14</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.texttechnologylab.textimager-uima</groupId>
+                    <artifactId>textimager-uima-types</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.dkpro.core</groupId>
+                    <artifactId>dkpro-core-api-syntax-asl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.dkpro.core</groupId>
+                    <artifactId>dkpro-core-api-semantics-asl</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.dkpro.core</groupId>
@@ -121,6 +135,21 @@
             <groupId>org.dkpro.core</groupId>
             <artifactId>dkpro-core-api-segmentation-asl</artifactId>
             <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-api-semantics-asl</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dkpro.core</groupId>
+            <artifactId>dkpro-core-api-syntax-asl</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.uima</groupId>
+            <artifactId>uimaj-core</artifactId>
+            <version>3.5.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.uima</groupId>
@@ -159,6 +188,16 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>org.texttechnologylab</groupId>
+            <artifactId>duui-dua</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>msgpack-core</artifactId>
+            <version>0.9.8</version>
+        </dependency>
 
     </dependencies>
 
@@ -171,9 +210,10 @@
                 <version>3.2.4</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <phase>${uce.importer.shade.phase}</phase>
                         <goals><goal>shade</goal></goals>
                         <configuration>
+                            <skip>${uce.importer.shade.skip}</skip>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <finalName>importer</finalName>
                             <filters>

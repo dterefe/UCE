@@ -46,6 +46,47 @@ function getLayeredSearchStateForRoute() {
     };
 }
 
+function getSearchViewLoader() {
+    return $('.view[data-id="search"] > .position-relative > .loader-container').first();
+}
+
+function showSearchViewLoader() {
+    getSearchViewLoader().stop(true, true).fadeIn(150);
+}
+
+function hideSearchViewLoader() {
+    getSearchViewLoader().stop(true, true).fadeOut(150);
+}
+
+function getSearchResultsLoader() {
+    const $documentList = $('.search-result-container .document-list-include').first();
+    const $siblingLoader = $documentList.siblings('.loader-container').first();
+    if ($siblingLoader.length > 0) return $siblingLoader;
+    return $('.search-result-container .loader-container').not(getSearchViewLoader()).first();
+}
+
+function showSearchResultsLoader() {
+    getSearchResultsLoader().stop(true, true).fadeIn(150);
+}
+
+function hideSearchResultsLoader() {
+    getSearchResultsLoader().stop(true, true).fadeOut(150);
+}
+
+function withSearchUiTimeout(promise, timeoutMs, timeoutMessage) {
+    let timeoutHandle;
+    const timeout = new Promise((resolve) => {
+        timeoutHandle = window.setTimeout(() => {
+            if (timeoutMessage) console.warn(timeoutMessage);
+            resolve();
+        }, timeoutMs);
+    });
+    return Promise.race([
+        Promise.resolve(promise),
+        timeout
+    ]).finally(() => window.clearTimeout(timeoutHandle));
+}
+
 function hydrateSearchVizSettingsFromRoute() {
     if (!window.uceUiState || !window.searchVizualization) return;
     if (window.searchVizualization.__routeHydrated) return;
@@ -199,7 +240,11 @@ function applySearchStateFromRoute() {
         if ($btn.length > 0) {
             const currentForTrigger = routeSortOrder === 'ASC' ? 'DESC' : 'ASC';
             $btn.data('curorder', currentForTrigger);
-            $btn.trigger('click');
+            if (!$btn.data('route-applied')) {
+                $btn.data('route-applied', true);
+                $btn.trigger('click');
+                window.setTimeout(() => $btn.removeData('route-applied'), 500);
+            }
         }
     }
 
@@ -614,6 +659,7 @@ $('body').on('click', '#search-results-visualization-container .group-box > .fle
  */
 function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
     if (searchInput === undefined) {
+        hideSearchViewLoader();
         return;
     }
 
@@ -624,12 +670,13 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
         : null;
     const corpusId = selectedOption ? selectedOption.getAttribute("data-id") : null;
     if (!corpusId || corpusId === 'null' || corpusId === 'undefined') {
+        hideSearchViewLoader();
         showMessageModal("No Corpus Selected", "Please select a corpus before starting a search.");
         return;
     }
 
     $('.search-menu-div').hide();
-    $('.view[data-id="search"] .loader-container').first().fadeIn(150);
+    showSearchViewLoader();
 
     // Get the selected search layers
     const fulltextOrNeLayer = $('.search-menu-div .search-settings-div input[name="searchLayerRadioOptions"]:checked').val() || 'FULLTEXT';
@@ -702,7 +749,7 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
         }),
         contentType: "application/json",
         //dataType: "json",
-        success: async function (response) {
+        success: function (response) {
             $('.view .search-result-container').html(response);
             activatePopovers();
             refreshPaginationControls();
@@ -716,14 +763,25 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
             if (window.uceUiState && searchId) {
                 window.uceUiState.set('searchId', String(searchId));
             }
-            if (typeof getNewCorpusUniverseHandler !== 'undefined') {
+            const finishSearchUi = function () {
+                applySearchStateFromRoute();
+                applySearchVisualizationExpandedStateFromRoute();
+                persistSearchVisualizationExpandedStateToRoute();
+                hideSearchViewLoader();
+            };
+
+            if (typeof getNewCorpusUniverseHandler !== 'undefined' && searchId) {
                 currentCorpusUniverseHandler = getNewCorpusUniverseHandler;
-                await currentCorpusUniverseHandler.createEmptyUniverse('search-universe-container');
-                await currentCorpusUniverseHandler.fromSearch(searchId);
+                withSearchUiTimeout(Promise.resolve()
+                    .then(() => currentCorpusUniverseHandler.createEmptyUniverse('search-universe-container'))
+                    .then(() => currentCorpusUniverseHandler.fromSearch(searchId))
+                    .catch(function (err) {
+                        console.error('Failed to update corpus universe for search ' + searchId, err);
+                    }), 5000, 'Corpus universe update timed out for search ' + searchId)
+                    .finally(finishSearchUi);
+            } else {
+                finishSearchUi();
             }
-            applySearchStateFromRoute();
-            applySearchVisualizationExpandedStateFromRoute();
-            persistSearchVisualizationExpandedStateToRoute();
         },
         error: function (xhr, status, error) {
             if (xhr.status === 406) {
@@ -731,9 +789,12 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
             } else {
                 $('.view .search-result-container').html(xhr.responseText);
             }
+            hideSearchViewLoader();
         }
     }).always(function () {
-        $('.view[data-id="search"] .loader-container').first().fadeOut(150);
+        if (!$('.view .search-result-container').find('.search-state').length) {
+            hideSearchViewLoader();
+        }
     });
 }
 
@@ -917,7 +978,7 @@ $('body').on('click', '.search-result-container .next-page-btn', function () {
 
 async function handleSwitchingOfPage(page) {
     const searchId = $('.search-state').data('id');
-    $('.search-result-container .loader-container').first().fadeIn(150);
+    showSearchResultsLoader();
 
     $.ajax({
         url: "/api/search/active/page?searchId=" + searchId + "&page=" + page,
@@ -948,7 +1009,7 @@ async function handleSwitchingOfPage(page) {
             $('.view .search-result-container .document-list-include').html(xhr.responseText);
         }
     }).always(function () {
-        $('.search-result-container .loader-container').first().fadeOut(150);
+        hideSearchResultsLoader();
     });
 }
 
@@ -991,10 +1052,13 @@ $('body').on('click', '.sort-container .sort-btn', function () {
     const curOrder = String($(this).data('curorder') || 'ASC').toUpperCase();
     const nextOrder = curOrder === "ASC" ? "DESC" : "ASC";
     const searchId = $('.search-state').data('id');
-    $('.search-result-container .loader-container').first().fadeIn(150);
+    if (!searchId) return;
+    showSearchResultsLoader();
 
     $.ajax({
-        url: "/api/search/active/sort?searchId=" + searchId + "&order=" + nextOrder + "&orderBy=" + orderBy,
+        url: "/api/search/active/sort?searchId=" + encodeURIComponent(searchId)
+            + "&order=" + encodeURIComponent(nextOrder)
+            + "&orderBy=" + encodeURIComponent(orderBy),
         type: "GET",
         success: function (response) {
             // Render the new documents
@@ -1005,7 +1069,7 @@ $('body').on('click', '.sort-container .sort-btn', function () {
             $('.view .search-result-container .document-list-include').html(xhr.responseText);
         }
     }).always(function () {
-        $('.search-result-container .loader-container').first().fadeOut(150);
+        hideSearchResultsLoader();
     });
 
     // Highlight the correct button

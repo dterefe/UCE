@@ -15,9 +15,9 @@ import java.util.List;
 public class MapService {
     private static final Logger logger = LogManager.getLogger(MapService.class);
 
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
 
-    public MapService(PostgresqlDataInterface_Impl db) {
+    public MapService(DataInterface db) {
         this.db = db;
     }
 
@@ -57,7 +57,7 @@ public class MapService {
 
     public boolean cachedTimelineMapHasEntries() {
         var entries = ExceptionUtils.tryCatchLog(
-                () -> db.executeSqlWithReturn("SELECT context_count from geoname_context_timeline_cache LIMIT 1"),
+                () -> db.getGeonameClustersFromTimelineMap(-180, -90, 180, 90, 1, null, null, -1),
                 (ex) -> logger.error("Error getting the count of the cached timeline map.", ex));
         return entries != null && !entries.isEmpty();
     }
@@ -68,6 +68,6 @@ public class MapService {
      */
     public void refreshCachedTimelineMap(boolean force) throws DatabaseOperationException, DocumentAccessDeniedException {
         if (force || !cachedTimelineMapHasEntries())
-            db.executeSqlWithoutReturn("REFRESH MATERIALIZED VIEW geoname_context_timeline_cache");
+            db.refreshGeonameLocations();
     }
 }

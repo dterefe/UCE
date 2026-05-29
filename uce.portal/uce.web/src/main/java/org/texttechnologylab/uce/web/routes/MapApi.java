@@ -8,8 +8,8 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException;
 import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.MapService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.web.LanguageResources;
 import org.texttechnologylab.uce.web.freeMarker.AccessDeniedRenderer;
 
@@ -22,14 +22,14 @@ public class MapApi implements UceApi {
 
     private static final Logger logger = LogManager.getLogger(WikiApi.class);
     private Configuration freemarkerConfig;
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
     private MapService mapService;
     private final Gson gson = new Gson();
 
     public MapApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
         this.freemarkerConfig = freemarkerConfig;
         this.mapService = serviceContext.getBean(MapService.class);
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
     }
 
     public void getLinkedOccurrences(Context ctx) throws IOException {

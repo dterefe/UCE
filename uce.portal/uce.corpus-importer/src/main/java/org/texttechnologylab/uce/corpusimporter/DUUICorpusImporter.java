@@ -30,7 +30,7 @@ import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.imp.ImportStatus;
 import org.texttechnologylab.uce.common.models.imp.UCEImport;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 import org.xml.sax.SAXException;
 
@@ -134,7 +134,7 @@ public class DUUICorpusImporter {
                 try (var guard = accessManager.asAdmin()) {
                     var commonConfig = new CommonConfig();
                     ExceptionUtils.tryCatchLog(
-                            () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), context.getBean(PostgresqlDataInterface_Impl.class)),
+                            () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), context.getBean(StorageMaintenanceService.class)),
                             (ex) -> logger.warn("Couldn't read the db scripts in the external database scripts folder; path wasn't found or other IO problems. ", ex));
                     var importId = UUID.randomUUID().toString();
                     var importer = new Importer(context, null, 1, importId, casView, jc, true);

@@ -9,11 +9,9 @@ import org.texttechnologylab.uce.common.exceptions.DatabaseOperationException;
 import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException;
 import org.texttechnologylab.uce.common.models.util.HealthStatus;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public final class SystemStatus {
     public static HealthStatus GbifServiceStatus = new HealthStatus();
@@ -41,30 +39,7 @@ public final class SystemStatus {
     /**
      * Executes the external database scripts for triggers, procedures and such.
      */
-    public static void executeExternalDatabaseScripts(String path, PostgresqlDataInterface_Impl db) throws IOException {
-        try (var fileStream = Files.list(Paths.get(path))) {
-            fileStream
-                    .filter(Files::isRegularFile)
-                    .filter(file -> file.toString().endsWith(".sql"))
-                    .sorted((f1, f2) -> {
-                        try {
-                            int n1 = Integer.parseInt(f1.getFileName().toString().split("_", 2)[0]);
-                            int n2 = Integer.parseInt(f2.getFileName().toString().split("_", 2)[0]);
-                            return Integer.compare(n1, n2);
-                        } catch (Exception e) {
-                            return 0; // fallback to equal if parsing fails
-                        }
-                    })
-                    .forEach(file -> {
-                        try {
-                            String sqlContent = Files.readString(file);
-                            db.executeSqlWithoutReturn(sqlContent);
-                            logger.info("*--> Successfully executed: " + file.getFileName());
-                        } catch (IOException | DatabaseOperationException | DocumentAccessDeniedException ex) {
-                            logger.error("Error trying to execute the database script " + file.getFileName(), ex);
-                        }
-                    });
-        }
-
+    public static void executeExternalDatabaseScripts(String path, StorageMaintenanceService storageMaintenanceService) throws IOException {
+        storageMaintenanceService.executeExternalStorageScripts(path);
     }
 }

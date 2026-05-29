@@ -23,17 +23,15 @@ import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.util.CasIOUtils;
 import org.apache.uima.util.CasLoadMode;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.texttechnologylab.DockerUnifiedUIMAInterface.driver.DUUIPipelineComponent;
+import org.texttechnologylab.DockerUnifiedUIMAInterface.driver.DUUIPodmanDriver;
+import org.texttechnologylab.DockerUnifiedUIMAInterface.lua.LuaConsts;
 import org.texttechnologylab.annotation.AnnotationComment;
 import org.texttechnologylab.annotation.DocumentAnnotation;
 import org.texttechnologylab.annotation.Emotion;
 import org.texttechnologylab.annotation.SentimentModel;
-import org.texttechnologylab.annotation.domain.Association;
-import org.texttechnologylab.annotation.domain.Domain;
-import org.texttechnologylab.annotation.domain.Equivalence;
-import org.texttechnologylab.annotation.domain.Membership;
-import org.texttechnologylab.annotation.domain.Reference;
-import org.texttechnologylab.annotation.domain.Sequence;
 import org.texttechnologylab.annotation.geonames.GeoNamesEntity;
+import org.texttechnologylab.duui.clients.http.DUUIHttpEndpoint;
 import org.texttechnologylab.annotation.link.ADLink;
 import org.texttechnologylab.annotation.link.DALink;
 import org.texttechnologylab.annotation.link.DLink;
@@ -44,10 +42,8 @@ import org.texttechnologylab.annotation.ocr.OCRToken;
 import org.texttechnologylab.annotation.uce.Permission;
 import org.texttechnologylab.duui.artifact.DUUIArtifact;
 import org.texttechnologylab.duui.artifact.DUUIArtifactEmitter;
-import org.texttechnologylab.duui.artifact.DUUIArtifactType;
-import org.texttechnologylab.duui.orchestration.DUUIDispatchMode;
-import org.texttechnologylab.duui.orchestration.DUUIDispatchPolicy;
-import org.texttechnologylab.duui.pipeline.DUUIComponent;
+import org.texttechnologylab.duui.orchestration.scheduling.DUUIDispatchMode;
+import org.texttechnologylab.duui.orchestration.scheduling.DUUIDispatchPolicy;
 import org.texttechnologylab.duui.pipeline.DUUIAdapter;
 import org.texttechnologylab.duui.pipeline.DUUIFork;
 import org.texttechnologylab.duui.pipeline.DUUIGenerator;
@@ -59,6 +55,13 @@ import org.texttechnologylab.duui.runtime.DUUIForkScope;
 import org.texttechnologylab.duui.runtime.DUUIGeneratorScope;
 import org.texttechnologylab.duui.runtime.DUUIPipelineScope;
 import org.texttechnologylab.duui.runtime.DUUIStageScope;
+import org.texttechnologylab.duui.pipeline.component.DUUIComponent;
+import org.texttechnologylab.duui.pipeline.component.DUUINode;
+import org.texttechnologylab.duui.protocol.v1.DUUIV1Annotator;
+import org.texttechnologylab.duui.protocol.v1.DUUIV1Config;
+import org.texttechnologylab.duui.protocol.v1.DUUIV1TelemetryConfig;
+import org.texttechnologylab.duui.dua.archive.DUAArchiveReader;
+import org.texttechnologylab.duui.dua.cas.DUAXmiBridge;
 import org.texttechnologylab.uce.common.config.CommonConfig;
 import org.texttechnologylab.uce.common.config.CorpusConfig;
 import org.texttechnologylab.uce.common.config.SpringConfig;
@@ -110,12 +113,15 @@ import org.texttechnologylab.uce.common.models.topic.TopicWord;
 import org.texttechnologylab.uce.common.models.topic.UnifiedTopic;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
 import org.texttechnologylab.uce.common.services.AgeGraphService;
+import org.texttechnologylab.uce.common.services.DataInterface;
+import org.texttechnologylab.uce.common.services.DomainGraphService;
+import org.texttechnologylab.uce.common.services.DuaDataInterface_Impl;
 import org.texttechnologylab.uce.common.services.EmbeddingService;
 import org.texttechnologylab.uce.common.services.GoetheUniversityService;
 import org.texttechnologylab.uce.common.services.JenaSparqlService;
 import org.texttechnologylab.uce.common.services.LexiconService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.common.services.S3StorageService;
+import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
 import org.texttechnologylab.uce.common.utils.StringUtils;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 import org.texttechnologylab.uce.common.utils.*;
@@ -133,6 +139,8 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipEntry;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import java.security.InvalidParameterException;
+import java.net.URI;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -144,6 +152,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.Objects;
 import java.util.Set;
@@ -153,6 +163,7 @@ import java.util.logging.Level;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -163,7 +174,7 @@ public class DUUIImporter {
     private static final Logger logger = LogManager.getLogger(DUUIImporter.class);
     private static final Gson gson = new Gson();
     private static final int BATCH_SIZE = 2000;
-    private static final String[] COMPATIBLE_CAS_FILE_ENDINGS = List.of("xmi", "bz2", "zip", "gz").toArray(new String[0]);
+    private static final String[] COMPATIBLE_CAS_FILE_ENDINGS = List.of("xmi", "bz2", "zip", "gz", "dua").toArray(new String[0]);
     private static final Set<String> WANTED_NE_TYPES = Set.of("LOCATION", "MISC", "PERSON", "ORGANIZATION");
     private static final Set<String> MIME_TYPES_PDF = Set.of("application/pdf", "pdf");
     private static final String MIME_TYPE_IMAGE_PREFIX = "image/";
@@ -178,19 +189,24 @@ public class DUUIImporter {
     private static final String UCE_OPERATION_TYPE = "org.texttechnologylab.annotation.uce.UCEOperation";
     private static final String MEMBERSHIP_TYPE = "org.texttechnologylab.annotation.domain.Membership";
     private static final String REFERENCE_TYPE = "org.texttechnologylab.annotation.domain.Reference";
-    private static final DUUIArtifactType<UCEImportArtifact> UCE_IMPORT = DUUIArtifactType.of("uce/import");
-    private static final DUUIArtifactType<UCECorpusArtifact> UCE_CORPUS = DUUIArtifactType.of("uce/corpus");
-    private static final DUUIArtifactType<UCEDocumentArtifact> UCE_DOCUMENT = DUUIArtifactType.of("uce/document");
-    private static final DUUIArtifactType<JCasArtifact> JCAS_ARTIFACT = DUUIArtifactType.of("uima/jcas");
+    private static final String UCE_IMPORT = "uce/import";
+    private static final String UCE_CORPUS = "uce/corpus";
+    private static final String UCE_DOCUMENT = "uce/document";
+    private static final String JCAS_ARTIFACT = "uima/jcas";
+    private static final String GNFINDER_ENABLED_ENV = "UCE_DUUI_GNFINDER_ENABLED";
+    private static final String GNFINDER_IMAGE_ENV = "UCE_DUUI_GNFINDER_IMAGE";
+    private static final String GNFINDER_IMAGE_PROPERTY = "uce.duui.gnfinder.image";
+    private static final String GNFINDER_DEFAULT_IMAGE = "localhost/duui-py-gnfinder:latest";
     private static final Path EXTERNAL_CORPUS_CONFIG_PATH = Path.of("/app/config/UCECorpusConfigEmpty.json");
     private static final Path LEGACY_CORPUS_CONFIG_PATH = Path.of("uce.corpus-importer/src/main/resources/UCECorpusConfigEmpty.json");
     private GoetheUniversityService goetheUniversityService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private EmbeddingService embeddingService;
     private JenaSparqlService jenaSparqlService;
     private S3StorageService s3StorageService;
     private LexiconService lexiconService;
     private final CommonConfig commonConfig = new CommonConfig();
+    private final DUAXmiBridge duaBridge = new DUAXmiBridge();
     private String importId;
     private Integer importerNumber;
     private List<UCEMetadataFilter> uceMetadataFilters = new CopyOnWriteArrayList<>();
@@ -227,10 +243,23 @@ public class DUUIImporter {
             }
         }
 
-        try (var springContext = new AnnotationConfigApplicationContext(SpringConfig.class)) {
-            DUUIImporter importer = new DUUIImporter();
-            for (String path : importablePaths) {
-                importer.run(path, importerNumber, numThreads, casView, corpusConfigJson, null, springContext);
+        boolean forceCliExit = gnFinderPodmanEnabled();
+        int exitCode = 0;
+        try {
+            try (var springContext = new AnnotationConfigApplicationContext(SpringConfig.class)) {
+                DUUIImporter importer = new DUUIImporter();
+                for (String path : importablePaths) {
+                    importer.run(path, importerNumber, numThreads, casView, corpusConfigJson, null, springContext);
+                }
+            }
+        } catch (Exception ex) {
+            exitCode = 1;
+            logger.error("DUUIImporter failed.", ex);
+            throw ex;
+        } finally {
+            if (forceCliExit) {
+                logger.info("Forcing DUUIImporter CLI exit after Podman driver shutdown.");
+                System.exit(exitCode);
             }
         }
     }
@@ -287,6 +316,7 @@ public class DUUIImporter {
                             try (DUUIStageScope<UCEDocumentArtifact> stage = documents.linear("document-jcas")) {
                                 stage.dispatchPolicy(importerIo);
                                 stage.lambda(lambda(UCE_DOCUMENT, "open-document-jcas", this::openDocumentJCas));
+                                stage.lambda(lambda(UCE_DOCUMENT, "annotate-gnfinder-podman", this::annotateGnfinderPodman));
                                 stage.lambda(lambda(UCE_DOCUMENT, "initialize-document-shell", this::initializeDocumentShell));
                             }
                                     try (DUUIStageScope<UCEDocumentArtifact> stage = documents.parallel("document-independent-extraction")) {
@@ -331,25 +361,32 @@ public class DUUIImporter {
                             stage.lambda(lambda(UCE_CORPUS, "finalize-corpus", this::finalizeCorpus));
                         }
                     }
-                    try (DUUIStageScope<UCEImportArtifact> stage = runtimeScope.linear("runtime-finalize")) {
-                        stage.dispatchPolicy(importerIo);
-                        stage.lambda(lambda(UCE_IMPORT, "finalize-import-environment", this::finalizeImportEnvironment));
-                    }
                 }
             }
-            duui.run(pipelineId);
+            var result = duui.run(pipelineId);
+            logger.info("DUUIImporter pipeline completed results=" + result.results().size()
+                    + " failures=" + result.hasFailures()
+                    + " unroutable=" + result.unroutableArtifacts().size());
+            result.results().stream()
+                    .filter(item -> item.failure() != null)
+                    .forEach(item -> logger.error("DUUIImporter stage failure status=" + item.status()
+                            + " stage=" + item.failure().stageId()
+                            + " checkpoint=" + item.failure().checkpointId()
+                            + " artifact=" + item.failure().artifactId()
+                            + " message=" + item.failure().message(), item.failure().cause()));
+        } finally {
+            flushDuaStoreQuietly(runtime);
+            closeGuardQuietly(runtime);
+            flushDuaStoreQuietly(runtime);
+            if (runtime.preparedImportPath != null && (runtime.sourcePath == null || runtime.sourcePath.isBlank())) {
+                cleanupPreparedImportPath(runtime.preparedImportPath);
+            }
         }
     }
 
-    private static <T> DUUILambda<T> lambda(DUUIArtifactType<T> inputType, String operationName, StageProcessor<T> processor) {
-        return new DUUILambda<>() {
-            @Override
-            public DUUIArtifactType<T> inputType() {
-                return inputType;
-            }
-
-            @Override
-            public DUUIArtifact<T> process(DUUIArtifact<T> artifact) throws Exception {
+    private static <T> DUUILambda<T> lambda(String inputType, String operationName, StageProcessor<T> processor) {
+        return DUUILambda.<T>builder(inputType + ":" + operationName)
+                .processor(artifact -> {
                 Object payload = artifact.payload();
                 ImportRuntimeState runtime = runtimeFromPayload(payload);
                 long started = System.currentTimeMillis();
@@ -361,8 +398,8 @@ public class DUUIImporter {
                     recordOperation(runtime, payload, operationName, "FAILED", 0, ex.getMessage(), started);
                     throw ex;
                 }
-            }
-        };
+                })
+                .build();
     }
 
     private static ImportRuntimeState runtimeFromPayload(Object payload) {
@@ -392,10 +429,11 @@ public class DUUIImporter {
         ImportRuntimeState runtime = artifact.payload().runtime;
         runtime.accessManager = runtime.springContext.getBean(DocumentAccessManager.class);
         runtime.adminGuard = runtime.accessManager.asAdmin();
-        runtime.db = runtime.springContext.getBean(PostgresqlDataInterface_Impl.class);
+        runtime.db = runtime.springContext.getBean(DataInterface.class);
+        runtime.storageMaintenance = runtime.springContext.getBean(StorageMaintenanceService.class);
         runtime.lexiconService = runtime.springContext.getBean(LexiconService.class);
         runtime.embeddingService = runtime.springContext.getBean(EmbeddingService.class);
-        runtime.ageGraphService = runtime.springContext.getBean(AgeGraphService.class);
+        runtime.ageGraphService = runtime.springContext.getBean(DomainGraphService.class);
         this.db = runtime.db;
         this.lexiconService = runtime.lexiconService;
         this.embeddingService = runtime.embeddingService;
@@ -405,7 +443,7 @@ public class DUUIImporter {
         this.importId = runtime.importId;
         this.importerNumber = runtime.importerNumber;
         try {
-            SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), runtime.db);
+            SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), runtime.storageMaintenance);
         } catch (Exception ex) {
             logger.warn("Couldn't execute external DB scripts.", ex);
         }
@@ -467,6 +505,7 @@ public class DUUIImporter {
         runtime.batchLatch = new AtomicReference<>(new CountDownLatch(0));
         runtime.continuation = new DocumentImportContinuation(
                 runtime.db,
+                runtime.storageMaintenance,
                 runtime.lexiconService,
                 logger,
                 runtime.batchLatch,
@@ -486,7 +525,7 @@ public class DUUIImporter {
     private DUUIArtifact<UCECorpusArtifact> finalizeCorpus(DUUIArtifact<UCECorpusArtifact> artifact) {
         UCECorpusArtifact work = artifact.payload();
         ExceptionUtils.tryCatchLog(
-                () -> work.runtime.db.callLogicalLinksRefresh(),
+                () -> work.runtime.storageMaintenance.refreshLogicalLinks(),
                 (ex) -> logger.error("Error in the final logical links update of the current corpus with id " + work.corpus.getId(), ex)
         );
         ExceptionUtils.tryCatchLog(
@@ -494,7 +533,7 @@ public class DUUIImporter {
                 (ex) -> logger.error("Error in the final lexicon update of the current corpus with id " + work.corpus.getId(), ex)
         );
         ExceptionUtils.tryCatchLog(
-                () -> work.runtime.db.callGeonameLocationRefresh(),
+                () -> work.runtime.storageMaintenance.refreshGeonameLocations(),
                 (ex) -> logger.error("Error in the final geoname location update of the current corpus with id " + work.corpus.getId(), ex)
         );
         ExceptionUtils.tryCatchLog(
@@ -541,6 +580,15 @@ public class DUUIImporter {
         return artifact;
     }
 
+    private DUUIArtifact<UCEDocumentArtifact> annotateGnfinderPodman(DUUIArtifact<UCEDocumentArtifact> artifact) throws Exception {
+        UCEDocumentArtifact work = artifact.payload();
+        if (work.jCas == null || !gnFinderPodmanEnabled()) {
+            return artifact;
+        }
+        work.corpus.runtime.gnfinderPodman().process(work.jCas);
+        return artifact;
+    }
+
     private DUUIArtifact<UCEDocumentArtifact> initializeDocumentShell(DUUIArtifact<UCEDocumentArtifact> artifact) {
         UCEDocumentArtifact work = artifact.payload();
         if (work.jCas == null) {
@@ -558,6 +606,9 @@ public class DUUIImporter {
     }
 
     private JCas openJCas(String filename, String casView) {
+        if (filename.endsWith(".dua")) {
+            return openDuaJCas(Path.of(filename), casView);
+        }
         try (InputStream inputStream = openInputStreamBasedOnExtension(filename)) {
             if (inputStream == null) {
                 return null;
@@ -570,6 +621,21 @@ public class DUUIImporter {
             return jCas;
         } catch (Exception ex) {
             logger.error("Error while reading annotated XMI file to JCas:", ex);
+            return null;
+        }
+    }
+
+    private JCas openDuaJCas(Path path, String casView) {
+        try (DUAArchiveReader reader = DUAArchiveReader.open(path)) {
+            String documentId = reader.manifest().getArtifacts().stream()
+                    .filter(entry -> "cas-xmi".equals(entry.kind()))
+                    .map(entry -> entry.id())
+                    .findFirst()
+                    .orElseThrow(() -> new IOException("DUA archive has no cas-xmi artifact: " + path));
+            JCas jCas = duaBridge.materialize(reader, documentId);
+            return casView == null ? jCas : jCas.getView(casView);
+        } catch (Exception ex) {
+            logger.error("Error while reading annotated DUA file to JCas:", ex);
             return null;
         }
     }
@@ -1172,9 +1238,10 @@ public class DUUIImporter {
                 return;
             }
             var primaryIdentifier = splitIds.getFirst();
-            ExceptionUtils.tryCatchLog(
-                    () -> taxon.setRecordId(Long.parseLong(Arrays.stream(primaryIdentifier.split("/")).toList().getLast())),
-                    (ex) -> logger.warn("Setting the recordId of a Taxon failed, but continuing the import: ", ex));
+            var recordId = parseTrailingNumericIdentifier(primaryIdentifier);
+            if (recordId != null) {
+                taxon.setRecordId(recordId);
+            }
             for (var potentialBiofidId : splitIds) {
                 var biofidId = potentialBiofidId.contains("gbif.org")
                         ? StringUtils.gbifToBIOfidUrl(potentialBiofidId)
@@ -1196,9 +1263,10 @@ public class DUUIImporter {
                 var splitIds = splitTaxonIdentifiers(taxon.getIdentifier());
                 if (!splitIds.isEmpty()) {
                     taxon.setPrimaryIdentifier(splitIds.getFirst());
-                    ExceptionUtils.tryCatchLog(
-                            () -> taxon.setRecordId(Long.parseLong(Arrays.stream(taxon.getPrimaryIdentifier().split("/")).toList().getLast())),
-                            (ex) -> logger.warn("Setting the recordId of a Taxon failed, but continuing the import: ", ex));
+                    var recordId = parseTrailingNumericIdentifier(taxon.getPrimaryIdentifier());
+                    if (recordId != null) {
+                        taxon.setRecordId(recordId);
+                    }
                     for (var potentialBiofidId : splitIds) {
                         if (potentialBiofidId.isEmpty()) continue;
                         var biofidId = potentialBiofidId.contains("gbif.org")
@@ -1213,6 +1281,29 @@ public class DUUIImporter {
         document.setGazetteerTaxons(gazetteerTaxa);
         document.setBiofidTaxons(biofidTaxa);
         logger.info("Setting Taxa done.");
+    }
+
+    private Long parseTrailingNumericIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return null;
+        }
+        int end = identifier.length() - 1;
+        while (end >= 0 && !Character.isDigit(identifier.charAt(end))) {
+            end--;
+        }
+        if (end < 0) {
+            return null;
+        }
+        int start = end;
+        while (start >= 0 && Character.isDigit(identifier.charAt(start))) {
+            start--;
+        }
+        try {
+            return Long.parseLong(identifier.substring(start + 1, end + 1));
+        } catch (NumberFormatException ex) {
+            logger.debug("Skipping non-numeric taxon record id from identifier: {}", identifier);
+            return null;
+        }
     }
 
     private ArrayList<String> splitTaxonIdentifiers(String identifiers) {
@@ -1565,13 +1656,13 @@ public class DUUIImporter {
     }
 
     private void logImportWarn(String message, Exception ex, String file) {
-        var importLog = new ImportLog(this.importerNumber.toString(), ex.getMessage(), LogStatus.WARN, file, this.importId, 0);
+        var importLog = new ImportLog(this.importerNumber.toString(), ex == null ? message : ex.getMessage(), LogStatus.WARN, file, this.importId, 0);
         tryStoreUCEImportLog(importLog);
         logger.warn(message, ex);
     }
 
     private void logImportError(String message, Exception ex, String file) {
-        var importLog = new ImportLog(this.importerNumber.toString(), ex.getMessage(), LogStatus.ERROR, file, this.importId, 0);
+        var importLog = new ImportLog(this.importerNumber.toString(), ex == null ? message : ex.getMessage(), LogStatus.ERROR, file, this.importId, 0);
         tryStoreUCEImportLog(importLog);
         logger.error(message, ex);
     }
@@ -2041,11 +2132,16 @@ public class DUUIImporter {
     }
 
     private void persistAnnotatedDomainGraph(UCEDocumentArtifact work) throws DatabaseOperationException, DocumentAccessDeniedException {
+        Class<? extends org.apache.uima.jcas.cas.TOP> domainClass = uimaClass("org.texttechnologylab.annotation.domain.Domain");
+        Class<? extends org.apache.uima.jcas.cas.TOP> associationClass = uimaClass("org.texttechnologylab.annotation.domain.Association");
+        if (domainClass == null || associationClass == null) {
+            return;
+        }
         long corpusId = work.corpus.corpus.getId();
         long documentRowId = work.document.getId();
-        var domains = JCasUtil.select(work.jCas, Domain.class);
+        var domains = JCasUtil.select(work.jCas, domainClass);
         List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
-        for (Domain domain : domains) {
+        for (org.apache.uima.jcas.cas.TOP domain : domains) {
             String uid = domainUid(domain);
             if (uid == null) {
                 continue;
@@ -2055,9 +2151,9 @@ public class DUUIImporter {
                     domain.getType().getName(),
                     corpusId,
                     documentRowId,
-                    domain.getName(),
-                    domain.getUri(),
-                    domain.getMetadata(),
+                    featureString(domain, "name"),
+                    featureString(domain, "uri"),
+                    featureString(domain, "metadata"),
                     featureJson(domain, Set.of("id", "name", "uri", "metadata"))
             ));
         }
@@ -2065,19 +2161,19 @@ public class DUUIImporter {
             work.corpus.runtime.ageGraphService.upsertDomainNodes(nodes);
         }
 
-        var associations = JCasUtil.select(work.jCas, Association.class);
+        var associations = JCasUtil.select(work.jCas, associationClass);
         List<AgeGraphService.AssociationEdge> edges = new ArrayList<>();
-        for (Association association : associations) {
-            Domain left = leftAssociationDomain(association);
-            Domain right = rightAssociationDomain(association);
+        for (org.apache.uima.jcas.cas.TOP association : associations) {
+            org.apache.uima.jcas.cas.TOP left = leftAssociationDomain(association);
+            org.apache.uima.jcas.cas.TOP right = rightAssociationDomain(association);
             String leftUid = domainUid(left);
             String rightUid = domainUid(right);
             if (leftUid == null || rightUid == null) {
                 continue;
             }
-            String edgeUid = association.getId();
+            String edgeUid = featureString(association, "id");
             if (edgeUid == null || edgeUid.isBlank()) {
-                edgeUid = association.getType().getName() + ":" + leftUid + "->" + rightUid + ":" + nullToEmpty(association.getName());
+                edgeUid = association.getType().getName() + ":" + leftUid + "->" + rightUid + ":" + nullToEmpty(featureString(association, "name"));
             }
             edges.add(new AgeGraphService.AssociationEdge(
                     edgeUid,
@@ -2086,8 +2182,8 @@ public class DUUIImporter {
                     documentRowId,
                     leftUid,
                     rightUid,
-                    association.getName(),
-                    association.getMetadata(),
+                    featureString(association, "name"),
+                    featureString(association, "metadata"),
                     featureJson(association, Set.of("id", "name", "metadata"))
             ));
         }
@@ -2096,27 +2192,64 @@ public class DUUIImporter {
         }
     }
 
-    private String domainUid(Domain domain) {
-        if (domain == null || domain.getId() == null || domain.getId().isBlank()) {
+    @SuppressWarnings("unchecked")
+    private Class<? extends org.apache.uima.jcas.cas.TOP> uimaClass(String className) {
+        try {
+            Class<?> clazz = Class.forName(className);
+            return org.apache.uima.jcas.cas.TOP.class.isAssignableFrom(clazz)
+                    ? (Class<? extends org.apache.uima.jcas.cas.TOP>) clazz
+                    : null;
+        } catch (ClassNotFoundException ignored) {
             return null;
         }
-        return domain.getType().getName() + ":" + domain.getId();
     }
 
-    private Domain leftAssociationDomain(Association association) {
-        if (association instanceof Membership membership) return membership.getWhole();
-        if (association instanceof Reference reference) return reference.getContext();
-        if (association instanceof Sequence sequence) return sequence.getPrevious();
-        if (association instanceof Equivalence equivalence) return equivalence.getOne();
+    private String domainUid(org.apache.uima.jcas.cas.TOP domain) {
+        String id = featureString(domain, "id");
+        if (domain == null || id == null || id.isBlank()) {
+            return null;
+        }
+        return domain.getType().getName() + ":" + id;
+    }
+
+    private org.apache.uima.jcas.cas.TOP leftAssociationDomain(org.apache.uima.jcas.cas.TOP association) {
+        return firstFeatureValue(association, "whole", "context", "previous", "one");
+    }
+
+    private org.apache.uima.jcas.cas.TOP rightAssociationDomain(org.apache.uima.jcas.cas.TOP association) {
+        return firstFeatureValue(association, "part", "referent", "next", "other");
+    }
+
+    private org.apache.uima.jcas.cas.TOP firstFeatureValue(org.apache.uima.jcas.cas.TOP fs, String... featureNames) {
+        for (String featureName : featureNames) {
+            Feature feature = fs.getType().getFeatureByBaseName(featureName);
+            if (feature == null) {
+                continue;
+            }
+            try {
+                var value = fs.getFeatureValue(feature);
+                if (value instanceof org.apache.uima.jcas.cas.TOP top) {
+                    return top;
+                }
+            } catch (Exception ignored) {
+            }
+        }
         return null;
     }
 
-    private Domain rightAssociationDomain(Association association) {
-        if (association instanceof Membership membership) return membership.getPart();
-        if (association instanceof Reference reference) return reference.getReferent();
-        if (association instanceof Sequence sequence) return sequence.getNext();
-        if (association instanceof Equivalence equivalence) return equivalence.getOther();
-        return null;
+    private String featureString(org.apache.uima.jcas.cas.TOP fs, String featureName) {
+        if (fs == null) {
+            return null;
+        }
+        Feature feature = fs.getType().getFeatureByBaseName(featureName);
+        if (feature == null) {
+            return null;
+        }
+        try {
+            return fs.getFeatureValueAsString(feature);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private String featureJson(org.apache.uima.jcas.cas.TOP fs, Set<String> excludedFeatures) {
@@ -2266,7 +2399,7 @@ public class DUUIImporter {
                 Path insertDocumentTopicWordFilePath = Path.of(commonConfig.getDatabaseScriptsLocation(), "topic/3_updateDocumentTopicWord.sql");
                 String insertDocumentTopicWordScript = Files.readString(insertDocumentTopicWordFilePath);
                 try {
-                    work.runtime.db.executeSqlWithoutReturn(insertDocumentTopicWordScript);
+                    work.runtime.storageMaintenance.executeStorageStatement(insertDocumentTopicWordScript);
                 } catch (Exception ex) {
                     logger.error("Error executing SQL script to populate documenttopicword table", ex);
                 }
@@ -2274,7 +2407,7 @@ public class DUUIImporter {
                 Path insertCorpusTopicWordFilePath = Path.of(commonConfig.getDatabaseScriptsLocation(), "topic/4_updateCorpusTopicWord.sql");
                 String insertCorpusTopicWordScript = Files.readString(insertCorpusTopicWordFilePath);
                 try {
-                    work.runtime.db.executeSqlWithoutReturn(insertCorpusTopicWordScript);
+                    work.runtime.storageMaintenance.executeStorageStatement(insertCorpusTopicWordScript);
                 } catch (Exception ex) {
                     logger.error("Error executing SQL script to populate corpustopicword table", ex);
                 }
@@ -2287,7 +2420,7 @@ public class DUUIImporter {
         logger.info("Done with the corpus postprocessing.");
     }
 
-    private static Corpus createDBCorpus(Corpus corpus, CorpusConfig corpusConfig, PostgresqlDataInterface_Impl db) throws DatabaseOperationException, DocumentAccessDeniedException {
+    private static Corpus createDBCorpus(Corpus corpus, CorpusConfig corpusConfig, DataInterface db) throws DatabaseOperationException, DocumentAccessDeniedException {
         corpus.setName(corpusConfig.getName());
         corpus.setLanguage(corpusConfig.getLanguage());
         corpus.setAuthor(corpusConfig.getAuthor());
@@ -2338,6 +2471,13 @@ public class DUUIImporter {
     }
 
     private static void closeGuardQuietly(ImportRuntimeState runtime) {
+        if (runtime.gnfinderPodman != null) {
+            try {
+                runtime.gnfinderPodman.close();
+            } catch (Exception ignored) {
+            }
+            runtime.gnfinderPodman = null;
+        }
         if (runtime.adminGuard != null) {
             try {
                 runtime.adminGuard.close();
@@ -2347,6 +2487,67 @@ public class DUUIImporter {
         }
     }
 
+    private static void flushDuaStoreQuietly(ImportRuntimeState runtime) {
+        if (runtime.db instanceof DuaDataInterface_Impl duaDataInterface) {
+            try {
+                duaDataInterface.flushPendingStore();
+            } catch (RuntimeException ex) {
+                logger.error("Failed to flush DUA store.", ex);
+            }
+        }
+    }
+
+    private static boolean gnFinderPodmanEnabled() {
+        String raw = System.getenv(GNFINDER_ENABLED_ENV);
+        if (raw != null && !raw.isBlank()) {
+            return Boolean.parseBoolean(raw.trim());
+        }
+        return configuredGnFinderImage() != null;
+    }
+
+    private static String configuredGnFinderImage() {
+        String raw = System.getProperty(GNFINDER_IMAGE_PROPERTY);
+        if (raw == null || raw.isBlank()) {
+            raw = System.getenv(GNFINDER_IMAGE_ENV);
+        }
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return raw.trim();
+    }
+
+    private static String configuredGnFinderParameter(String name, String defaultValue) {
+        String raw = System.getenv("UCE_DUUI_GNFINDER_" + name.toUpperCase(Locale.ROOT));
+        return raw == null || raw.isBlank() ? defaultValue : raw.trim();
+    }
+
+    private static int configuredGnFinderInt(String name, int defaultValue) {
+        String raw = configuredGnFinderParameter(name, Integer.toString(defaultValue));
+        try {
+            return Math.max(1, Integer.parseInt(raw));
+        } catch (NumberFormatException ignored) {
+            return Math.max(1, defaultValue);
+        }
+    }
+
+    private static String initialViewName(String casView) {
+        return casView == null || casView.isBlank() ? "_InitialView" : casView;
+    }
+
+    private static void addOptionalParameter(Map<String, String> parameters, String name) {
+        String value = configuredGnFinderParameter(name, "");
+        if (!value.isBlank()) {
+            parameters.put(name, value);
+        }
+    }
+
+    private static JCas healthCas() throws Exception {
+        JCas cas = JCasFactory.createJCas();
+        cas.setDocumentLanguage("en");
+        cas.setDocumentText("DUUI GNFinder health check.");
+        return cas;
+    }
+
     @FunctionalInterface
     private interface StageProcessor<T> {
         DUUIArtifact<T> process(DUUIArtifact<T> artifact) throws Exception;
@@ -2354,15 +2555,10 @@ public class DUUIImporter {
 
     private static final class RuntimeToCorpus implements DUUIAdapter<UCEImportArtifact, UCECorpusArtifact> {
         static Builder builder() { return new Builder(); }
-        @Override
-        public DUUIArtifactType<UCEImportArtifact> inputType() { return UCE_IMPORT; }
-
-        @Override
-        public DUUIArtifactType<UCECorpusArtifact> outputType() { return UCE_CORPUS; }
 
         @Override
         public DUUIArtifact<UCECorpusArtifact> adapt(DUUIArtifact<UCEImportArtifact> artifact) {
-            return artifact.childArtifact(new UCECorpusArtifact(artifact.payload().runtime), UCE_CORPUS);
+            return DUUIArtifact.of(new UCECorpusArtifact(artifact.payload().runtime));
         }
 
         static final class Builder {
@@ -2374,11 +2570,6 @@ public class DUUIImporter {
 
     private static final class CorpusToDocuments implements DUUIFork<UCECorpusArtifact, UCEDocumentArtifact> {
         static Builder builder() { return new Builder(); }
-        @Override
-        public DUUIArtifactType<UCECorpusArtifact> inputType() { return UCE_CORPUS; }
-
-        @Override
-        public DUUIArtifactType<UCEDocumentArtifact> outputType() { return UCE_DOCUMENT; }
 
         @Override
         public void fork(DUUIArtifact<UCECorpusArtifact> artifact, DUUIArtifactEmitter<UCEDocumentArtifact> emitter) throws Exception {
@@ -2387,14 +2578,17 @@ public class DUUIImporter {
             if (runtime.sourcePath == null || runtime.sourcePath.isBlank()) {
                 var metadata = JCasUtil.selectSingle(runtime.inputCas, DocumentMetaData.class);
                 String documentId = metadata.getDocumentId();
-                emitter.emit(artifact.childArtifact(UCEDocumentArtifact.mainCas(corpus, documentId), UCE_DOCUMENT));
+                emitter.emit(DUUIArtifact.of(UCEDocumentArtifact.mainCas(corpus, documentId)));
                 return;
             }
             Path inputFolder = runtime.preparedImportPath.resolve("input");
             try (Stream<Path> fileStream = Files.walk(inputFolder)) {
-                fileStream.filter(Files::isRegularFile)
+                var files = fileStream.filter(Files::isRegularFile)
                         .filter(path -> StringUtils.checkIfFileHasExtension(path.toString().toLowerCase(), COMPATIBLE_CAS_FILE_ENDINGS))
-                        .forEach(path -> emitter.emit(artifact.childArtifact(UCEDocumentArtifact.file(corpus, path), UCE_DOCUMENT)));
+                        .sorted()
+                        .toList();
+                logger.info("DUUIImporter discovered " + files.size() + " importable CAS/DUA files in " + inputFolder);
+                files.forEach(path -> emitter.emit(DUUIArtifact.of(UCEDocumentArtifact.file(corpus, path))));
             }
         }
 
@@ -2409,10 +2603,6 @@ public class DUUIImporter {
         private final DUUIImporter importer;
         private DocumentToJCas(DUUIImporter importer) { this.importer = importer; }
         static Builder builder(DUUIImporter importer) { return new Builder(importer); }
-        @Override
-        public DUUIArtifactType<UCEDocumentArtifact> inputType() { return UCE_DOCUMENT; }
-        @Override
-        public DUUIArtifactType<JCasArtifact> outputType() { return JCAS_ARTIFACT; }
         @Override
         public DUUIArtifact<JCasArtifact> adapt(DUUIArtifact<UCEDocumentArtifact> artifact) throws Exception {
             UCEDocumentArtifact source = artifact.payload();
@@ -2430,7 +2620,7 @@ public class DUUIImporter {
             }
             source.documentId = resolvedId;
             source.filePath = source.mainCasDocument ? Path.of("DUUI-CAS-Import-" + resolvedId + ".xmi") : source.filePath;
-            return artifact.childArtifact(new JCasArtifact(source, selectedCas), JCAS_ARTIFACT);
+            return DUUIArtifact.of(new JCasArtifact(source, selectedCas));
         }
         static final class Builder {
             private final DUUIImporter importer;
@@ -2446,10 +2636,6 @@ public class DUUIImporter {
         private JCasToDocument(DUUIImporter importer) { this.importer = importer; }
         static Builder builder(DUUIImporter importer) { return new Builder(importer); }
         @Override
-        public DUUIArtifactType<JCasArtifact> inputType() { return JCAS_ARTIFACT; }
-        @Override
-        public DUUIArtifactType<UCEDocumentArtifact> outputType() { return UCE_DOCUMENT; }
-        @Override
         public DUUIArtifact<UCEDocumentArtifact> adapt(DUUIArtifact<JCasArtifact> artifact) throws Exception {
             JCasArtifact source = artifact.payload();
             UCEDocumentArtifact documentArtifact = source.source;
@@ -2462,7 +2648,7 @@ public class DUUIImporter {
                     documentArtifact.corpus.runtime
             );
             documentArtifact.jCas = source.jCas;
-            return artifact.childArtifact(documentArtifact, UCE_DOCUMENT);
+            return DUUIArtifact.of(documentArtifact);
         }
         static final class Builder {
             private final DUUIImporter importer;
@@ -2470,6 +2656,94 @@ public class DUUIImporter {
             DUUIAdapterScope<JCasArtifact, UCEDocumentArtifact> open(DUUIFlowScope<JCasArtifact> parent) {
                 return parent.pipeline().adapter(parent, new JCasToDocument(importer));
             }
+        }
+    }
+
+    private static final class GnfinderPodmanRuntime implements AutoCloseable {
+        private final DUUIComponent<JCas> component;
+
+        private GnfinderPodmanRuntime(DUUIComponent<JCas> component) {
+            this.component = component;
+        }
+
+        static GnfinderPodmanRuntime start(ImportRuntimeState runtime) throws Exception {
+            String image = configuredGnFinderImage();
+            if (image == null || image.isBlank()) {
+                image = GNFINDER_DEFAULT_IMAGE;
+            }
+            String viewName = initialViewName(runtime.casView);
+            int scale = configuredGnFinderInt("scale", Math.min(Math.max(1, runtime.numThreads), 4));
+            int concurrency = configuredGnFinderInt("concurrency", 1);
+            long timeoutSeconds = configuredGnFinderInt("timeout_seconds", 600);
+            boolean imageFetching = Boolean.parseBoolean(configuredGnFinderParameter("image_fetching", "false"));
+            Map<String, String> parameters = new LinkedHashMap<>();
+            parameters.put("lang", configuredGnFinderParameter("lang", "detect"));
+            parameters.put("verify", configuredGnFinderParameter("verify", "true"));
+            parameters.put("timeout_seconds", configuredGnFinderParameter("process_timeout_seconds", "120"));
+            addOptionalParameter(parameters, "gnfinder_binary");
+            addOptionalParameter(parameters, "sources");
+            addOptionalParameter(parameters, "words_around");
+            addOptionalParameter(parameters, "utf8_input");
+            addOptionalParameter(parameters, "no_bayes");
+            addOptionalParameter(parameters, "adjust_odds");
+            addOptionalParameter(parameters, "ambiguous_uninomials");
+            addOptionalParameter(parameters, "all_matches");
+            addOptionalParameter(parameters, "unique_names");
+
+            DUUIPodmanDriver driver = new DUUIPodmanDriver();
+            driver.setLuaContext(LuaConsts.getJSON());
+            DUUIPipelineComponent podmanComponent = new DUUIPodmanDriver.Component(image)
+                    .withScale(scale)
+                    .withWorkers(1)
+                    .withImageFetching(imageFetching)
+                    .withSourceView(viewName)
+                    .withTargetView(viewName)
+                    .build()
+                    .withTimeout(timeoutSeconds);
+            parameters.forEach(podmanComponent::withParameter);
+            String uuid = driver.instantiate(podmanComponent, healthCas(), true, new AtomicBoolean(false));
+            List<String> endpoints = driver.getEndpointUrls(uuid);
+            if (endpoints.isEmpty()) {
+                driver.destroy(uuid);
+                throw new IllegalStateException("GNFinder Podman component did not expose any DUUI v1 endpoint.");
+            }
+
+            DUUIV1Config config = new DUUIV1Config(
+                    concurrency,
+                    viewName,
+                    viewName,
+                    parameters,
+                    DUUIV1TelemetryConfig.disabled(),
+                    false,
+                    "application/octet-stream"
+            );
+            List<DUUINode<JCas>> nodes = new ArrayList<>();
+            int slot = 0;
+            int replica = 0;
+            for (String endpoint : endpoints) {
+                DUUIV1Annotator annotator = new DUUIV1Annotator(
+                        "gnfinder-podman-replica-" + replica++,
+                        new DUUIHttpEndpoint(URI.create(endpoint), HttpClient.newHttpClient()),
+                        config
+                );
+                for (int i = 0; i < concurrency; i++) {
+                    nodes.add(DUUINode.v1("gnfinder-podman-slot-" + slot++, annotator));
+                }
+            }
+            logger.info("Started DUUI GNFinder Podman component image=" + image
+                    + " endpoints=" + endpoints.size()
+                    + " scale=" + scale
+                    + " concurrency=" + concurrency);
+            return new GnfinderPodmanRuntime(new DUUIComponent<>("gnfinder-podman", nodes, () -> driver.destroy(uuid)));
+        }
+
+        void process(JCas jCas) throws Exception {
+            component.process(DUUIArtifact.of(jCas));
+        }
+
+        @Override
+        public void close() throws Exception {
+            component.close();
         }
     }
 
@@ -2481,13 +2755,8 @@ public class DUUIImporter {
         }
 
         @Override
-        public DUUIArtifactType<UCEImportArtifact> outputType() {
-            return UCE_IMPORT;
-        }
-
-        @Override
         public void generate(DUUIArtifactEmitter<UCEImportArtifact> emitter) throws Exception {
-            emitter.emit(DUUIArtifact.of(new UCEImportArtifact(runtime), UCE_IMPORT));
+            emitter.emit(DUUIArtifact.of(new UCEImportArtifact(runtime)));
         }
 
         @Override
@@ -2513,12 +2782,14 @@ public class DUUIImporter {
         Path preparedImportPath;
         DocumentAccessManager accessManager;
         AutoCloseable adminGuard;
-        PostgresqlDataInterface_Impl db;
+        DataInterface db;
+        StorageMaintenanceService storageMaintenance;
         LexiconService lexiconService;
         EmbeddingService embeddingService;
-        AgeGraphService ageGraphService;
+        DomainGraphService ageGraphService;
         boolean domainGraphInitialized;
         DocumentImportContinuation continuation;
+        GnfinderPodmanRuntime gnfinderPodman;
         CopyOnWriteArrayList<UCEMetadataFilter> uceMetadataFilters = new CopyOnWriteArrayList<>();
         AtomicReference<CountDownLatch> batchLatch;
         AtomicInteger docInBatch;
@@ -2534,6 +2805,13 @@ public class DUUIImporter {
             this.inputCas = inputCas;
             this.springContext = springContext;
             this.casOnlyRun = sourcePath == null || sourcePath.isBlank();
+        }
+
+        synchronized GnfinderPodmanRuntime gnfinderPodman() throws Exception {
+            if (gnfinderPodman == null) {
+                gnfinderPodman = GnfinderPodmanRuntime.start(this);
+            }
+            return gnfinderPodman;
         }
     }
 

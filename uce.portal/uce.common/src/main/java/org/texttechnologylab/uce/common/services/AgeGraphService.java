@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class AgeGraphService {
+public class AgeGraphService implements DomainGraphService {
     public static final String GRAPH_NAME = "uce_domain_graph";
     public static final String NODE_LABEL = "FeatureStructure";
     public static final String EDGE_LABEL = "Association";

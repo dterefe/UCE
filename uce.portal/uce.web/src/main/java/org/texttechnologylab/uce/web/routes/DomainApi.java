@@ -7,8 +7,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException;
-import org.texttechnologylab.uce.common.services.AgeGraphService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
+import org.texttechnologylab.uce.common.services.DomainGraphService;
 import org.texttechnologylab.uce.web.freeMarker.AccessDeniedRenderer;
 
 import java.util.ArrayList;
@@ -19,14 +19,14 @@ import java.util.Map;
 public class DomainApi implements UceApi {
     private static final Logger logger = LogManager.getLogger(DomainApi.class);
 
-    private final AgeGraphService ageGraphService;
-    private final PostgresqlDataInterface_Impl db;
+    private final DomainGraphService ageGraphService;
+    private final DataInterface db;
     private final Configuration freemarkerConfig;
     private final Gson gson = new Gson();
 
     public DomainApi(ApplicationContext context, Configuration freemarkerConfig) {
-        this.ageGraphService = context.getBean(AgeGraphService.class);
-        this.db = context.getBean(PostgresqlDataInterface_Impl.class);
+        this.ageGraphService = context.getBean(DomainGraphService.class);
+        this.db = context.getBean(DataInterface.class);
         this.freemarkerConfig = freemarkerConfig;
     }
 

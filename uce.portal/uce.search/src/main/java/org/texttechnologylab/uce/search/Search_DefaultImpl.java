@@ -10,10 +10,10 @@ import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.authentication.UceUser;
 import org.texttechnologylab.uce.common.models.dto.UCEMetadataFilterDto;
 import org.texttechnologylab.uce.common.models.search.*;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.models.search.promode.ProModeSyntaxException;
 import org.texttechnologylab.uce.common.services.EmbeddingService;
 import org.texttechnologylab.uce.common.services.JenaSparqlService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.common.utils.Pair;
 import org.texttechnologylab.uce.common.utils.StringUtils;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
@@ -37,7 +37,7 @@ public class Search_DefaultImpl implements Search {
     private static final Logger logger = LogManager.getLogger(Search_DefaultImpl.class);
     private SearchState searchState;
     private List<String> stopwords;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
 //    private RAGService ragService;
     private EmbeddingService embeddingService;
     private JenaSparqlService jenaSparqlService;
@@ -436,7 +436,7 @@ public class Search_DefaultImpl implements Search {
     }
 
     private void initServices(ApplicationContext serviceContext, String languageCode) throws URISyntaxException, IOException {
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
 //        this.ragService = serviceContext.getBean(RAGService.class);
         this.jenaSparqlService = serviceContext.getBean(JenaSparqlService.class);
         this.stopwords = loadStopwords(languageCode);

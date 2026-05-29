@@ -16,7 +16,7 @@ import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.authentication.UceUser;
 import org.texttechnologylab.uce.common.models.corpus.UCEMetadataValueType;
 import org.texttechnologylab.uce.common.models.search.SearchType;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.S3StorageService;
 import org.texttechnologylab.uce.search.SearchState;
 import org.texttechnologylab.uce.web.LanguageResources;
@@ -49,7 +49,7 @@ import org.texttechnologylab.uce.common.security.DocumentAccessManager;
 
 public class DocumentApi implements UceApi {
     private S3StorageService s3StorageService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private static final Logger logger = LogManager.getLogger(DocumentApi.class);
     private Configuration freemarkerConfig;
 
@@ -57,7 +57,7 @@ public class DocumentApi implements UceApi {
     private final RendererRegistry rendererRegistry;
 
     public DocumentApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.s3StorageService = serviceContext.getBean(S3StorageService.class);
         this.freemarkerConfig = freemarkerConfig;
 
@@ -513,7 +513,18 @@ public class DocumentApi implements UceApi {
         }
 
         try {
-            var skip = Integer.parseInt(ctx.queryParam("skip"));
+            var skip = 0;
+            var skipParam = ctx.queryParam("skip");
+            if (skipParam != null && !skipParam.isBlank()) {
+                try {
+                    skip = Integer.parseInt(skipParam);
+                } catch (NumberFormatException ex) {
+                    logger.warn("Invalid skip parameter for document pages list, defaulting to 0: {}", skipParam);
+                }
+            }
+            if (skip < 0) {
+                skip = 0;
+            }
             var doc = db.getCompleteDocumentById(Long.parseLong(id), skip, 10);
             var annotations = doc.getAllAnnotations(skip, 10);
             model.put("documentAnnotations", annotations);

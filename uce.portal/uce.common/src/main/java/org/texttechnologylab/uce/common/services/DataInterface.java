@@ -1,15 +1,22 @@
 package org.texttechnologylab.uce.common.services;
 
 import java.util.List;
+import java.util.Map;
 
+import org.texttechnologylab.models.authentication.DocumentPermission;
 import org.texttechnologylab.uce.common.exceptions.DatabaseOperationException;
 import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException;
+import org.texttechnologylab.uce.common.models.Linkable;
+import org.texttechnologylab.uce.common.models.ModelBase;
+import org.texttechnologylab.uce.common.models.UIMAAnnotation;
 import org.texttechnologylab.uce.common.models.biofid.BiofidTaxon;
 import org.texttechnologylab.uce.common.models.biofid.GazetteerTaxon;
 import org.texttechnologylab.uce.common.models.biofid.GnFinderTaxon;
 import org.texttechnologylab.uce.common.models.corpus.Corpus;
 import org.texttechnologylab.uce.common.models.corpus.CorpusTsnePlot;
 import org.texttechnologylab.uce.common.models.corpus.Document;
+import org.texttechnologylab.uce.common.models.corpus.DocumentTopThreeTopics;
+import org.texttechnologylab.uce.common.models.corpus.GeoNameFeatureClass;
 import org.texttechnologylab.uce.common.models.corpus.GeoName;
 import org.texttechnologylab.uce.common.models.corpus.KeywordDistribution;
 import org.texttechnologylab.uce.common.models.corpus.Lemma;
@@ -22,22 +29,33 @@ import org.texttechnologylab.uce.common.models.corpus.Time;
 import org.texttechnologylab.uce.common.models.corpus.UCELog;
 import org.texttechnologylab.uce.common.models.corpus.UCEMetadata;
 import org.texttechnologylab.uce.common.models.corpus.UCEMetadataFilter;
+import org.texttechnologylab.uce.common.models.corpus.UCEMetadataValueType;
 import org.texttechnologylab.uce.common.models.corpus.links.AnnotationLink;
 import org.texttechnologylab.uce.common.models.corpus.links.AnnotationToDocumentLink;
 import org.texttechnologylab.uce.common.models.corpus.links.DocumentLink;
 import org.texttechnologylab.uce.common.models.corpus.links.DocumentToAnnotationLink;
+import org.texttechnologylab.uce.common.models.corpus.links.Link;
+import org.texttechnologylab.uce.common.models.dto.map.MapClusterDto;
+import org.texttechnologylab.uce.common.models.dto.map.PointDto;
 import org.texttechnologylab.uce.common.models.dto.UCEMetadataFilterDto;
 import org.texttechnologylab.uce.common.models.gbif.GbifOccurrence;
 import org.texttechnologylab.uce.common.models.globe.GlobeTaxon;
 import org.texttechnologylab.uce.common.models.imp.ImportLog;
 import org.texttechnologylab.uce.common.models.imp.UCEImport;
+import org.texttechnologylab.uce.common.models.negation.CompleteNegation;
 import org.texttechnologylab.uce.common.models.search.AnnotationSearchResult;
 import org.texttechnologylab.uce.common.models.search.DocumentSearchResult;
 import org.texttechnologylab.uce.common.models.search.OrderByColumn;
 import org.texttechnologylab.uce.common.models.search.SearchLayer;
 import org.texttechnologylab.uce.common.models.search.SearchOrder;
+import org.texttechnologylab.uce.common.models.topic.TopicWord;
+import org.texttechnologylab.uce.common.models.topic.UnifiedTopic;
 
 public interface DataInterface {
+
+    public default String backendName() {
+        return getClass().getSimpleName();
+    }
 
     /**
      * Fetches annotations (NE, Taxon, Time,...) of a given corpus.
@@ -56,6 +74,8 @@ public interface DataInterface {
      * @throws DocumentAccessDeniedException 
      */
     public int countDocumentsInCorpus(long id) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public int countPagesInCorpus(long corpusId) throws DatabaseOperationException, DocumentAccessDeniedException;
 
     /**
      * Returns true if the document with the given documentId exists in
@@ -138,11 +158,32 @@ public interface DataInterface {
      */
     public List<GlobeTaxon> getGlobeDataForDocument(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException;
 
+    public List<TopicWord> getNormalizedTopicWordsForCorpus(long corpusId) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public Map<String, Double> getTopNormalizedTopicsByCorpusId(long corpusId) throws DatabaseOperationException, DocumentAccessDeniedException;
+
     /**
      * Gets many documents by their ids
      * @throws DocumentAccessDeniedException 
      */
     public List<Document> getManyDocumentsByIds(List<Long> documentIds) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public default List<Document> getManyDocumentsByIds(List<Long> documentIds, java.util.Set<String> hibernateInit) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return getManyDocumentsByIds(documentIds);
+    }
+
+    public boolean hasDocumentAccess(String principal,
+                                     long documentId,
+                                     DocumentPermission.DOCUMENT_PERMISSION_LEVEL level)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public Map<Long, Boolean> hasDocumentAccess(String principal,
+                                                List<Long> documentIds,
+                                                DocumentPermission.DOCUMENT_PERMISSION_LEVEL level)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public void calculateEffectivePermissions(String username, java.util.Set<String> groups)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
 
     /**
      * Returns a list of lexicon entries depending on the parameters.
@@ -257,6 +298,25 @@ public interface DataInterface {
      */
     public Document getDocumentById(long id) throws DatabaseOperationException, DocumentAccessDeniedException;
 
+    public default Document getDocumentById(long id, java.util.Set<String> hibernateInit) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return getDocumentById(id);
+    }
+
+    public default Document getFirstDocumentByTitle(String title, boolean like) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return null;
+    }
+
+    public default List<Long> findDocumentIDsByTitle(String title, boolean like) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Long> findDocumentIdsByMetadata(String key, String value, UCEMetadataValueType valueType) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default void deleteDocumentById(long id) throws DatabaseOperationException, DocumentAccessDeniedException {
+    }
+
     /**
      * Gets a fully initialized page by its id.
      * @throws DocumentAccessDeniedException 
@@ -268,6 +328,64 @@ public interface DataInterface {
      * @throws DocumentAccessDeniedException 
      */
     public Page getPageByDocumentIdAndBeginEnd(long documentId, int begin, int end, boolean initialize) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public Linkable getLinkable(long id, Class<? extends Linkable> clazz) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public Linkable getLinkable(long id, String className) throws ClassNotFoundException, DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<Link> getAllLinksOfLinkable(long id,
+                                            Class<? extends Linkable> linkableType,
+                                            List<Class<? extends ModelBase>> possibleLinkTypes)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<UIMAAnnotation> getManyUIMAAnnotationsByCoveredText(String coveredText,
+                                                                    Class<? extends UIMAAnnotation> clazz,
+                                                                    int skip,
+                                                                    int take)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<PointDto> getGeonameTimelineLinks(double minLng,
+                                                  double minLat,
+                                                  double maxLng,
+                                                  double maxLat,
+                                                  java.sql.Date fromDate,
+                                                  java.sql.Date toDate,
+                                                  long corpusId,
+                                                  int skip,
+                                                  int take,
+                                                  String fromAnnotationTypeTable)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<MapClusterDto> getGeonameClustersFromTimelineMap(double minLng,
+                                                                 double minLat,
+                                                                 double maxLng,
+                                                                 double maxLat,
+                                                                 double gridSize,
+                                                                 java.sql.Date fromDate,
+                                                                 java.sql.Date toDate,
+                                                                 long corpusId)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<String> getDistinctTimeCoveredTexts(String unitName,
+                                                    String value,
+                                                    Long fromYear,
+                                                    Long toYear,
+                                                    long corpusId,
+                                                    int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<String> getDistinctGeonamesNamesByFeatureCode(GeoNameFeatureClass featureClass,
+                                                              String featureCode,
+                                                              long corpusId,
+                                                              int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<String> getDistinctGeonamesNamesByRadius(double longitude,
+                                                         double latitude,
+                                                         double radius,
+                                                         long corpusId,
+                                                         int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException;
 
     /**
      * Gets the corresponding gbifOccurrences to a gbifTaxonId
@@ -307,11 +425,25 @@ public interface DataInterface {
      */
     public Sentence getSentenceAnnotationById(long id) throws DatabaseOperationException, DocumentAccessDeniedException;
 
+    public CompleteNegation getCompleteNegationByCueId(long id) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public default CompleteNegation getCompleteNegationById(long id) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return null;
+    }
+
+    public UnifiedTopic getInitializedUnifiedTopicById(long id) throws DatabaseOperationException, DocumentAccessDeniedException;
+
     /**
      * Counts the entries in the lexicon
      * @throws DocumentAccessDeniedException 
      */
     public long countLexiconEntries() throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public int refreshLexicon(List<String> annotationTables, boolean forceRecalculate) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public int refreshLogicalLinks() throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public int refreshGeonameLocations() throws DatabaseOperationException, DocumentAccessDeniedException;
 
     /**
      * Gets a Lexicon entry by its composite id.
@@ -410,6 +542,56 @@ public interface DataInterface {
      * @throws DocumentAccessDeniedException 
      */
     public void saveOrUpdateCorpusTsnePlot(CorpusTsnePlot corpusTsnePlot, Corpus corpus) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public DocumentTopThreeTopics getDocumentTopThreeTopicsById(long id) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<Object[]> getTopTopicsByDocument(long documentId, int limit) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<Object[]> getTopDocumentsByTopicLabel(String topicValue, long corpusId, int limit) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<TopicWord> getTopicWordsByTopicLabel(String topicValue, long corpusId) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<Object[]> getSimilarTopicsbyTopicLabel(String topicValue, long corpusId, int minSharedWords, int resultLimit) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<TopicWord> getDocumentWordDistribution(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public List<Object[]> getSimilarDocumentbyDocumentId(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException;
+
+    public default void saveDocumentTopThreeTopics(Document document) throws DatabaseOperationException, DocumentAccessDeniedException {
+        updateDocument(document);
+    }
+
+    public default List<Object[]> getTaxonValuesAndCountByPageId(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Object[]> getNamedEntityValuesAndCountByPage(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Object[]> getLemmaByPage(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Object[]> getGeonameByPage(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Object[]> getTopicDistributionByPageForDocument(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Object[]> getSentenceTopicsWithEntitiesByPageForDocument(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default List<Object[]> getTopicWordsByDocumentId(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of();
+    }
+
+    public default Map<Long, Long> getUnifiedTopicToSentenceMap(long documentId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of();
+    }
 
     /**
      *  Saves or updates a list of documentLinks.

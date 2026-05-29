@@ -17,9 +17,9 @@ import org.texttechnologylab.uce.common.models.biofid.GazetteerTaxon;
 import org.texttechnologylab.uce.common.models.biofid.GnFinderTaxon;
 import org.texttechnologylab.uce.common.models.dto.LinkableNodeDto;
 import org.texttechnologylab.uce.common.models.viewModels.wiki.CachedWikiPage;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.JenaSparqlService;
 import org.texttechnologylab.uce.common.services.LexiconService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.common.services.WikiService;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 import org.texttechnologylab.uce.web.CustomFreeMarkerEngine;
@@ -41,12 +41,12 @@ public class WikiApi implements UceApi {
     private Configuration freemarkerConfig;
     private JenaSparqlService jenaSparqlService;
     private WikiService wikiService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private final Gson gson = new Gson();
 
     public WikiApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
         this.freemarkerConfig = freemarkerConfig;
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.lexiconService = serviceContext.getBean(LexiconService.class);
         this.wikiService = serviceContext.getBean(WikiService.class);
         this.jenaSparqlService = serviceContext.getBean(JenaSparqlService.class);

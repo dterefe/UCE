@@ -49,7 +49,7 @@ import static org.texttechnologylab.uce.common.models.rag.RAGChatMessage.cleanTh
 public class RAGService {
     private static final Logger logger = LogManager.getLogger(RAGService.class);
 
-    private PostgresqlDataInterface_Impl postgresqlDataInterfaceImpl = null;
+    private DataInterface dataInterface = null;
     private Connection vectorDbConnection = null;
     private CommonConfig config;
 
@@ -59,9 +59,9 @@ public class RAGService {
 
     private final DocumentAccessManager accessManager;
 
-    public RAGService(PostgresqlDataInterface_Impl postgresqlDataInterfaceImpl) {
-        this.postgresqlDataInterfaceImpl = postgresqlDataInterfaceImpl;
-        this.accessManager = postgresqlDataInterfaceImpl.getAccessManager();
+    public RAGService(DataInterface dataInterface, DocumentAccessManager accessManager) {
+        this.dataInterface = dataInterface;
+        this.accessManager = accessManager;
         TestConnection();
     }
 

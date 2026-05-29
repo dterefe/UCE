@@ -401,7 +401,7 @@ public class Document extends ModelBase implements WikiModel, Linkable {
     }
 
     public List<Taxon> getAllTaxa(){
-        return Stream.concat(this.gazetteerTaxons.stream(), this.gnFinderTaxons.stream()).toList();
+        return Stream.concat(safeList(this.gazetteerTaxons).stream(), safeList(this.gnFinderTaxons).stream()).toList();
     }
 
     /**
@@ -410,30 +410,38 @@ public class Document extends ModelBase implements WikiModel, Linkable {
      * @return
      */
     public List<UIMAAnnotation> getAllAnnotations(int pagesSkip, int pagesTake) {
-        var pagesBegin = getPages().stream().skip(pagesSkip).limit(1).findFirst().get().getBegin();
-        var pagesEnd = getPages().stream().skip(Math.min(pagesSkip + pagesTake, getPages().size() - 1)).limit(1).findFirst().get().getEnd();
+        var sortedPages = getPages();
+        if (sortedPages.isEmpty()) {
+            return List.of();
+        }
+
+        var boundedSkip = Math.max(0, Math.min(pagesSkip, sortedPages.size() - 1));
+        var boundedTake = Math.max(1, pagesTake);
+        var boundedEndIndex = Math.max(boundedSkip, Math.min(boundedSkip + boundedTake, sortedPages.size() - 1));
+        var pagesBegin = sortedPages.get(boundedSkip).getBegin();
+        var pagesEnd = sortedPages.get(boundedEndIndex).getEnd();
 
         var annotations = new ArrayList<UIMAAnnotation>();
-        annotations.addAll(gazetteerTaxons.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(gnFinderTaxons.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(namedEntities.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(geoNames.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(times.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(gazetteerTaxons).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(gnFinderTaxons).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(namedEntities).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(geoNames).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(times).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
         var pageOverlap = 40000;
-        annotations.addAll(sentiments.stream().filter(a -> a.getBegin() + pageOverlap >= pagesBegin && a.getEnd() - pageOverlap <= pagesEnd).toList());
-        annotations.addAll(emotions.stream().filter(a -> a.getBegin() + pageOverlap >= pagesBegin && a.getEnd() - pageOverlap <= pagesEnd).toList());
-        annotations.addAll(wikipediaLinks.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(lemmas.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(sentiments).stream().filter(a -> a.getBegin() + pageOverlap >= pagesBegin && a.getEnd() - pageOverlap <= pagesEnd).toList());
+        annotations.addAll(safeList(emotions).stream().filter(a -> a.getBegin() + pageOverlap >= pagesBegin && a.getEnd() - pageOverlap <= pagesEnd).toList());
+        annotations.addAll(safeList(wikipediaLinks).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(lemmas).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
         // negations TODO: completeNegations do not have start and end so far -> could cause problems?
-        annotations.addAll(completeNegations.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(cues.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(focuses.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(scopes.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(xscopes.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(events.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(completeNegations).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(cues).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(focuses).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(scopes).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(xscopes).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(events).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
         // unifiedTopics
-        annotations.addAll(unifiedTopics.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
-        annotations.addAll(images.stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(unifiedTopics).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
+        annotations.addAll(safeList(images).stream().filter(a -> a.getBegin() >= pagesBegin && a.getEnd() <= pagesEnd).toList());
 
         annotations.sort(Comparator.comparingInt(UIMAAnnotation::getBegin));
         return annotations;
@@ -445,21 +453,22 @@ public class Document extends ModelBase implements WikiModel, Linkable {
     }
 
     public List<Page> getPages() {
-        return pages.stream()
+        return safeList(pages).stream()
                 .sorted(Comparator.comparingInt(Page::getPageNumber))
                 .toList();
     }
 
     public List<Page> getPages(int take, int skip) {
-        return pages.stream()
+        return safeList(pages).stream()
                 .sorted(Comparator.comparingInt(Page::getPageNumber))
-                .skip(skip)
-                .limit(take)
+                .skip(Math.max(0, skip))
+                .limit(Math.max(0, take))
                 .collect(Collectors.toList());
     }
 
     public String getDocumentTitle() {
-        var title = metadataTitleInfo.getTitle() == null ? documentTitle : metadataTitleInfo.getTitle();
+        var metadataTitle = metadataTitleInfo == null ? null : metadataTitleInfo.getTitle();
+        var title = metadataTitle == null ? documentTitle : metadataTitle;
         return title == null ? "(Unbekannt)" : title;
     }
 
@@ -472,7 +481,7 @@ public class Document extends ModelBase implements WikiModel, Linkable {
         List<TopicValueBase> unscoredTopics = new ArrayList<>();
 
         // Separate scored and unscored topics using getRepresentativeTopic()
-        for (UnifiedTopic unifiedTopic : unifiedTopics) {
+        for (UnifiedTopic unifiedTopic : safeList(unifiedTopics)) {
             TopicValueBase representativeTopic = unifiedTopic.getRepresentativeTopic();
 
             if (representativeTopic != null) {
@@ -496,6 +505,10 @@ public class Document extends ModelBase implements WikiModel, Linkable {
         return unscoredTopics.stream()
                 .limit(topN)
                 .collect(Collectors.toList());
+    }
+
+    private static <T> List<T> safeList(List<T> values) {
+        return values == null ? List.of() : values;
     }
 
 }

@@ -85,7 +85,8 @@ import java.util.zip.ZipInputStream;
 
 public class DocumentImportContinuation {
 
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
+    private final StorageMaintenanceService storageMaintenance;
     private final LexiconService lexiconService;
     private final Logger logger;
     private final AtomicReference<CountDownLatch> batchLatch;
@@ -101,7 +102,8 @@ public class DocumentImportContinuation {
 
 
     public DocumentImportContinuation(
-            PostgresqlDataInterface_Impl db,
+            DataInterface db,
+            StorageMaintenanceService storageMaintenance,
             LexiconService lexiconService,
             Logger logger,
             AtomicReference<CountDownLatch> batchLatch,
@@ -116,6 +118,7 @@ public class DocumentImportContinuation {
 
     ) {
         this.db = db;
+        this.storageMaintenance = storageMaintenance;
         this.lexiconService = lexiconService;
         this.logger = logger;
         this.batchLatch = batchLatch;
@@ -182,7 +185,7 @@ public class DocumentImportContinuation {
     private void runBatchPostProcessing(Path filePath) {
         logImportInfo("=========== UPDATING THE LOGICAL LINKS...", LogStatus.POST_PROCESSING, "LINKS", 0);
         var logicalLinksResult = ExceptionUtils.tryCatchLog(
-                () -> db.callLogicalLinksRefresh(),
+                () -> storageMaintenance.refreshLogicalLinks(),
                 ex -> logImportError(
                         "Error updating the logical links while postprocessing a batch.",
                         ex,
@@ -218,7 +221,7 @@ public class DocumentImportContinuation {
 
         logImportInfo("=========== UPDATING THE GEONAME LOCATIONS...", LogStatus.POST_PROCESSING, "GEONAME_LOCATION", 0);
         var geonameLocationResult = ExceptionUtils.tryCatchLog(
-                () -> db.callGeonameLocationRefresh(),
+                () -> storageMaintenance.refreshGeonameLocations(),
                 ex -> logImportError(
                         "Error updating the geoname locations while postprocessing a batch.",
                         ex,
@@ -443,7 +446,7 @@ public class DocumentImportContinuation {
                 var insertSentenceTopicsScript = Files.readString(insertSentenceTopicsFilePath);
 
                 ExceptionUtils.tryCatchLog(
-                        () -> db.executeSqlWithoutReturn(insertSentenceTopicsScript),
+                        () -> storageMaintenance.executeStorageStatement(insertSentenceTopicsScript),
                         (ex) -> logImportError("Error executing SQL script to populate sentencetopics table", ex, filePath)
                 );
 
@@ -451,7 +454,7 @@ public class DocumentImportContinuation {
                 var insertDocumentTopicsScript = Files.readString(insertDocumentTopicsFilePath);
 
                 ExceptionUtils.tryCatchLog(
-                        () -> db.executeSqlWithoutReturn(insertDocumentTopicsScript),
+                        () -> storageMaintenance.executeStorageStatement(insertDocumentTopicsScript),
                         (ex) -> logImportError("Error executing SQL script to populate documenttopicsraw table", ex, filePath)
                 );
 
@@ -644,7 +647,7 @@ public class DocumentImportContinuation {
                 var insertDocumentTopicWordScript = Files.readString(insertDocumentTopicWordFilePath);
 
                 ExceptionUtils.tryCatchLog(
-                        () -> db.executeSqlWithoutReturn(insertDocumentTopicWordScript),
+                        () -> storageMaintenance.executeStorageStatement(insertDocumentTopicWordScript),
                         (ex) -> logger.error("Error executing SQL script to populate documenttopicword table", ex)
                 );
 
@@ -652,7 +655,7 @@ public class DocumentImportContinuation {
                 var insertCorpusTopicWordScript = Files.readString(insertCorpusTopicWordFilePath);
 
                 ExceptionUtils.tryCatchLog(
-                        () -> db.executeSqlWithoutReturn(insertCorpusTopicWordScript),
+                        () -> storageMaintenance.executeStorageStatement(insertCorpusTopicWordScript),
                         (ex) -> logger.error("Error executing SQL script to populate corpustopicword table", ex)
                 );
 

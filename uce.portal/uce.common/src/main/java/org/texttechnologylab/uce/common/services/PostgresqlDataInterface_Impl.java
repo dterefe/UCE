@@ -108,6 +108,7 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
      * 
      * @return true if the principal has at least the specified access level to the document, false otherwise.
      */
+    @Override
     public boolean hasDocumentAccess(String principal,
                                     long documentId,
                                     DocumentPermission.DOCUMENT_PERMISSION_LEVEL minLevel) throws DatabaseOperationException, DocumentAccessDeniedException {
@@ -171,7 +172,14 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         });
     }
 
+    @Override
+    public Map<Long, Boolean> hasDocumentAccess(String principal,
+                                                List<Long> documentIds,
+                                                DocumentPermission.DOCUMENT_PERMISSION_LEVEL minLevel) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return hasDocumentAccess(principal, (Collection<Long>) documentIds, minLevel);
+    }
 
+    @Override
     public void calculateEffectivePermissions(String username, Set<String> groups)
             throws DatabaseOperationException, DocumentAccessDeniedException {
 
@@ -911,6 +919,11 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         }));
     }
 
+    @Override
+    public int refreshLexicon(List<String> annotationTables, boolean forceRecalculate) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return callLexiconRefresh(new ArrayList<>(annotationTables == null ? List.of() : annotationTables), forceRecalculate);
+    }
+
     public int callLogicalLinksRefresh() throws DatabaseOperationException, DocumentAccessDeniedException {
         return executeOperationSafely((session) -> session.doReturningWork((connection) -> {
             var insertedLex = 0;
@@ -924,6 +937,11 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         }));
     }
 
+    @Override
+    public int refreshLogicalLinks() throws DatabaseOperationException, DocumentAccessDeniedException {
+        return callLogicalLinksRefresh();
+    }
+
     public int callGeonameLocationRefresh() throws DatabaseOperationException, DocumentAccessDeniedException {
         return executeOperationSafely((session) -> session.doReturningWork((connection) -> {
             var insertedLex = 0;
@@ -935,6 +953,11 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
             }
             return insertedLex;
         }));
+    }
+
+    @Override
+    public int refreshGeonameLocations() throws DatabaseOperationException, DocumentAccessDeniedException {
+        return callGeonameLocationRefresh();
     }
 
     @Override
@@ -1675,6 +1698,34 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         });
     }
 
+    @Override
+    public List<String> getDistinctTimeCoveredTexts(String unitName,
+                                                    String value,
+                                                    Long fromYear,
+                                                    Long toYear,
+                                                    long corpusId,
+                                                    int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        String normalizedUnit = unitName == null ? "" : unitName.toLowerCase(Locale.ROOT);
+        String condition;
+        if ("range".equals(normalizedUnit)) {
+            if (fromYear == null || toYear == null) {
+                condition = "1=0";
+            } else {
+                condition = "t.year >= %d AND t.year <= %d AND t.pageId IS NOT NULL".formatted(fromYear, toYear);
+            }
+        } else if ("year".equals(normalizedUnit)) {
+            condition = "t.year = %s AND t.pageId IS NOT NULL".formatted(value);
+        } else if ("month".equals(normalizedUnit) || "day".equals(normalizedUnit) || "season".equals(normalizedUnit)) {
+            String escapedValue = value == null ? "" : value.replace("'", "''");
+            condition = "t.%s = '%s' AND t.pageId IS NOT NULL".formatted(normalizedUnit, escapedValue);
+        } else {
+            condition = "1=0";
+        }
+        return getDistinctTimesByCondition(condition, corpusId, limit);
+    }
+
+    @Override
     public List<String> getDistinctGeonamesNamesByFeatureCode(GeoNameFeatureClass featureClass, String featureCode, long corpusId, int limit) throws DatabaseOperationException, DocumentAccessDeniedException {
         return executeOperationSafely((session) -> {
             // This with hibernate query builder doesn't work.
@@ -1699,6 +1750,7 @@ public final class PostgresqlDataInterface_Impl implements DataInterface {
         });
     }
 
+    @Override
     public List<String> getDistinctGeonamesNamesByRadius(double longitude, double latitude, double radius, long corpusId, int limit) throws DatabaseOperationException, DocumentAccessDeniedException {
 
         return executeOperationSafely((session) -> {

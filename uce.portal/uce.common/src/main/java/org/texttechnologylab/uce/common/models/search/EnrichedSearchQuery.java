@@ -17,8 +17,8 @@ import org.texttechnologylab.uce.common.models.search.promode.ProQueryParser;
 import org.texttechnologylab.uce.common.models.search.promode.ProTsQueryCompiler;
 import org.texttechnologylab.uce.common.models.search.promode.TaxonEnrichmentPass;
 import org.texttechnologylab.uce.common.models.viewModels.CorpusViewModel;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.JenaSparqlService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.common.utils.StringUtils;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 
@@ -70,7 +70,7 @@ public class EnrichedSearchQuery {
         };
     }
 
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
     private final JenaSparqlService jenaSparqlService;
 
     @Getter
@@ -86,7 +86,7 @@ public class EnrichedSearchQuery {
     private boolean parseTimes;
 
     public EnrichedSearchQuery(String query,
-                               PostgresqlDataInterface_Impl db,
+                               DataInterface db,
                                JenaSparqlService jenaSparqlService) {
         this.originalQuery = query;
         this.jenaSparqlService = jenaSparqlService;
@@ -292,19 +292,16 @@ public class EnrichedSearchQuery {
         var unitCode = command.replace("::", "");
         var unitName = getFullTimeUnitByCode(unitCode).toLowerCase();
 
-        String condition;
+        Long fromYear = null;
+        Long toYear = null;
         if (!unitName.equals("range")) {
-            var formattedValue = unitName.equals("year") ? value : "'" + value + "'";
-            condition = String.format("t.%s = %s AND t.pageId IS NOT NULL", unitName, formattedValue);
+            return db.getDistinctTimeCoveredTexts(unitName, value, null, null, corpusId, 200);
         } else if (value.contains("-")) {
             var split = value.split("-");
-            var from = split[0].trim();
-            var to = split[1].trim();
-            condition = String.format("t.year >= %s AND t.year <= %s AND t.pageId IS NOT NULL", from, to);
-        } else {
-            condition = "1=0";
+            fromYear = Long.parseLong(split[0].trim());
+            toYear = Long.parseLong(split[1].trim());
         }
-        var matched = db.getDistinctTimesByCondition(condition, corpusId, 200);
+        var matched = db.getDistinctTimeCoveredTexts(unitName, null, fromYear, toYear, corpusId, 200);
         return matched == null ? Collections.emptyList() : matched;
     }
 
@@ -406,25 +403,29 @@ public class EnrichedSearchQuery {
         var unitCode = command.replace("::", "");
         var unitName = getFullTimeUnitByCode(unitCode).toLowerCase();
 
-        String condition;
+        Long fromYear = null;
+        Long toYear = null;
 
         if (!unitName.equals("range")) {
-            // For units like year, month, day, season
-            var formattedValue = unitName.equals("year") ? value : "'" + value + "'";
-            condition = String.format("t.%s = %s AND t.pageId IS NOT NULL", unitName, formattedValue);
+            var matchedCoveredTexts = db.getDistinctTimeCoveredTexts(unitName, value, null, null, corpusId, 200);
+            return applyTimeMatches(value, enrichedToken, query, delimiter, or, matchedCoveredTexts);
         } else if (value.contains("-")) {
             // Handle range like 2010-2020
             var split = value.split("-");
-            var from = split[0].trim();
-            var to = split[1].trim();
-            condition = String.format("t.year >= %s AND t.year <= %s AND t.pageId IS NOT NULL", from, to);
-        } else {
-            // Invalid or unsupported format
-            condition = "1=0"; // will return nothing
+            fromYear = Long.parseLong(split[0].trim());
+            toYear = Long.parseLong(split[1].trim());
         }
 
-        var matchedCoveredTexts = db.getDistinctTimesByCondition(condition, corpusId, 200);
+        var matchedCoveredTexts = db.getDistinctTimeCoveredTexts(unitName, null, fromYear, toYear, corpusId, 200);
+        return applyTimeMatches(value, enrichedToken, query, delimiter, or, matchedCoveredTexts);
+    }
 
+    private boolean applyTimeMatches(String value,
+                                     @NotNull EnrichedSearchToken enrichedToken,
+                                     StringBuilder query,
+                                     String delimiter,
+                                     String or,
+                                     List<String> matchedCoveredTexts) {
         if (matchedCoveredTexts == null || matchedCoveredTexts.isEmpty()) {
             query.append(delimiter).append(value).append(delimiter).append(" ");
         } else {
@@ -480,7 +481,7 @@ public class EnrichedSearchQuery {
         }
 
         enrichedToken.setType(EnrichedSearchTokenType.TAXON);
-        var grouped = jenaSparqlService.getAlternativeNamesGroupedDetailedOfTaxons(taxonIds);
+        var grouped = jenaSparqlService.getDirectNamesGroupedDetailedOfTaxons(taxonIds);
         var names = flattenGroupedNames(grouped);
         if (names != null) expandedTerms.addAll(names);
         if (names == null || names.isEmpty()) {
@@ -495,7 +496,6 @@ public class EnrichedSearchQuery {
 
         return true;
     }
-
     private List<String> flattenGroupedNames(LinkedHashMap<String, List<JenaSparqlService.GroupedTaxonChild>> grouped) {
         var flattened = new ArrayList<String>();
         if (grouped == null || grouped.isEmpty()) return flattened;

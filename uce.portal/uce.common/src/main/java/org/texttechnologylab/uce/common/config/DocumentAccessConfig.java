@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.texttechnologylab.uce.common.security.DocumentAccessContext;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 
 @Configuration
 public class DocumentAccessConfig {
@@ -20,7 +20,7 @@ public class DocumentAccessConfig {
     }
 
     @Bean
-    public DocumentAccessManager documentAccessManager(PostgresqlDataInterface_Impl db) {
+    public DocumentAccessManager documentAccessManager(DataInterface db) {
         return new DocumentAccessManager(db);
     }
 }

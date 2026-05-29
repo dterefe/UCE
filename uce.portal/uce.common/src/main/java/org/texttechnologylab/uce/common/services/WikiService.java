@@ -18,10 +18,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WikiService {
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
     private final JenaSparqlService sparqlService;
 
-    public WikiService(PostgresqlDataInterface_Impl db, RAGService ragService, JenaSparqlService sparqlService) {
+    public WikiService(DataInterface db, RAGService ragService, JenaSparqlService sparqlService) {
         this.db = db;
         this.sparqlService = sparqlService;
     }

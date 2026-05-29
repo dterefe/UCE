@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.Linkable;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +14,12 @@ import java.util.List;
  */
 public class LinkableViewModel {
     private static final Logger logger = LogManager.getLogger(LinkableViewModel.class);
-    private transient final PostgresqlDataInterface_Impl db;
+    private transient final DataInterface db;
     private final Linkable baseModel;
     private List<LinkViewModel> incomingLinks = new ArrayList<>();
     private List<LinkViewModel> outgoingLinks = new ArrayList<>();
 
-    public LinkableViewModel(Linkable baseModel, PostgresqlDataInterface_Impl db){
+    public LinkableViewModel(Linkable baseModel, DataInterface db){
         this.baseModel = baseModel;
         this.db = db;
         fetchLinks();

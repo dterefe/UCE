@@ -10,7 +10,7 @@ import org.texttechnologylab.uce.common.models.authentication.UceUser;
 import org.texttechnologylab.uce.common.models.dto.UCEMetadataFilterDto;
 import org.texttechnologylab.uce.common.models.search.DocumentSearchResult;
 import org.texttechnologylab.uce.common.models.search.SearchType;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -21,7 +21,7 @@ import java.util.List;
 
 public class SearchCompleteNegation implements Search {
     private static final Logger logger = LogManager.getLogger(SearchCompleteNegation.class);
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private CompleteNegationSearchState searchState;
 
     public SearchCompleteNegation(ApplicationContext serviceContext,
@@ -43,7 +43,7 @@ public class SearchCompleteNegation implements Search {
     }
 
     private void setDefaultSearchStateParameters(ApplicationContext serviceContext, long corpusId){
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.searchState.setCorpusId(corpusId);
         this.searchState.setCorpusConfig(ExceptionUtils.tryCatchLog(
                 () -> CorpusConfig.fromJson(db.getCorpusById(corpusId).getCorpusJsonConfig()),
@@ -172,7 +172,7 @@ public class SearchCompleteNegation implements Search {
 
     @Override
     public void fromSearchState(ApplicationContext serviceContext, String languageCode, SearchState searchState) throws URISyntaxException, IOException {
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.searchState = (CompleteNegationSearchState) searchState;
     }
 

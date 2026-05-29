@@ -17,8 +17,8 @@ import org.texttechnologylab.uce.common.models.corpus.Document;
 import org.texttechnologylab.uce.common.models.corpus.Image;
 import org.texttechnologylab.uce.common.models.rag.*;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.EmbeddingService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.common.services.RAGService;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 import org.texttechnologylab.uce.web.CustomFreeMarkerEngine;
@@ -34,7 +34,7 @@ public class RAGApi implements UceApi {
     private Configuration freemarkerConfig;
     private RAGService ragService;
     private EmbeddingService embeddingService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private final CommonConfig commonConfig = new CommonConfig();
     private final Map<UUID, RAGChatState> activeRagChatStates = new HashMap<>();
 
@@ -43,7 +43,7 @@ public class RAGApi implements UceApi {
     public RAGApi(ApplicationContext serviceContext,
                   Configuration freemarkerConfig) {
         this.freemarkerConfig = freemarkerConfig;
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.ragService = serviceContext.getBean(RAGService.class);
         this.embeddingService = serviceContext.getBean(EmbeddingService.class);
         this.accessManager = serviceContext.getBean(DocumentAccessManager.class);

@@ -10,9 +10,11 @@ COPY ./uce.portal/uce.corpus-importer/pom.xml ./uce.portal/uce.corpus-importer/p
 COPY ./uce.portal/uce.web/pom.xml ./uce.portal/uce.web/pom.xml
 COPY ./uce.portal/uce.search/pom.xml ./uce.portal/uce.search/pom.xml
 COPY ./uce.portal/uce.analysis/pom.xml ./uce.portal/uce.analysis/pom.xml
+COPY ./.docker-m2 /app/.docker-m2
 
 WORKDIR /app/uce.portal
 RUN --mount=type=cache,id=uce-m2-repo,target=/root/.m2/repository,sharing=locked \
+    cp -R /app/.docker-m2/. /root/.m2/repository/ && \
     mvn -B -T 1C -nsu -DskipTests -Dmaven.repo.local=/root/.m2/repository \
     dependency:go-offline -pl uce.web -am
 

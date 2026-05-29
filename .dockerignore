@@ -1,7 +1,12 @@
 .git
-.dev/storage
-uce.portal/**/target
-!uce.portal/uce.corpus-importer/target
+.dev
+.venv
+logs
+uce.portal/logs
+uce.portal/**/target/*
+!uce.portal/uce.web/target/
+!uce.portal/uce.web/target/webportal-jar-with-dependencies.jar
+!uce.portal/uce.corpus-importer/target/
 !uce.portal/uce.corpus-importer/target/importer.jar
 uce.portal/uce.corpus-importer/logs
 node_modules

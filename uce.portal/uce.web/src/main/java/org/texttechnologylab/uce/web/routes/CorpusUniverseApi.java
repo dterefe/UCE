@@ -13,8 +13,8 @@ import org.texttechnologylab.uce.common.models.corpus.Document;
 import org.texttechnologylab.uce.common.models.rag.DocumentEmbedding;
 import org.texttechnologylab.uce.common.models.universe.CorpusUniverseNode;
 import org.texttechnologylab.uce.common.models.universe.UniverseLayer;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.EmbeddingService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
 import org.texttechnologylab.uce.common.services.RAGService;
 import org.texttechnologylab.uce.common.utils.ListUtils;
 import org.texttechnologylab.uce.search.SearchState;
@@ -35,14 +35,14 @@ public class CorpusUniverseApi implements UceApi {
     private ApplicationContext context;
     private RAGService ragService;
     private EmbeddingService embeddingService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private Configuration freemarkerConfig;
 
     public CorpusUniverseApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
         this.context = serviceContext;
         this.ragService = serviceContext.getBean(RAGService.class);
         this.embeddingService = serviceContext.getBean(EmbeddingService.class);
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.freemarkerConfig = freemarkerConfig;
     }
 

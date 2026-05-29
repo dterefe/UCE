@@ -40,13 +40,13 @@ import org.texttechnologylab.uce.common.models.corpus.Corpus;
 import org.texttechnologylab.uce.common.models.corpus.UCELog;
 import org.texttechnologylab.uce.common.security.DocumentAccessContext;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.LexiconService;
 import org.texttechnologylab.uce.common.services.MapService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
 import org.texttechnologylab.uce.common.utils.ImageUtils;
 import org.texttechnologylab.uce.common.utils.StringUtils;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
-import org.texttechnologylab.uce.search.LayeredSearch;
 import org.texttechnologylab.uce.web.auth.AuthenticationRouteRegister;
 import org.texttechnologylab.uce.web.freeMarker.Renderer;
 import org.texttechnologylab.uce.web.freeMarker.RequestContextHolder;
@@ -130,17 +130,19 @@ public class App {
         // Initialize access manager for document permission checks
         logger.info("Initializing the Document Access Manager...");
         var accessManager = context.getBean(DocumentAccessManager.class);
+        var dataInterface = context.getBean(DataInterface.class);
+        var storageMaintenance = context.getBean(StorageMaintenanceService.class);
         
         // Execute the external database scripts
         logger.info("Executing external database scripts from " + commonConfig.getDatabaseScriptsLocation());
         ExceptionUtils.tryCatchLog(
-                () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), context.getBean(PostgresqlDataInterface_Impl.class)),
+                () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), storageMaintenance),
                 (ex) -> logger.warn("Couldn't read the db scripts in the external database scripts folder; path wasn't found or other IO problems. ", ex));
         logger.info("Finished with executing external database scripts.");
 
         // Cleanup temporary db fragments for the LayeredSearch
         ExceptionUtils.tryCatchLog(
-                () -> LayeredSearch.CleanupScheme(context.getBean(PostgresqlDataInterface_Impl.class)),
+                storageMaintenance::cleanupLayeredSearch,
                 (ex) -> logger.warn("Error while trying to cleanup the LayeredSearch temporary schema.", ex));
         logger.info("Cleanup temporary LayeredSearch tables.");
 
@@ -178,7 +180,7 @@ public class App {
         logger.info("Checking if we can or should update any linkables... (this may take a moment depending on the time of the last update. Runs asynchronous.)");
         accessManager.runAsyncAdmin(() -> {
             try {
-                var result = context.getBean(PostgresqlDataInterface_Impl.class).callLogicalLinksRefresh();
+                var result = storageMaintenance.refreshLogicalLinks();
                 logger.info("Finished updating the linkables. Updated linkables: " + result);
             } catch (Exception ex){
                 logger.error("There was an error trying to refresh linkables in the startup of the web app. App starts normally though.");
@@ -188,7 +190,7 @@ public class App {
         logger.info("Checking if we can or should update any geoname locations... (this may take a moment depending on the time of the last update. Runs asynchronous.)");
         accessManager.runAsyncAdmin(() -> {
             try {
-                var result = context.getBean(PostgresqlDataInterface_Impl.class).callGeonameLocationRefresh();
+                var result = storageMaintenance.refreshGeonameLocations();
                 logger.info("Finished updating the geoname locations. Updated locations: " + result);
             } catch (Exception ex){
                 logger.error("There was an error trying to refresh geoname locations in the startup of the web app. App starts normally though.");
@@ -386,6 +388,7 @@ public class App {
 
     private static void initSparkRoutes(ApplicationContext context, ApiRegistry registry, JavalinConfig config) throws IOException {
         Renderer.freemarkerConfig = configuration;
+        var dataInterface = context.getBean(DataInterface.class);
 
         ModelResources modelResources = new ModelResources();
         TTLabScorerInfo ttlabScorer = new TTLabScorerInfo();
@@ -412,7 +415,7 @@ public class App {
                             if (commonConfig.getLogToDb() && SystemStatus.PostgresqlDbStatus.isAlive()) {
                                 var uceLog = new UCELog(ctx.ip(), ctx.method().name(), ctx.url(), ctx.body(), ctx.queryString());
                                 ExceptionUtils.tryCatchLog(
-                                        () -> context.getBean(PostgresqlDataInterface_Impl.class).saveUceLog(uceLog),
+                                        () -> dataInterface.saveUceLog(uceLog),
                                         (ex) -> logger.error("Error storing a log to the database: ", ex));
                                 logger.info("Last log was also logged to the db with id " + uceLog.getId());
                             }
@@ -467,8 +470,7 @@ public class App {
                     get("/", ctx -> {
                         var model = new HashMap<String, Object>();
                         model.put("title", SystemStatus.UceConfig.getMeta().getName());
-                        model.put("corpora", context.getBean(PostgresqlDataInterface_Impl.class)
-                                .getAllCorpora()
+                        model.put("corpora", dataInterface.getAllCorpora()
                                 .stream().map(Corpus::getViewModel)
                                 .toList());
                         model.put("commonConf", commonConfig);

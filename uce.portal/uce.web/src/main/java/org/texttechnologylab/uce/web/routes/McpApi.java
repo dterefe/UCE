@@ -9,7 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.texttechnologylab.uce.common.models.corpus.Document;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 
 import java.util.List;
 import java.util.Map;
@@ -18,11 +18,11 @@ import java.util.function.BiFunction;
 public class McpApi implements UceApi {
     private static final Logger logger = LogManager.getLogger(McpApi.class);
 
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private Configuration freemarkerConfig;
 
     public McpApi(ApplicationContext serviceContext, Configuration freemarkerConfig) {
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.freemarkerConfig = freemarkerConfig;
     }
 

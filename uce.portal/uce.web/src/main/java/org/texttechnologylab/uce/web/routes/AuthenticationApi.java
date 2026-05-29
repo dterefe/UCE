@@ -11,7 +11,7 @@ import org.texttechnologylab.uce.common.config.CommonConfig;
 import org.texttechnologylab.uce.common.models.authentication.UceUser;
 import org.texttechnologylab.uce.common.security.DocumentAccessContext;
 import org.texttechnologylab.uce.common.services.AuthenticationService;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.utils.AuthenticationUtils;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 
@@ -30,12 +30,12 @@ public class AuthenticationApi implements UceApi {
     private static final Logger logger = LogManager.getLogger(AuthenticationApi.class);
     private Configuration freemarkerConfig;
     private AuthenticationService authenticationService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private final Gson gson = new Gson();
 
     public AuthenticationApi(ApplicationContext serviceContext, Configuration freemarkerConfig){
         this.authenticationService = serviceContext.getBean(AuthenticationService.class);
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
         this.freemarkerConfig = freemarkerConfig;
     }
 

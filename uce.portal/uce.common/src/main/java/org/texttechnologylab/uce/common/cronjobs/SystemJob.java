@@ -24,7 +24,7 @@ public class SystemJob implements Runnable {
             try {
                 // First, check all service connections - maybe a new one has connected
                 // DB
-                this.serviceContext.getBean(PostgresqlDataInterface_Impl.class).TestConnection();
+                this.serviceContext.getBean(StorageMaintenanceService.class).testConnection();
 
                 // Jena sparql
                 this.serviceContext.getBean(JenaSparqlService.class).TestConnection();

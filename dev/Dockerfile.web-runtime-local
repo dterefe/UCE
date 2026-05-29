@@ -1,0 +1,9 @@
+FROM eclipse-temurin:21-jdk
+
+EXPOSE 4567
+
+COPY ./uce.portal/uce.web/target/webportal-jar-with-dependencies.jar /app/uce.portal/uce.web/target/webportal-jar-with-dependencies.jar
+COPY ./uce.portal/resources /app/uce.portal/resources
+COPY ./uce.portal/uce.web/src/main/resources/public /app/uce.portal/uce.web/src/main/resources/public
+
+WORKDIR /app/uce.portal/uce.web/

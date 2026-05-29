@@ -3,7 +3,7 @@ package org.texttechnologylab.uce.common.security;
 import org.texttechnologylab.models.authentication.DocumentPermission;
 import org.texttechnologylab.uce.common.exceptions.DatabaseOperationException;
 import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 
 import java.util.Collection;
@@ -15,11 +15,11 @@ public class DocumentAccessManager {
     public static final String ADMIN_USERNAME = DocumentPermission.ADMIN_BYPASS_USERNAME;
 
     private final ThreadLocal<DocumentAccessContext> current = new ThreadLocal<>();
-    private final PostgresqlDataInterface_Impl db;
+    private final DataInterface db;
     private static final DocumentAccessContext adminAccessContext = 
             new DocumentAccessContext(ADMIN_USERNAME, EnumSet.of(DocumentAccessContext.Role.ADMIN));
 
-    public DocumentAccessManager(PostgresqlDataInterface_Impl db) {
+    public DocumentAccessManager(DataInterface db) {
         this.db = db;
     }
 

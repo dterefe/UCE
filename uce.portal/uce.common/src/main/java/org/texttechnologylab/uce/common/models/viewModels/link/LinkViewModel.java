@@ -6,7 +6,7 @@ import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.Linkable;
 import org.texttechnologylab.uce.common.models.corpus.Document;
 import org.texttechnologylab.uce.common.models.corpus.links.*;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.utils.ReflectionUtils;
 
 import javax.persistence.Transient;
@@ -14,12 +14,12 @@ import javax.persistence.Transient;
 public class LinkViewModel {
     private static final Logger logger = LogManager.getLogger(LinkViewModel.class);
     @Transient
-    private transient final PostgresqlDataInterface_Impl db;
+    private transient final DataInterface db;
     private Link link;
     private LinkableViewModel fromLinkableViewModel;
     private LinkableViewModel toLinkableViewModel;
 
-    public LinkViewModel(Link link, PostgresqlDataInterface_Impl db) {
+    public LinkViewModel(Link link, DataInterface db) {
         this.link = link;
         this.db = db;
     }

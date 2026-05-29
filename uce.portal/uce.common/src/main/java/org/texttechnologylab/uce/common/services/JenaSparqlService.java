@@ -52,6 +52,7 @@ public class JenaSparqlService {
     private final SparqlChunkParallelizer chunkParallelizer =
             new SparqlChunkParallelizer(sparqlExecutor, config.getSparqlConcurrentRequestsMax());
     private final int taxonBatchSize = config.getSparqlBatchSize();
+    private final int taxonTraversalMaxNodes = Math.max(50, Math.min(TAXON_TRAVERSAL_MAX_NODES, config.getSparqlMaxEnrichment()));
     private static final int TAXON_TRAVERSAL_MAX_DEPTH = 4;
     private static final int TAXON_TRAVERSAL_MAX_NODES = 2000;
     private static final String DWC = "http://rs.tdwg.org/dwc/terms/";
@@ -213,6 +214,50 @@ public class JenaSparqlService {
         }
     }
 
+    /**
+     * Lightweight grouped enrichment for plain search tokens. This only reads the seed taxon facts and
+     * deliberately avoids reverse synonym/subordinate traversal, which is reserved for explicit taxonomy commands.
+     */
+    public LinkedHashMap<String, List<GroupedTaxonChild>> getDirectNamesGroupedDetailedOfTaxons(List<String> biofidIds) throws IOException {
+        if (!SystemStatus.JenaSparqlStatus.isAlive()) {
+            return new LinkedHashMap<>();
+        }
+
+        var seedIds = new LinkedHashSet<>(biofidIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .limit(config.getSparqlMaxEnrichment())
+                .toList());
+        if (seedIds.isEmpty()) return new LinkedHashMap<>();
+
+        var factsById = queryTaxonFactsByIds(seedIds);
+        var scientific = new LinkedHashMap<String, GroupedTaxonChild>();
+        var vernaculars = new LinkedHashMap<String, GroupedTaxonChild>();
+
+        for (var facts : factsById.values()) {
+            var rankLabel = formatRankLabel(facts.getPrimaryRank());
+            var meta = buildTooltipMeta(rankLabel, formatStatusLabel(facts.getPrimaryStatus()));
+            var status = facts.getPrimaryStatus();
+            var badgeTone = status != null && status.contains("accepted") ? "accepted" : "neutral";
+            var badgeText = status != null && status.contains("accepted") ? "A" : "i";
+
+            for (var name : facts.getPreferredScientificNames()) {
+                if (name == null || name.isBlank()) continue;
+                scientific.putIfAbsent(name, new GroupedTaxonChild(name, meta, badgeText, badgeTone, facts.getPrimaryRank()));
+            }
+            var ownerName = facts.getPrimaryScientificName();
+            if (ownerName == null || ownerName.isBlank()) ownerName = "Unknown species";
+            for (var vernacular : facts.vernacularNames) {
+                if (vernacular == null || vernacular.isBlank()) continue;
+                vernaculars.putIfAbsent(vernacular, new GroupedTaxonChild(vernacular, buildTooltipMeta("VERNACULAR", ownerName), "V", "neutral", "vernacular"));
+            }
+        }
+
+        var grouped = new LinkedHashMap<String, List<GroupedTaxonChild>>();
+        if (!scientific.isEmpty()) grouped.put("SCIENTIFIC", new ArrayList<>(scientific.values()));
+        if (!vernaculars.isEmpty()) grouped.put("VERNACULAR", new ArrayList<>(vernaculars.values()));
+        return grouped;
+    }
+
     private LinkedHashMap<String, List<GroupedTaxonChild>> computeAlternativeNamesGroupedDetailedOfTaxons(Set<String> seedIds) throws IOException {
         var traversal = traverseTaxonGraph(seedIds);
         var factsById = queryTaxonFactsByIds(traversal.visitedIds);
@@ -336,7 +381,7 @@ public class JenaSparqlService {
 
         var frontier = new LinkedHashSet<>(seedIds);
         int depth = 0;
-        while (!frontier.isEmpty() && depth <= TAXON_TRAVERSAL_MAX_DEPTH && state.visitedIds.size() < TAXON_TRAVERSAL_MAX_NODES) {
+        while (!frontier.isEmpty() && depth <= TAXON_TRAVERSAL_MAX_DEPTH && state.visitedIds.size() < taxonTraversalMaxNodes) {
             frontier.removeAll(state.visitedIds);
             if (frontier.isEmpty()) break;
 
@@ -363,9 +408,9 @@ public class JenaSparqlService {
             nextFrontier.addAll(children);
 
             nextFrontier.removeAll(state.visitedIds);
-            if (state.visitedIds.size() + nextFrontier.size() > TAXON_TRAVERSAL_MAX_NODES) {
+            if (state.visitedIds.size() + nextFrontier.size() > taxonTraversalMaxNodes) {
                 var capped = new LinkedHashSet<String>();
-                int remaining = TAXON_TRAVERSAL_MAX_NODES - state.visitedIds.size();
+                int remaining = taxonTraversalMaxNodes - state.visitedIds.size();
                 for (var id : nextFrontier) {
                     if (remaining-- <= 0) break;
                     capped.add(id);
@@ -452,10 +497,11 @@ public class JenaSparqlService {
             var command = "SELECT DISTINCT ?subject WHERE {" +
                     "  ?subject <{PREDICATE}> ?object . " +
                     "  VALUES ?object { {BIOFID_IDS} }" +
-                    "}";
+                    "} LIMIT {LIMIT}";
             command = command
                     .replace("{PREDICATE}", predicateUri)
-                    .replace("{BIOFID_IDS}", String.join("\n", chunk.stream().map(id -> "<" + id + ">").toList()));
+                    .replace("{BIOFID_IDS}", String.join("\n", chunk.stream().map(id -> "<" + id + ">").toList()))
+                    .replace("{LIMIT}", String.valueOf(taxonTraversalMaxNodes));
 
             var queryResult = executeCommand(command, RDFSelectQueryDto.class);
             if (queryResult == null || queryResult.getResults() == null || queryResult.getResults().getBindings() == null) return localSubjects;

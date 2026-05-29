@@ -101,7 +101,8 @@ public class Importer {
     // TODO this list must also be used in the frontend to decide if we should show the image viewer
     private static final Set<String> MIME_TYPES_IMAGES = Set.of("image/jpeg", "image/png");
     private GoetheUniversityService goetheUniversityService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
+    private StorageMaintenanceService storageMaintenance;
 //    private RAGService ragService;
     private EmbeddingService embeddingService;
     private JenaSparqlService jenaSparqlService;
@@ -180,7 +181,8 @@ public class Importer {
 
     private void initServices(ApplicationContext serviceContext) {
         this.goetheUniversityService = serviceContext.getBean(GoetheUniversityService.class);
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
+        this.storageMaintenance = serviceContext.getBean(StorageMaintenanceService.class);
 //        this.ragService = serviceContext.getBean(RAGService.class);
         this.embeddingService = serviceContext.getBean(EmbeddingService.class);
         this.lexiconService = serviceContext.getBean(LexiconService.class);
@@ -310,6 +312,7 @@ public class Importer {
 
         this.continuation = new DocumentImportContinuation(
                 db,
+                storageMaintenance,
                 lexiconService,
                 logger,
                 batchLatch,
@@ -390,7 +393,7 @@ public class Importer {
     private void runFinalCorpusUpdates(Corpus corpus, CorpusConfig corpusConfigFinal) {
         // Final links updating
         ExceptionUtils.tryCatchLog(
-                () -> db.callLogicalLinksRefresh(),
+                () -> storageMaintenance.refreshLogicalLinks(),
                 (ex) -> logger.error(
                         "Error in the final logical links update of the current corpus with id " + corpus.getId(), ex
                 )
@@ -406,7 +409,7 @@ public class Importer {
 
         // Final geonames location updating
         ExceptionUtils.tryCatchLog(
-                () -> db.callGeonameLocationRefresh(),
+                () -> storageMaintenance.refreshGeonameLocations(),
                 (ex) -> logger.error(
                         "Error in the final geoname location update of the current corpus with id " + corpus.getId(), ex
                 )
@@ -429,7 +432,7 @@ public class Importer {
             Path pathdefault,
             CorpusConfig corpusConfig,
             Corpus corpus,
-            PostgresqlDataInterface_Impl db
+            DataInterface db
     ) throws MissingResourceException, DatabaseOperationException {
         try (var reader = new FileReader(pathdefault.toFile(), StandardCharsets.UTF_8)) {
             corpusConfig = gson.fromJson(reader, CorpusConfig.class);
@@ -471,7 +474,7 @@ public class Importer {
      * @return A {@link Corpus} object if an existing corpus was found otherwise null
      * @throws DocumentAccessDeniedException
      */
-    public static Corpus CreateDBCorpus(Corpus corpus, CorpusConfig corpusConfig, PostgresqlDataInterface_Impl db) throws DatabaseOperationException, DocumentAccessDeniedException {
+    public static Corpus CreateDBCorpus(Corpus corpus, CorpusConfig corpusConfig, DataInterface db) throws DatabaseOperationException, DocumentAccessDeniedException {
         corpus.setName(corpusConfig.getName());
         corpus.setLanguage(corpusConfig.getLanguage());
         corpus.setAuthor(corpusConfig.getAuthor());

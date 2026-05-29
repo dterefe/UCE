@@ -12,7 +12,7 @@ import org.texttechnologylab.uce.common.exceptions.DatabaseOperationException;
 import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException;
 import org.texttechnologylab.uce.common.exceptions.ExceptionUtils;
 import org.texttechnologylab.uce.common.models.corpus.Corpus;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.S3StorageService;
 import org.texttechnologylab.uce.common.utils.StringUtils;
 import org.texttechnologylab.uce.corpusimporter.Importer;
@@ -25,16 +25,16 @@ import java.util.concurrent.CompletableFuture;
 public class ImportExportApi implements UceApi {
 
     private S3StorageService s3StorageService;
-    private PostgresqlDataInterface_Impl db;
+    private DataInterface db;
     private ApplicationContext serviceContext;
 
-    private static final Logger logger = LogManager.getLogger(PostgresqlDataInterface_Impl.class);
+    private static final Logger logger = LogManager.getLogger(ImportExportApi.class);
     private static Gson gson = new Gson();
 
     public ImportExportApi(ApplicationContext serviceContext) {
         this.serviceContext = serviceContext;
         this.s3StorageService = serviceContext.getBean(S3StorageService.class);
-        this.db = serviceContext.getBean(PostgresqlDataInterface_Impl.class);
+        this.db = serviceContext.getBean(DataInterface.class);
     }
 
     public void downloadUIMA(Context ctx) {

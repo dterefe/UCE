@@ -10,9 +10,11 @@ COPY ./uce.portal/uce.corpus-importer/pom.xml ./uce.portal/uce.corpus-importer/p
 COPY ./uce.portal/uce.web/pom.xml ./uce.portal/uce.web/pom.xml
 COPY ./uce.portal/uce.search/pom.xml ./uce.portal/uce.search/pom.xml
 COPY ./uce.portal/uce.analysis/pom.xml ./uce.portal/uce.analysis/pom.xml
+COPY ./.docker-m2 /app/.docker-m2
 
 WORKDIR /app/uce.portal
 RUN --mount=type=cache,id=uce-m2-repo,target=/root/.m2/repository,sharing=locked \
+    cp -R /app/.docker-m2/. /root/.m2/repository/ && \
     mvn -B -T 1C -nsu -DskipTests -Dmaven.repo.local=/root/.m2/repository \
     dependency:go-offline -pl uce.corpus-importer -am
 
@@ -28,6 +30,10 @@ RUN --mount=type=cache,id=uce-m2-repo,target=/root/.m2/repository,sharing=locked
 FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates podman \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/uce.portal/uce.corpus-importer/target/importer.jar /app/uce.portal/uce.corpus-importer/target/importer.jar
 

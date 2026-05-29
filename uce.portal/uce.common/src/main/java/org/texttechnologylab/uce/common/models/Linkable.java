@@ -2,7 +2,7 @@ package org.texttechnologylab.uce.common.models;
 
 import org.texttechnologylab.uce.common.models.corpus.links.LinkableRegistry;
 import org.texttechnologylab.uce.common.models.viewModels.link.LinkableViewModel;
-import org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl;
+import org.texttechnologylab.uce.common.services.DataInterface;
 
 import java.util.List;
 
@@ -24,7 +24,7 @@ public interface Linkable {
         return this.getClassName() + "-" + this.getPrimaryDbIdentifier();
     }
 
-    default void initLinkableViewModel(PostgresqlDataInterface_Impl db) {
+    default void initLinkableViewModel(DataInterface db) {
         LinkableRegistry.nodeMap.computeIfAbsent(getUnique(), k -> new LinkableViewModel(this, db));
     }
 
