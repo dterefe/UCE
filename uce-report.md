@@ -912,13 +912,13 @@ org.texttechnologylab.annotation.uce.UCEAnnotation
 org.texttechnologylab.annotation.uce.UCEOperation
 ```
 
-They should extend the same domain base used by BIOFID:
+They should extend the active artifact hierarchy used by BIOFID:
 
 ```text
-org.texttechnologylab.annotation.domain.Domain
+org.texttechnologylab.annotation.artifact.Artifact
 ```
 
-Operational relationships should use existing association classes where possible:
+Operational relationships should use existing artifact association classes where possible:
 
 - `Membership`
 - `Sequence`

@@ -25,24 +25,6 @@
                         <i class="fas fa-sitemap"></i>
                         <span>Membership</span>
                     </button>
-                    <button class="domain-lens" data-association="Sequence" data-trigger="hover"
-                            data-toggle="popover" data-placement="right"
-                            data-content="Sequence: ordered previous/next traversal">
-                        <i class="fas fa-sort-amount-down"></i>
-                        <span>Sequence</span>
-                    </button>
-                    <button class="domain-lens" data-association="Reference" data-trigger="hover"
-                            data-toggle="popover" data-placement="right"
-                            data-content="Reference: cross-link traversal">
-                        <i class="fas fa-link"></i>
-                        <span>Reference</span>
-                    </button>
-                    <button class="domain-lens" data-association="Equivalence" data-trigger="hover"
-                            data-toggle="popover" data-placement="right"
-                            data-content="Equivalence: identity clusters">
-                        <i class="fas fa-equals"></i>
-                        <span>Equivalence</span>
-                    </button>
                 </nav>
 
                 <section class="domain-explorer">
@@ -83,7 +65,7 @@
 
             <section class="domain-reference-panel">
                 <div class="domain-reference-header">
-                    <h6 class="mb-0"><i class="fas fa-link mr-2"></i>References</h6>
+                    <h6 class="mb-0"><i class="fas fa-link mr-2"></i>Associations</h6>
                     <div>
                         <button class="btn domain-reference-direction active" data-direction="OUTGOING">Outgoing</button>
                         <button class="btn domain-reference-direction" data-direction="INCOMING">Incoming</button>

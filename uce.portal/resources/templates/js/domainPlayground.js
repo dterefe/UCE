@@ -14,9 +14,7 @@ var domainPlayground = (function () {
 
     const associationIcons = {
         Membership: 'fa-sitemap',
-        Sequence: 'fa-sort-amount-down',
-        Reference: 'fa-link',
-        Equivalence: 'fa-equals'
+        Association: 'fa-link'
     };
 
     function init() {
@@ -72,7 +70,7 @@ var domainPlayground = (function () {
             $(this).addClass('active');
             loadAssociations(node, $(this));
             renderWorkspace();
-            loadReferences();
+            loadAssociationPanel();
         });
 
         $('body').on('click', '.domain-expand-btn', function (event) {
@@ -115,7 +113,7 @@ var domainPlayground = (function () {
             state.referenceDirection = $(this).attr('data-direction');
             $('.domain-reference-direction').removeClass('active');
             $(this).addClass('active');
-            loadReferences();
+            loadAssociationPanel();
         });
 
         $('body').on('click', '.domain-page-prev', function () {
@@ -205,7 +203,7 @@ var domainPlayground = (function () {
                 corpusId: state.corpusId,
                 sourceUids: [node.uid],
                 associationType: state.activeLens,
-                direction: state.activeLens === 'Equivalence' ? 'BOTH' : 'OUTGOING',
+                direction: 'OUTGOING',
                 skip: 0,
                 take: 80
             });
@@ -215,25 +213,25 @@ var domainPlayground = (function () {
         }
     }
 
-    async function loadReferences() {
+    async function loadAssociationPanel() {
         const $panel = $('.domain-reference-content');
         if (!state.selectedNode) {
-            $panel.html(emptyBox('Select a domain node to inspect references.'));
+            $panel.html(emptyBox('Select a domain node to inspect associations.'));
             return;
         }
-        $panel.html(loader('Loading references...'));
+        $panel.html(loader('Loading associations...'));
         try {
             const response = await postJson('/api/domain/associations', {
                 corpusId: state.corpusId,
                 sourceUids: [state.selectedNode.uid],
-                associationType: 'Reference',
+                associationType: 'Association',
                 direction: state.referenceDirection,
                 skip: 0,
                 take: 30
             });
-            renderReferencePanel(response.page);
+            renderAssociationPanel(response.page);
         } catch (e) {
-            $panel.html(errorBox('Could not load references.'));
+            $panel.html(errorBox('Could not load associations.'));
         }
     }
 
@@ -331,17 +329,17 @@ var domainPlayground = (function () {
         $target.html(html);
     }
 
-    function renderReferencePanel(page) {
+    function renderAssociationPanel(page) {
         const items = page && page.items ? page.items : [];
         if (!items.length) {
-            $('.domain-reference-content').html(emptyBox('No references for the selected direction.'));
+            $('.domain-reference-content').html(emptyBox('No associations for the selected direction.'));
             return;
         }
         $('.domain-reference-content').html('<div class="domain-workspace-grid">' + items.map((item) =>
             '<div class="domain-workspace-card">' +
             '<h6 class="mb-1">' + esc(item.target.name || item.target.uid) + '</h6>' +
             '<p class="mb-1 small-font color-prime">' + esc(item.target.label) + '</p>' +
-            '<p class="mb-0 xsmall-font text">' + esc(item.edge.name || item.edge.label || 'Reference') + '</p>' +
+            '<p class="mb-0 xsmall-font text">' + esc(item.edge.name || item.edge.label || 'Association') + '</p>' +
             '</div>'
         ).join('') + '</div>');
     }
@@ -400,7 +398,12 @@ var domainPlayground = (function () {
             const response = await postJson('/api/domain/ego', {
                 corpusId: state.corpusId,
                 selectedUids: [state.selectedNode.uid],
-                associationTypes: ['Membership', 'Sequence', 'Reference', 'Equivalence'],
+                associationTypes: [
+                    'Association',
+                    'Membership',
+                    'org.texttechnologylab.annotation.artifact.Association',
+                    'org.texttechnologylab.annotation.artifact.Membership'
+                ],
                 depth: 1
             });
             const graph = response.graph || {nodes: [], edges: []};

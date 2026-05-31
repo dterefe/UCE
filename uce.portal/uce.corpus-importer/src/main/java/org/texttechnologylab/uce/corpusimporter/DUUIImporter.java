@@ -187,8 +187,8 @@ public class DUUIImporter {
     private static final String UCE_TYPE_TYPE = "org.texttechnologylab.annotation.uce.UCEType";
     private static final String UCE_ANNOTATION_TYPE = "org.texttechnologylab.annotation.uce.UCEAnnotation";
     private static final String UCE_OPERATION_TYPE = "org.texttechnologylab.annotation.uce.UCEOperation";
-    private static final String MEMBERSHIP_TYPE = "org.texttechnologylab.annotation.domain.Membership";
-    private static final String REFERENCE_TYPE = "org.texttechnologylab.annotation.domain.Reference";
+    private static final String ASSOCIATION_TYPE = "org.texttechnologylab.annotation.artifact.Association";
+    private static final String MEMBERSHIP_TYPE = "org.texttechnologylab.annotation.artifact.Membership";
     private static final String UCE_IMPORT = "uce/import";
     private static final String UCE_CORPUS = "uce/corpus";
     private static final String UCE_DOCUMENT = "uce/document";
@@ -1770,7 +1770,7 @@ public class DUUIImporter {
                 documentDomainId
         ));
         recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                REFERENCE_TYPE,
+                ASSOCIATION_TYPE,
                 "document-view:" + documentDomainId + ":" + viewDomainId,
                 uceUid(UCE_DOCUMENT_TYPE, documentDomainId),
                 uceUid(UCE_VIEW_TYPE, viewDomainId),
@@ -1780,7 +1780,7 @@ public class DUUIImporter {
                 documentDomainId
         ));
         recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                REFERENCE_TYPE,
+                ASSOCIATION_TYPE,
                 "import-view:" + work.corpus.runtime.importId + ":" + viewDomainId,
                 uceUid(UCE_IMPORT_TYPE, importDomainId),
                 uceUid(UCE_VIEW_TYPE, viewDomainId),
@@ -1854,7 +1854,7 @@ public class DUUIImporter {
                     documentDomainId
             ));
             recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                    REFERENCE_TYPE,
+                    ASSOCIATION_TYPE,
                     "import-type:" + work.corpus.runtime.importId + ":" + typeDomainId,
                     uceUid(UCE_IMPORT_TYPE, importDomainId),
                     uceUid(UCE_TYPE_TYPE, typeDomainId),
@@ -1864,7 +1864,7 @@ public class DUUIImporter {
                     documentDomainId
             ));
             recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                    REFERENCE_TYPE,
+                    ASSOCIATION_TYPE,
                     "corpus-type:" + corpusDomainId + ":" + typeDomainId,
                     uceUid(UCE_CORPUS_TYPE, corpusDomainId),
                     uceUid(UCE_TYPE_TYPE, typeDomainId),
@@ -1874,7 +1874,7 @@ public class DUUIImporter {
                     documentDomainId
             ));
             recordAssociation(work.corpus.runtime, new UceAssociationRecord(
-                    REFERENCE_TYPE,
+                    ASSOCIATION_TYPE,
                     "document-type:" + documentDomainId + ":" + typeDomainId,
                     uceUid(UCE_DOCUMENT_TYPE, documentDomainId),
                     uceUid(UCE_TYPE_TYPE, typeDomainId),
@@ -2037,16 +2037,16 @@ public class DUUIImporter {
                             "error", nullToEmpty(operation.error()),
                             "startedAt", String.valueOf(operation.startedAt()),
                             "finishedAt", String.valueOf(operation.finishedAt()))));
-            edges.add(uceAssociationEdge(work, REFERENCE_TYPE, "operation-import:" + operationId,
+            edges.add(uceAssociationEdge(work, ASSOCIATION_TYPE, "operation-import:" + operationId,
                     uceUid(UCE_OPERATION_TYPE, operationId), uceUid(UCE_IMPORT_TYPE, "import:" + importId),
                     "operation-import", mapOf("role", "import")));
             if (operation.corpusDomainId() != null) {
-                edges.add(uceAssociationEdge(work, REFERENCE_TYPE, "operation-corpus:" + operationId,
+                edges.add(uceAssociationEdge(work, ASSOCIATION_TYPE, "operation-corpus:" + operationId,
                         uceUid(UCE_OPERATION_TYPE, operationId), uceUid(UCE_CORPUS_TYPE, operation.corpusDomainId()),
                         "operation-corpus", mapOf("role", "corpus")));
             }
             if (operation.documentDomainId() != null) {
-                edges.add(uceAssociationEdge(work, REFERENCE_TYPE, "operation-document:" + operationId,
+                edges.add(uceAssociationEdge(work, ASSOCIATION_TYPE, "operation-document:" + operationId,
                         uceUid(UCE_OPERATION_TYPE, operationId), uceUid(UCE_DOCUMENT_TYPE, operation.documentDomainId()),
                         "operation-document", mapOf("role", "document")));
             }
@@ -2086,8 +2086,8 @@ public class DUUIImporter {
                             "finishedAt", String.valueOf(operation.finishedAt())))
             ));
             edges.add(new AgeGraphService.AssociationEdge(
-                    REFERENCE_TYPE + ":operation-import:" + operationId,
-                    REFERENCE_TYPE,
+                    ASSOCIATION_TYPE + ":operation-import:" + operationId,
+                    ASSOCIATION_TYPE,
                     work.corpus.getId(),
                     -1,
                     operationUid,
@@ -2098,8 +2098,8 @@ public class DUUIImporter {
             ));
             if (operation.corpusDomainId() != null || operation.documentDomainId() != null) {
                 edges.add(new AgeGraphService.AssociationEdge(
-                        REFERENCE_TYPE + ":operation-corpus:" + operationId,
-                        REFERENCE_TYPE,
+                        ASSOCIATION_TYPE + ":operation-corpus:" + operationId,
+                        ASSOCIATION_TYPE,
                         work.corpus.getId(),
                         -1,
                         operationUid,
@@ -2111,8 +2111,8 @@ public class DUUIImporter {
             }
             if (operation.documentDomainId() != null) {
                 edges.add(new AgeGraphService.AssociationEdge(
-                        REFERENCE_TYPE + ":operation-document:" + operationId,
-                        REFERENCE_TYPE,
+                        ASSOCIATION_TYPE + ":operation-document:" + operationId,
+                        ASSOCIATION_TYPE,
                         work.corpus.getId(),
                         -1,
                         operationUid,
@@ -2132,16 +2132,19 @@ public class DUUIImporter {
     }
 
     private void persistAnnotatedDomainGraph(UCEDocumentArtifact work) throws DatabaseOperationException, DocumentAccessDeniedException {
-        Class<? extends org.apache.uima.jcas.cas.TOP> domainClass = uimaClass("org.texttechnologylab.annotation.domain.Domain");
-        Class<? extends org.apache.uima.jcas.cas.TOP> associationClass = uimaClass("org.texttechnologylab.annotation.domain.Association");
-        if (domainClass == null || associationClass == null) {
+        Class<? extends org.apache.uima.jcas.cas.TOP> artifactClass = uimaClass("org.texttechnologylab.annotation.artifact.Artifact");
+        Class<? extends org.apache.uima.jcas.cas.TOP> associationClass = uimaClass(ASSOCIATION_TYPE);
+        if (artifactClass == null || associationClass == null) {
             return;
         }
         long corpusId = work.corpus.corpus.getId();
         long documentRowId = work.document.getId();
-        var domains = JCasUtil.select(work.jCas, domainClass);
+        var domains = JCasUtil.select(work.jCas, artifactClass);
         List<AgeGraphService.DomainNode> nodes = new ArrayList<>();
         for (org.apache.uima.jcas.cas.TOP domain : domains) {
+            if (associationClass.isInstance(domain)) {
+                continue;
+            }
             String uid = domainUid(domain);
             if (uid == null) {
                 continue;
@@ -2213,11 +2216,11 @@ public class DUUIImporter {
     }
 
     private org.apache.uima.jcas.cas.TOP leftAssociationDomain(org.apache.uima.jcas.cas.TOP association) {
-        return firstFeatureValue(association, "whole", "context", "previous", "one");
+        return firstFeatureValue(association, "owner");
     }
 
     private org.apache.uima.jcas.cas.TOP rightAssociationDomain(org.apache.uima.jcas.cas.TOP association) {
-        return firstFeatureValue(association, "part", "referent", "next", "other");
+        return firstFeatureValue(association, "owned");
     }
 
     private org.apache.uima.jcas.cas.TOP firstFeatureValue(org.apache.uima.jcas.cas.TOP fs, String... featureNames) {
