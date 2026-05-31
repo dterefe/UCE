@@ -1,0 +1,439 @@
+2026-05-22 09:09:20.285 [main] INFO  org.texttechnologylab.uce.web.App - Starting the UCE web service...
+2026-05-22 09:09:20.288 [main] INFO  org.texttechnologylab.uce.web.App - Passed in command line args: -cf .dev/storage/UceConfig.json
+2026-05-22 09:09:20.291 [main] INFO  org.texttechnologylab.uce.web.App - Parsing the UCE config...
+2026-05-22 09:09:20.338 [main] INFO  org.texttechnologylab.uce.web.App - Read UCE Config from path: .dev/storage/UceConfig.json
+2026-05-22 09:09:20.338 [main] INFO  org.texttechnologylab.uce.web.App - UCE Config read and instantiated.
+2026-05-22 09:09:20.343 [main] INFO  org.texttechnologylab.uce.web.App - Loaded the common config.
+2026-05-22 09:09:20.344 [main] INFO  org.texttechnologylab.uce.web.App - Language resources templates override path: uce.portal/resources/templates/
+2026-05-22 09:09:20.348 [main] INFO  org.texttechnologylab.uce.web.App - Adjusting UCE to the UceConfig...
+2026-05-22 09:09:20.966 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 1.0-SNAPSHOT
+2026-05-22 09:09:21.104 [main] INFO  org.hibernate.spatial.integration.SpatialService - HHH80000001: hibernate-spatial integration enabled : true
+2026-05-22 09:09:21.139 [main] INFO  org.hibernate.annotations.common.Version - HCANN000001: Hibernate Commons Annotations {5.1.2.Final}
+2026-05-22 09:09:21.205 [main] INFO  org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator - HHH000130: Instantiating explicit connection provider: com.zaxxer.hikari.hibernate.HikariConnectionProvider
+2026-05-22 09:09:22.270 [main] WARN  org.springframework.context.annotation.AnnotationConfigApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'documentAccessManager' defined in org.texttechnologylab.uce.common.config.DocumentAccessConfig: Unsatisfied dependency expressed through method 'documentAccessManager' parameter 0: Error creating bean with name 'databaseService' defined in org.texttechnologylab.uce.common.config.SpringConfig: Failed to instantiate [org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl]: Factory method 'databaseService' threw exception with message: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-22 09:09:22.278 [main] FATAL org.texttechnologylab.uce.web.App - ========== [ABORT] ==========
+The Application context couldn't be established. This is very likely due to a missing/invalid database connection. UCE will have to shutdown.
+2026-05-22 09:09:31.714 [main] INFO  org.texttechnologylab.uce.web.App - Starting the UCE web service...
+2026-05-22 09:09:31.716 [main] INFO  org.texttechnologylab.uce.web.App - Passed in command line args: -cf .dev/storage/UceConfig.json
+2026-05-22 09:09:31.717 [main] INFO  org.texttechnologylab.uce.web.App - Parsing the UCE config...
+2026-05-22 09:09:31.753 [main] INFO  org.texttechnologylab.uce.web.App - Read UCE Config from path: .dev/storage/UceConfig.json
+2026-05-22 09:09:31.753 [main] INFO  org.texttechnologylab.uce.web.App - UCE Config read and instantiated.
+2026-05-22 09:09:31.758 [main] INFO  org.texttechnologylab.uce.web.App - Loaded the common config.
+2026-05-22 09:09:31.758 [main] INFO  org.texttechnologylab.uce.web.App - Language resources templates override path: uce.portal/resources/templates/
+2026-05-22 09:09:31.761 [main] INFO  org.texttechnologylab.uce.web.App - Adjusting UCE to the UceConfig...
+2026-05-22 09:09:32.250 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 1.0-SNAPSHOT
+2026-05-22 09:09:32.320 [main] INFO  org.hibernate.spatial.integration.SpatialService - HHH80000001: hibernate-spatial integration enabled : true
+2026-05-22 09:09:32.337 [main] INFO  org.hibernate.annotations.common.Version - HCANN000001: Hibernate Commons Annotations {5.1.2.Final}
+2026-05-22 09:09:32.381 [main] INFO  org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator - HHH000130: Instantiating explicit connection provider: com.zaxxer.hikari.hibernate.HikariConnectionProvider
+2026-05-22 09:09:33.428 [main] WARN  org.springframework.context.annotation.AnnotationConfigApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'documentAccessManager' defined in org.texttechnologylab.uce.common.config.DocumentAccessConfig: Unsatisfied dependency expressed through method 'documentAccessManager' parameter 0: Error creating bean with name 'databaseService' defined in org.texttechnologylab.uce.common.config.SpringConfig: Failed to instantiate [org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl]: Factory method 'databaseService' threw exception with message: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-22 09:09:33.433 [main] FATAL org.texttechnologylab.uce.web.App - ========== [ABORT] ==========
+The Application context couldn't be established. This is very likely due to a missing/invalid database connection. UCE will have to shutdown.
+2026-05-22 09:11:07.745 [main] INFO  org.texttechnologylab.uce.web.App - Starting the UCE web service...
+2026-05-22 09:11:07.748 [main] INFO  org.texttechnologylab.uce.web.App - Passed in command line args: -cf .dev/storage/UceConfig.json
+2026-05-22 09:11:07.750 [main] INFO  org.texttechnologylab.uce.web.App - Parsing the UCE config...
+2026-05-22 09:11:07.788 [main] INFO  org.texttechnologylab.uce.web.App - Read UCE Config from path: .dev/storage/UceConfig.json
+2026-05-22 09:11:07.788 [main] INFO  org.texttechnologylab.uce.web.App - UCE Config read and instantiated.
+2026-05-22 09:11:07.794 [main] INFO  org.texttechnologylab.uce.web.App - Loaded the common config.
+2026-05-22 09:11:07.794 [main] INFO  org.texttechnologylab.uce.web.App - Language resources templates override path: uce.portal/resources/templates/
+2026-05-22 09:11:07.798 [main] INFO  org.texttechnologylab.uce.web.App - Adjusting UCE to the UceConfig...
+2026-05-22 09:11:08.297 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 1.0-SNAPSHOT
+2026-05-22 09:11:08.369 [main] INFO  org.hibernate.spatial.integration.SpatialService - HHH80000001: hibernate-spatial integration enabled : true
+2026-05-22 09:11:08.402 [main] INFO  org.hibernate.annotations.common.Version - HCANN000001: Hibernate Commons Annotations {5.1.2.Final}
+2026-05-22 09:11:08.448 [main] INFO  org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator - HHH000130: Instantiating explicit connection provider: com.zaxxer.hikari.hibernate.HikariConnectionProvider
+2026-05-22 09:11:08.582 [main] INFO  org.hibernate.dialect.Dialect - HHH000400: Using dialect: org.hibernate.dialect.PostgreSQLDialect
+2026-05-22 09:11:09.404 [main] INFO  org.hibernate.orm.connections.access - HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@6520625f] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+2026-05-22 09:11:10.020 [main] INFO  org.texttechnologylab.uce.common.utils.QueryResultCache - Initialized global query cache with maximumSize=5000 entries.
+2026-05-22 09:11:10.242 [main] INFO  org.texttechnologylab.uce.web.App - Loaded application context and services.
+2026-05-22 09:11:10.242 [main] INFO  org.texttechnologylab.uce.web.App - Initializing the Document Access Manager...
+2026-05-22 09:11:10.245 [main] INFO  org.texttechnologylab.uce.web.App - Executing external database scripts from /storage/projects/bagci/BioFID/UCE_Releases/2026-02-06_BioFID/database
+2026-05-22 09:11:10.316 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 1_createExtensions.sql
+2026-05-22 09:11:10.321 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 1_createDocumentChunkEmbeddings.sql
+2026-05-22 09:11:10.330 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 2_createDocumentEmbeddings.sql
+2026-05-22 09:11:10.333 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 3_createGetCorpusAnnotationProcedure.sql
+2026-05-22 09:11:10.352 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 4_createSearchLayerFulltextProcedure.sql
+2026-05-22 09:11:10.368 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 6_createGeonameProcedures.sql
+2026-05-22 09:11:10.372 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 6_createSemanticRoleSearchProcedure.sql
+2026-05-22 09:11:10.374 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 7_createLexicon.sql
+2026-05-22 09:11:10.377 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 7_logicalLinks.sql
+2026-05-22 09:11:10.380 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 8_createTriggers.sql
+2026-05-22 09:11:10.387 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 9_createGinIndexes.sql
+2026-05-22 09:11:10.389 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 10_topicTables.sql
+2026-05-22 09:11:10.392 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 11_similarTopics.sql
+2026-05-22 09:11:10.395 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 12_createDocumentSentenceEmbeddings.sql
+2026-05-22 09:11:10.398 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 13_corpusTopicDist.sql
+2026-05-22 09:11:10.399 [main] INFO  org.texttechnologylab.uce.web.App - Finished with executing external database scripts.
+2026-05-22 09:11:10.403 [main] INFO  org.texttechnologylab.uce.web.App - Cleanup temporary LayeredSearch tables.
+2026-05-22 09:11:10.404 [main] INFO  org.texttechnologylab.uce.web.App - Testing the language resources:
+2026-05-22 09:11:10.437 [main] INFO  org.texttechnologylab.uce.web.App - Search
+2026-05-22 09:11:10.438 [main] INFO  org.texttechnologylab.uce.web.App - Initialized the Session Job.
+2026-05-22 09:11:10.441 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob has started.
+2026-05-22 09:11:10.443 [main] INFO  org.texttechnologylab.uce.web.App - Initialized the System Job.
+2026-05-22 09:11:10.446 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update the lexicon... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:11:10.444 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob has started.
+2026-05-22 09:11:10.447 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob is still running and starting another cycle: Active Search States: 0 | Cached Wiki Pages: 0
+2026-05-22 09:11:10.449 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update any linkables... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:11:10.453 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update any geoname locations... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:11:10.454 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob is done with this cycle. Active Search States: 0 | Active Layered Searches: 0 | Cached Wiki Pages: 0
+2026-05-22 09:11:10.472 [main] INFO  org.texttechnologylab.uce.web.App - Setting up the Javalin application...
+2026-05-22 09:11:10.472 [ForkJoinPool.commonPool-worker-2] INFO  org.texttechnologylab.uce.web.App - Finished updating the linkables. Updated linkables: 0
+2026-05-22 09:11:10.494 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:11:10.520 [main] INFO  org.texttechnologylab.uce.web.App - Setup FreeMarker templates and public folders.
+2026-05-22 09:11:10.520 [main] INFO  org.texttechnologylab.uce.web.App - Setup FreeMarker templates and public folders.
+2026-05-22 09:11:10.523 [main] INFO  org.texttechnologylab.uce.web.App - Initializing all the spark routes...
+2026-05-22 09:11:10.529 [ForkJoinPool.commonPool-worker-3] INFO  org.texttechnologylab.uce.web.App - Finished updating the geoname locations. Updated locations: 0
+2026-05-22 09:11:10.562 [main] INFO  org.texttechnologylab.uce.web.App - Routes initialized
+2026-05-22 09:11:10.562 [main] INFO  org.texttechnologylab.uce.web.App - MCP server is disabled and will not be initialized.
+2026-05-22 09:11:10.599 [main] INFO  org.texttechnologylab.uce.web.App - Javalin application setup done.
+2026-05-22 09:11:10.741 [main] INFO  org.texttechnologylab.uce.web.App - UCE web service has started!
+2026-05-22 09:11:16.015 [ForkJoinPool.commonPool-worker-1] INFO  org.texttechnologylab.uce.web.App - Finished updating the lexicon. Added new entries: 0
+2026-05-22 09:11:20.543 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:11:30.590 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:11:40.639 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:11:44.238 [JettyServerThreadPool-155] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=96593afb-bbf5-45a4-88c6-2e69dbad5653, IP=[0:0:0:0:0:0:0:1], Method=HEAD, URI=http://localhost:4567/, QUERY=null, BODY=
+2026-05-22 09:11:44.238 [JettyServerThreadPool-121] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=8c07456c-28bd-41b1-924a-3ac28a58a94a, IP=[0:0:0:0:0:0:0:1], Method=GET, URI=http://localhost:4567/api/domain/types, QUERY=corpusId=-1, BODY=
+2026-05-22 09:11:44.245 [JettyServerThreadPool-121] WARN  org.hibernate.engine.jdbc.spi.SqlExceptionHelper - SQL Error: 0, SQLState: 58P01
+2026-05-22 09:11:44.246 [JettyServerThreadPool-121] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - ERROR: could not access file "age": No such file or directory
+2026-05-22 09:11:44.503 [JettyServerThreadPool-121] WARN  org.hibernate.engine.jdbc.spi.SqlExceptionHelper - SQL Error: 0, SQLState: 58P01
+2026-05-22 09:11:44.503 [JettyServerThreadPool-121] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - ERROR: could not access file "age": No such file or directory
+2026-05-22 09:11:45.006 [JettyServerThreadPool-121] WARN  org.hibernate.engine.jdbc.spi.SqlExceptionHelper - SQL Error: 0, SQLState: 58P01
+2026-05-22 09:11:45.006 [JettyServerThreadPool-121] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - ERROR: could not access file "age": No such file or directory
+2026-05-22 09:11:45.007 [JettyServerThreadPool-121] ERROR org.texttechnologylab.uce.web.routes.DomainApi - Error loading domain types.
+org.texttechnologylab.uce.common.exceptions.DatabaseOperationException: Error while executing database operation. All possible db transactions have been rolled back and state has been restored.
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.executeOperationOnce(PostgresqlDataInterface_Impl.java:2845) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.executeOperationSafely(PostgresqlDataInterface_Impl.java:2793) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.executeNativeStatements(PostgresqlDataInterface_Impl.java:2736) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.AgeGraphService.initializeGraph(AgeGraphService.java:54) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.AgeGraphService.ensureGraph(AgeGraphService.java:47) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.AgeGraphService.listDomainTypes(AgeGraphService.java:203) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.web.routes.DomainApi.types(DomainApi.java:58) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.web.App.lambda$initSparkRoutes$51(App.java:552) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.router.Endpoint.handle(Endpoint.kt:52) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.router.ParsedEndpoint.handle(ParsedEndpoint.kt:15) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.http.servlet.DefaultTasks.HTTP$lambda$11$lambda$9$lambda$8(DefaultTasks.kt:55) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.http.servlet.JavalinServlet.handleTask(JavalinServlet.kt:99) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.http.servlet.JavalinServlet.handleSync(JavalinServlet.kt:64) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.http.servlet.JavalinServlet.handle(JavalinServlet.kt:50) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.http.servlet.JavalinServlet.service(JavalinServlet.kt:30) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:587) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at io.javalin.jetty.JavalinJettyServlet.service(JavalinJettyServlet.kt:52) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:587) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.servlet.ServletHolder.handle(ServletHolder.java:764) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.servlet.ServletHandler.doHandle(ServletHandler.java:529) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:221) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.session.SessionHandler.doHandle(SessionHandler.java:1580) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:221) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ContextHandler.doHandle(ContextHandler.java:1381) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:176) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.servlet.ServletHandler.doScope(ServletHandler.java:484) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.session.SessionHandler.doScope(SessionHandler.java:1553) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:174) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ContextHandler.doScope(ContextHandler.java:1303) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:129) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.StatisticsHandler.handle(StatisticsHandler.java:173) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:122) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.Server.handle(Server.java:563) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.HttpChannel$RequestDispatchable.dispatch(HttpChannel.java:1598) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.HttpChannel.dispatch(HttpChannel.java:753) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.HttpChannel.handle(HttpChannel.java:501) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.server.HttpConnection.onFillable(HttpConnection.java:287) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.io.AbstractConnection$ReadCallback.succeeded(AbstractConnection.java:314) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.io.FillInterest.fillable(FillInterest.java:100) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.io.SelectableChannelEndPoint$1.run(SelectableChannelEndPoint.java:53) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.runTask(AdaptiveExecutionStrategy.java:421) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.consumeTask(AdaptiveExecutionStrategy.java:390) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.tryProduce(AdaptiveExecutionStrategy.java:277) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.produce(AdaptiveExecutionStrategy.java:193) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.QueuedThreadPool.runJob(QueuedThreadPool.java:969) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.QueuedThreadPool$Runner.doRunJob(QueuedThreadPool.java:1194) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.eclipse.jetty.util.thread.QueuedThreadPool$Runner.run(QueuedThreadPool.java:1149) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?]
+Caused by: org.hibernate.exception.GenericJDBCException: error executing work
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:42) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:113) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:99) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.coordinateWork(JdbcCoordinatorImpl.java:313) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.internal.AbstractSharedSessionContract.doWork(AbstractSharedSessionContract.java:1125) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.internal.AbstractSharedSessionContract.doWork(AbstractSharedSessionContract.java:1112) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.lambda$executeNativeStatements$135(PostgresqlDataInterface_Impl.java:2737) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.executeOperationOnce(PostgresqlDataInterface_Impl.java:2822) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	... 47 more
+Caused by: org.postgresql.util.PSQLException: ERROR: could not access file "age": No such file or directory
+	at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2725) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2412) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:371) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:502) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:419) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:341) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.jdbc.PgStatement.executeCachedSql(PgStatement.java:326) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:302) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:297) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:94) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.lambda$executeNativeStatements$134(PostgresqlDataInterface_Impl.java:2742) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.jdbc.WorkExecutor.executeWork(WorkExecutor.java:37) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.internal.AbstractSharedSessionContract.lambda$doWork$1(AbstractSharedSessionContract.java:1109) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.coordinateWork(JdbcCoordinatorImpl.java:308) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.internal.AbstractSharedSessionContract.doWork(AbstractSharedSessionContract.java:1125) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.hibernate.internal.AbstractSharedSessionContract.doWork(AbstractSharedSessionContract.java:1112) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.lambda$executeNativeStatements$135(PostgresqlDataInterface_Impl.java:2737) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	at org.texttechnologylab.uce.common.services.PostgresqlDataInterface_Impl.executeOperationOnce(PostgresqlDataInterface_Impl.java:2822) ~[webportal-jar-with-dependencies.jar:1.0-SNAPSHOT]
+	... 47 more
+2026-05-22 09:11:50.674 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:12:00.722 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:12:10.763 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:12:20.810 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:12:30.874 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:12:40.926 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:12:50.958 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:13:01.002 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:13:11.047 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:13:21.090 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:13:31.149 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:13:41.195 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:13:51.230 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:14:01.274 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:14:11.318 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:14:21.358 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:14:31.396 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:14:41.452 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:14:51.504 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:15:01.551 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:15:11.164 [JettyServerThreadPool-157] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=b8b0b62e-f479-4d3e-8cff-a485ba555870, IP=[0:0:0:0:0:0:0:1], Method=GET, URI=http://localhost:4567/, QUERY=null, BODY=
+2026-05-22 09:15:11.593 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:15:21.637 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:15:22.541 [JettyServerThreadPool-123] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=4146e875-f1ce-425c-8aff-6a5848dd278f, IP=[0:0:0:0:0:0:0:1], Method=GET, URI=http://localhost:4567/domainPlayground, QUERY=null, BODY=
+2026-05-22 09:15:31.689 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:15:41.715 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:15:51.759 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:16:01.796 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:16:11.840 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:16:21.927 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:16:31.969 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:16:42.006 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:16:52.040 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:17:02.079 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:17:12.121 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:17:22.160 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:17:32.199 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:17:42.238 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:17:52.277 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:18:02.319 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:18:12.359 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:18:22.406 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:18:32.449 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:18:42.494 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:18:52.536 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:19:02.575 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:19:12.615 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:19:22.658 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:19:32.691 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:19:42.732 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:19:52.782 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:20:02.821 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:20:12.866 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:20:22.910 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:20:32.954 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:20:42.997 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:20:53.041 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:21:03.050 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:21:13.058 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:21:23.066 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:21:33.075 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:21:43.083 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:21:53.091 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:22:03.099 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:22:13.109 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:22:23.117 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:22:33.125 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:22:43.184 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:22:53.191 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:00.796 [main] INFO  org.texttechnologylab.uce.web.App - Starting the UCE web service...
+2026-05-22 09:23:00.798 [main] INFO  org.texttechnologylab.uce.web.App - Passed in command line args: -cf .dev/storage/UceConfig.json
+2026-05-22 09:23:00.802 [main] INFO  org.texttechnologylab.uce.web.App - Parsing the UCE config...
+2026-05-22 09:23:00.837 [main] INFO  org.texttechnologylab.uce.web.App - Read UCE Config from path: .dev/storage/UceConfig.json
+2026-05-22 09:23:00.837 [main] INFO  org.texttechnologylab.uce.web.App - UCE Config read and instantiated.
+2026-05-22 09:23:00.845 [main] INFO  org.texttechnologylab.uce.web.App - Loaded the common config.
+2026-05-22 09:23:00.846 [main] INFO  org.texttechnologylab.uce.web.App - Language resources templates override path: uce.portal/resources/templates/
+2026-05-22 09:23:00.849 [main] INFO  org.texttechnologylab.uce.web.App - Adjusting UCE to the UceConfig...
+2026-05-22 09:23:01.339 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 1.0-SNAPSHOT
+2026-05-22 09:23:01.406 [main] INFO  org.hibernate.spatial.integration.SpatialService - HHH80000001: hibernate-spatial integration enabled : true
+2026-05-22 09:23:01.423 [main] INFO  org.hibernate.annotations.common.Version - HCANN000001: Hibernate Commons Annotations {5.1.2.Final}
+2026-05-22 09:23:01.470 [main] INFO  org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator - HHH000130: Instantiating explicit connection provider: com.zaxxer.hikari.hibernate.HikariConnectionProvider
+2026-05-22 09:23:01.582 [main] INFO  org.hibernate.dialect.Dialect - HHH000400: Using dialect: org.hibernate.dialect.PostgreSQLDialect
+2026-05-22 09:23:02.285 [main] INFO  org.hibernate.orm.connections.access - HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@6520625f] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+2026-05-22 09:23:02.773 [main] INFO  org.texttechnologylab.uce.common.utils.QueryResultCache - Initialized global query cache with maximumSize=5000 entries.
+2026-05-22 09:23:02.886 [main] INFO  org.texttechnologylab.uce.web.App - Loaded application context and services.
+2026-05-22 09:23:02.887 [main] INFO  org.texttechnologylab.uce.web.App - Initializing the Document Access Manager...
+2026-05-22 09:23:02.887 [main] INFO  org.texttechnologylab.uce.web.App - Executing external database scripts from /storage/projects/bagci/BioFID/UCE_Releases/2026-02-06_BioFID/database
+2026-05-22 09:23:02.983 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 1_createExtensions.sql
+2026-05-22 09:23:02.984 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 1_createDocumentChunkEmbeddings.sql
+2026-05-22 09:23:02.988 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 2_createDocumentEmbeddings.sql
+2026-05-22 09:23:02.993 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 3_createGetCorpusAnnotationProcedure.sql
+2026-05-22 09:23:02.996 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 4_createSearchLayerFulltextProcedure.sql
+2026-05-22 09:23:03.010 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 6_createGeonameProcedures.sql
+2026-05-22 09:23:03.012 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 6_createSemanticRoleSearchProcedure.sql
+2026-05-22 09:23:03.016 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 7_createLexicon.sql
+2026-05-22 09:23:03.019 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 7_logicalLinks.sql
+2026-05-22 09:23:03.023 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 8_createTriggers.sql
+2026-05-22 09:23:03.029 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 9_createGinIndexes.sql
+2026-05-22 09:23:03.030 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 10_topicTables.sql
+2026-05-22 09:23:03.034 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 11_similarTopics.sql
+2026-05-22 09:23:03.037 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 12_createDocumentSentenceEmbeddings.sql
+2026-05-22 09:23:03.041 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 13_corpusTopicDist.sql
+2026-05-22 09:23:03.043 [main] INFO  org.texttechnologylab.uce.web.App - Finished with executing external database scripts.
+2026-05-22 09:23:03.049 [main] INFO  org.texttechnologylab.uce.web.App - Cleanup temporary LayeredSearch tables.
+2026-05-22 09:23:03.050 [main] INFO  org.texttechnologylab.uce.web.App - Testing the language resources:
+2026-05-22 09:23:03.066 [main] INFO  org.texttechnologylab.uce.web.App - Search
+2026-05-22 09:23:03.067 [main] INFO  org.texttechnologylab.uce.web.App - Initialized the Session Job.
+2026-05-22 09:23:03.067 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob has started.
+2026-05-22 09:23:03.071 [main] INFO  org.texttechnologylab.uce.web.App - Initialized the System Job.
+2026-05-22 09:23:03.071 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob has started.
+2026-05-22 09:23:03.075 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob is still running and starting another cycle: Active Search States: 0 | Cached Wiki Pages: 0
+2026-05-22 09:23:03.077 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update the lexicon... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:23:03.085 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob is done with this cycle. Active Search States: 0 | Active Layered Searches: 0 | Cached Wiki Pages: 0
+2026-05-22 09:23:03.087 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update any linkables... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:23:03.094 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update any geoname locations... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:23:03.108 [ForkJoinPool.commonPool-worker-2] INFO  org.texttechnologylab.uce.web.App - Finished updating the linkables. Updated linkables: 0
+2026-05-22 09:23:03.108 [main] INFO  org.texttechnologylab.uce.web.App - Setting up the Javalin application...
+2026-05-22 09:23:03.114 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:03.127 [main] INFO  org.texttechnologylab.uce.web.App - Setup FreeMarker templates and public folders.
+2026-05-22 09:23:03.127 [main] INFO  org.texttechnologylab.uce.web.App - Setup FreeMarker templates and public folders.
+2026-05-22 09:23:03.130 [main] INFO  org.texttechnologylab.uce.web.App - Initializing all the spark routes...
+2026-05-22 09:23:03.132 [ForkJoinPool.commonPool-worker-3] INFO  org.texttechnologylab.uce.web.App - Finished updating the geoname locations. Updated locations: 0
+2026-05-22 09:23:03.163 [main] INFO  org.texttechnologylab.uce.web.App - Routes initialized
+2026-05-22 09:23:03.163 [main] INFO  org.texttechnologylab.uce.web.App - MCP server is disabled and will not be initialized.
+2026-05-22 09:23:03.180 [main] INFO  org.texttechnologylab.uce.web.App - Javalin application setup done.
+2026-05-22 09:23:03.200 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:06.500 [ForkJoinPool.commonPool-worker-1] INFO  org.texttechnologylab.uce.web.App - Finished updating the lexicon. Added new entries: 0
+2026-05-22 09:23:13.150 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:13.206 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:23.181 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:23.212 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:33.221 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:33.222 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:43.232 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:43.270 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:53.323 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:23:59.586 [main] INFO  org.texttechnologylab.uce.web.App - Starting the UCE web service...
+2026-05-22 09:23:59.588 [main] INFO  org.texttechnologylab.uce.web.App - Passed in command line args: -cf .dev/storage/UceConfig.json
+2026-05-22 09:23:59.591 [main] INFO  org.texttechnologylab.uce.web.App - Parsing the UCE config...
+2026-05-22 09:23:59.623 [main] INFO  org.texttechnologylab.uce.web.App - Read UCE Config from path: .dev/storage/UceConfig.json
+2026-05-22 09:23:59.623 [main] INFO  org.texttechnologylab.uce.web.App - UCE Config read and instantiated.
+2026-05-22 09:23:59.628 [main] INFO  org.texttechnologylab.uce.web.App - Loaded the common config.
+2026-05-22 09:23:59.629 [main] INFO  org.texttechnologylab.uce.web.App - Language resources templates override path: uce.portal/resources/templates/
+2026-05-22 09:23:59.632 [main] INFO  org.texttechnologylab.uce.web.App - Adjusting UCE to the UceConfig...
+2026-05-22 09:24:00.126 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 1.0-SNAPSHOT
+2026-05-22 09:24:00.195 [main] INFO  org.hibernate.spatial.integration.SpatialService - HHH80000001: hibernate-spatial integration enabled : true
+2026-05-22 09:24:00.214 [main] INFO  org.hibernate.annotations.common.Version - HCANN000001: Hibernate Commons Annotations {5.1.2.Final}
+2026-05-22 09:24:00.262 [main] INFO  org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator - HHH000130: Instantiating explicit connection provider: com.zaxxer.hikari.hibernate.HikariConnectionProvider
+2026-05-22 09:24:00.380 [main] INFO  org.hibernate.dialect.Dialect - HHH000400: Using dialect: org.hibernate.dialect.PostgreSQLDialect
+2026-05-22 09:24:01.074 [main] INFO  org.hibernate.orm.connections.access - HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@6520625f] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+2026-05-22 09:24:01.657 [main] INFO  org.texttechnologylab.uce.common.utils.QueryResultCache - Initialized global query cache with maximumSize=5000 entries.
+2026-05-22 09:24:01.787 [main] INFO  org.texttechnologylab.uce.web.App - Loaded application context and services.
+2026-05-22 09:24:01.788 [main] INFO  org.texttechnologylab.uce.web.App - Initializing the Document Access Manager...
+2026-05-22 09:24:01.788 [main] INFO  org.texttechnologylab.uce.web.App - Executing external database scripts from /storage/projects/bagci/BioFID/UCE_Releases/2026-02-06_BioFID/database
+2026-05-22 09:24:01.798 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 1_createExtensions.sql
+2026-05-22 09:24:01.799 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 1_createDocumentChunkEmbeddings.sql
+2026-05-22 09:24:01.803 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 2_createDocumentEmbeddings.sql
+2026-05-22 09:24:01.807 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 3_createGetCorpusAnnotationProcedure.sql
+2026-05-22 09:24:01.810 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 4_createSearchLayerFulltextProcedure.sql
+2026-05-22 09:24:01.820 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 6_createGeonameProcedures.sql
+2026-05-22 09:24:01.822 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 6_createSemanticRoleSearchProcedure.sql
+2026-05-22 09:24:01.825 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 7_createLexicon.sql
+2026-05-22 09:24:01.828 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 7_logicalLinks.sql
+2026-05-22 09:24:01.831 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 8_createTriggers.sql
+2026-05-22 09:24:01.836 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 9_createGinIndexes.sql
+2026-05-22 09:24:01.838 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 10_topicTables.sql
+2026-05-22 09:24:01.841 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 11_similarTopics.sql
+2026-05-22 09:24:01.843 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 12_createDocumentSentenceEmbeddings.sql
+2026-05-22 09:24:01.846 [main] INFO  org.texttechnologylab.uce.common.utils.SystemStatus - *--> Successfully executed: 13_corpusTopicDist.sql
+2026-05-22 09:24:01.847 [main] INFO  org.texttechnologylab.uce.web.App - Finished with executing external database scripts.
+2026-05-22 09:24:01.852 [main] INFO  org.texttechnologylab.uce.web.App - Cleanup temporary LayeredSearch tables.
+2026-05-22 09:24:01.853 [main] INFO  org.texttechnologylab.uce.web.App - Testing the language resources:
+2026-05-22 09:24:01.876 [main] INFO  org.texttechnologylab.uce.web.App - Search
+2026-05-22 09:24:01.877 [main] INFO  org.texttechnologylab.uce.web.App - Initialized the Session Job.
+2026-05-22 09:24:01.877 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob has started.
+2026-05-22 09:24:01.880 [main] INFO  org.texttechnologylab.uce.web.App - Initialized the System Job.
+2026-05-22 09:24:01.881 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob has started.
+2026-05-22 09:24:01.884 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob is still running and starting another cycle: Active Search States: 0 | Cached Wiki Pages: 0
+2026-05-22 09:24:01.886 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update the lexicon... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:24:01.893 [Thread-1] INFO  org.texttechnologylab.uce.web.cronjobs.SessionJob - Session CronJob is done with this cycle. Active Search States: 0 | Active Layered Searches: 0 | Cached Wiki Pages: 0
+2026-05-22 09:24:01.895 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update any linkables... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:24:01.900 [main] INFO  org.texttechnologylab.uce.web.App - Checking if we can or should update any geoname locations... (this may take a moment depending on the time of the last update. Runs asynchronous.)
+2026-05-22 09:24:01.916 [ForkJoinPool.commonPool-worker-2] INFO  org.texttechnologylab.uce.web.App - Finished updating the linkables. Updated linkables: 0
+2026-05-22 09:24:01.922 [main] INFO  org.texttechnologylab.uce.web.App - Setting up the Javalin application...
+2026-05-22 09:24:01.931 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:01.944 [main] INFO  org.texttechnologylab.uce.web.App - Setup FreeMarker templates and public folders.
+2026-05-22 09:24:01.945 [main] INFO  org.texttechnologylab.uce.web.App - Setup FreeMarker templates and public folders.
+2026-05-22 09:24:01.948 [main] INFO  org.texttechnologylab.uce.web.App - Initializing all the spark routes...
+2026-05-22 09:24:01.945 [ForkJoinPool.commonPool-worker-3] INFO  org.texttechnologylab.uce.web.App - Finished updating the geoname locations. Updated locations: 0
+2026-05-22 09:24:01.974 [main] INFO  org.texttechnologylab.uce.web.App - Routes initialized
+2026-05-22 09:24:01.974 [main] INFO  org.texttechnologylab.uce.web.App - MCP server is disabled and will not be initialized.
+2026-05-22 09:24:01.994 [main] INFO  org.texttechnologylab.uce.web.App - Javalin application setup done.
+2026-05-22 09:24:02.103 [main] INFO  org.texttechnologylab.uce.web.App - UCE web service has started!
+2026-05-22 09:24:03.376 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:05.646 [ForkJoinPool.commonPool-worker-1] INFO  org.texttechnologylab.uce.web.App - Finished updating the lexicon. Added new entries: 0
+2026-05-22 09:24:11.962 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:13.418 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:21.991 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:23.460 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:32.021 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:33.498 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:37.830 [JettyServerThreadPool-157] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=6059f2e8-b2f4-4603-b965-8cc8073ec720, IP=[0:0:0:0:0:0:0:1], Method=GET, URI=http://localhost:4567/api/domain/types, QUERY=corpusId=-1, BODY=
+2026-05-22 09:24:37.831 [JettyServerThreadPool-121] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=243054af-54ad-4a4a-92bb-6384e6bf2ce6, IP=[0:0:0:0:0:0:0:1], Method=GET, URI=http://localhost:4567/domainPlayground, QUERY=null, BODY=
+2026-05-22 09:24:37.835 [JettyServerThreadPool-157] WARN  org.hibernate.engine.jdbc.spi.SqlExceptionHelper - SQL Error: 0, SQLState: 58P01
+2026-05-22 09:24:37.838 [JettyServerThreadPool-157] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - ERROR: could not access file "age": No such file or directory
+2026-05-22 09:24:37.863 [JettyServerThreadPool-122] INFO  org.texttechnologylab.uce.web.App - Received API call: ID=c67fcf9b-c525-4960-a074-7de6c0fdf224, IP=[0:0:0:0:0:0:0:1], Method=GET, URI=http://localhost:4567/, QUERY=null, BODY=
+2026-05-22 09:24:38.094 [JettyServerThreadPool-157] WARN  org.hibernate.engine.jdbc.spi.SqlExceptionHelper - SQL Error: 0, SQLState: 58P01
+2026-05-22 09:24:38.095 [JettyServerThreadPool-157] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - ERROR: could not access file "age": No such file or directory
+2026-05-22 09:24:38.597 [JettyServerThreadPool-157] WARN  org.hibernate.engine.jdbc.spi.SqlExceptionHelper - SQL Error: 0, SQLState: 58P01
+2026-05-22 09:24:38.597 [JettyServerThreadPool-157] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - ERROR: could not access file "age": No such file or directory
+2026-05-22 09:24:42.063 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:43.541 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:52.103 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:24:53.592 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:02.150 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:03.641 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:12.190 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:13.671 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:22.219 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:23.748 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:32.261 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:33.793 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:42.299 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:43.838 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:52.343 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:25:53.881 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:02.376 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:03.923 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:12.420 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:13.972 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:22.479 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:24.014 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:32.541 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:34.060 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:42.577 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:44.107 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:52.624 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:26:54.156 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:02.672 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:04.201 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:12.716 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:14.248 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:22.757 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:24.281 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:32.802 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:34.323 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:42.848 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:44.378 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:52.891 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:27:54.421 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:02.944 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:04.479 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:12.989 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:14.526 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:23.028 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:24.567 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:33.057 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:34.609 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.
+2026-05-22 09:28:43.093 [Thread-2] INFO  org.texttechnologylab.uce.common.cronjobs.SystemJob - System CronJob is still running and has finished a cycle.

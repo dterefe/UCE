@@ -1,9 +1,0 @@
-FROM eclipse-temurin:21-jdk
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates podman \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY ./uce.portal/uce.corpus-importer/target/importer.jar /app/uce.portal/uce.corpus-importer/target/importer.jar
-
-WORKDIR /app/uce.portal/uce.corpus-importer/
