@@ -43,7 +43,7 @@ import org.texttechnologylab.uce.common.security.DocumentAccessManager;
 import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.LexiconService;
 import org.texttechnologylab.uce.common.services.MapService;
-import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
+import org.texttechnologylab.uce.common.services.UCEBackend;
 import org.texttechnologylab.uce.common.utils.ImageUtils;
 import org.texttechnologylab.uce.common.utils.StringUtils;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
@@ -56,6 +56,7 @@ import org.texttechnologylab.uce.web.render.feedback.FeedbackPaneRenderer;
 import org.texttechnologylab.uce.web.routes.AnalysisApi;
 import org.texttechnologylab.uce.web.routes.AuthenticationApi;
 import org.texttechnologylab.uce.web.routes.CorpusUniverseApi;
+import org.texttechnologylab.uce.web.routes.DUAVizApi;
 import org.texttechnologylab.uce.web.routes.DocumentApi;
 import org.texttechnologylab.uce.web.routes.DomainApi;
 import org.texttechnologylab.uce.web.routes.ImportExportApi;
@@ -77,6 +78,7 @@ import static io.javalin.apibuilder.ApiBuilder.delete;
 import static io.javalin.apibuilder.ApiBuilder.get;
 import static io.javalin.apibuilder.ApiBuilder.path;
 import static io.javalin.apibuilder.ApiBuilder.post;
+import static io.javalin.apibuilder.ApiBuilder.ws;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JsonMapper;
@@ -93,7 +95,7 @@ public class App {
     private static boolean forceLexicalization = false;
     private static int DUUIInputCounter = 0;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         logger.info("Starting the UCE web service...");
         logger.info("Passed in command line args: " + String.join(" ", args));
 
@@ -123,7 +125,7 @@ public class App {
         var context = ExceptionUtils.tryCatchLog(
                 () -> new AnnotationConfigApplicationContext(WebSpringConfig.class),
                 (ex) -> logger.fatal("========== [ABORT] ==========\nThe Application context couldn't be established. " +
-                        "This is very likely due to a missing/invalid database connection. UCE will have to shutdown."));
+                        "This is very likely due to a missing/invalid database connection. UCE will have to shutdown.", ex));
         if(context == null) return;
         logger.info("Loaded application context and services.");
 
@@ -131,18 +133,16 @@ public class App {
         logger.info("Initializing the Document Access Manager...");
         var accessManager = context.getBean(DocumentAccessManager.class);
         var dataInterface = context.getBean(DataInterface.class);
-        var storageMaintenance = context.getBean(StorageMaintenanceService.class);
+        var uceBackend = context.getBean(UCEBackend.class);
         
-        // Execute the external database scripts
-        logger.info("Executing external database scripts from " + commonConfig.getDatabaseScriptsLocation());
+        logger.info("Initializing UCE backend: " + uceBackend.name());
         ExceptionUtils.tryCatchLog(
-                () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), storageMaintenance),
-                (ex) -> logger.warn("Couldn't read the db scripts in the external database scripts folder; path wasn't found or other IO problems. ", ex));
-        logger.info("Finished with executing external database scripts.");
+                () -> uceBackend.initialize(commonConfig),
+                (ex) -> logger.warn("UCE backend initialization completed with warnings.", ex));
 
         // Cleanup temporary db fragments for the LayeredSearch
         ExceptionUtils.tryCatchLog(
-                storageMaintenance::cleanupLayeredSearch,
+                uceBackend::cleanupLayeredSearch,
                 (ex) -> logger.warn("Error while trying to cleanup the LayeredSearch temporary schema.", ex));
         logger.info("Cleanup temporary LayeredSearch tables.");
 
@@ -180,7 +180,7 @@ public class App {
         logger.info("Checking if we can or should update any linkables... (this may take a moment depending on the time of the last update. Runs asynchronous.)");
         accessManager.runAsyncAdmin(() -> {
             try {
-                var result = storageMaintenance.refreshLogicalLinks();
+                var result = uceBackend.refreshLogicalLinks();
                 logger.info("Finished updating the linkables. Updated linkables: " + result);
             } catch (Exception ex){
                 logger.error("There was an error trying to refresh linkables in the startup of the web app. App starts normally though.");
@@ -190,7 +190,7 @@ public class App {
         logger.info("Checking if we can or should update any geoname locations... (this may take a moment depending on the time of the last update. Runs asynchronous.)");
         accessManager.runAsyncAdmin(() -> {
             try {
-                var result = storageMaintenance.refreshGeonameLocations();
+                var result = uceBackend.refreshGeonameLocations();
                 logger.info("Finished updating the geoname locations. Updated locations: " + result);
             } catch (Exception ex){
                 logger.error("There was an error trying to refresh geoname locations in the startup of the web app. App starts normally though.");
@@ -265,6 +265,7 @@ public class App {
         javalinApp.start(port);
 
         logger.info("UCE web service has started!");
+        Thread.currentThread().join();
     }
 
     /**
@@ -484,6 +485,46 @@ public class App {
                         model.put("lexiconEntriesCount", context.getBean(LexiconService.class).countLexiconEntries());
                         model.put("lexiconizableAnnotations", LexiconService.lexiconizableAnnotations);
                         model.put("uceVersion", commonConfig.getUceVersion());
+                        String backendName = dataInterface.backendName();
+                        boolean isDuaBackend = isDuavizEnabled(dataInterface);
+                        boolean showDuaviz = isDuaBackend || Boolean.parseBoolean(System.getenv().getOrDefault("UCE_SHOW_DUAVIZ", "false"));
+                        model.put("uceBackendName", backendName);
+                        model.put("isDuaBackend", isDuaBackend);
+                        model.put("showDuaviz", showDuaviz);
+                        model.put("duavizDefaultDummy", Boolean.parseBoolean(System.getenv().getOrDefault("UCE_DUAVIZ_DEFAULT_DUMMY", "false")));
+                        String configuredDuavizWsUrl = System.getenv().getOrDefault("UCE_DUAVIZ_WS_URL", "");
+                        String configuredDuavizHttpUrl = System.getenv().getOrDefault("UCE_DUAVIZ_HTTP_URL", "");
+                        String wsScheme = "https".equalsIgnoreCase(ctx.scheme()) ? "wss" : "ws";
+                        String httpScheme = "https".equalsIgnoreCase(ctx.scheme()) ? "https" : "http";
+                        String hostPrefix = wsScheme + "://" + ctx.host();
+                        String httpHostPrefix = httpScheme + "://" + ctx.host();
+                        if (configuredDuavizWsUrl == null || configuredDuavizWsUrl.isBlank()) {
+                            configuredDuavizWsUrl = hostPrefix + "/ws/duaviz";
+                        } else {
+                            String trimmed = configuredDuavizWsUrl.trim();
+                            if (trimmed.startsWith("ws://") || trimmed.startsWith("wss://")) {
+                                configuredDuavizWsUrl = trimmed;
+                            } else {
+                                String suffix = trimmed.startsWith("/") ? trimmed : ("/" + trimmed);
+                                configuredDuavizWsUrl = hostPrefix + suffix;
+                            }
+                            configuredDuavizWsUrl = configuredDuavizWsUrl.replaceAll("/+$", "");
+                            if (!configuredDuavizWsUrl.toLowerCase().contains("/ws/duaviz")) {
+                                configuredDuavizWsUrl = configuredDuavizWsUrl + "/ws/duaviz";
+                            }
+                        }
+                        model.put("duavizWsUrl", configuredDuavizWsUrl);
+                        if (configuredDuavizHttpUrl == null || configuredDuavizHttpUrl.isBlank()) {
+                            configuredDuavizHttpUrl = httpHostPrefix;
+                        } else {
+                            String trimmedHttp = configuredDuavizHttpUrl.trim();
+                            if (!(trimmedHttp.startsWith("http://") || trimmedHttp.startsWith("https://"))) {
+                                trimmedHttp = httpScheme + "://" + trimmedHttp.replaceFirst("^/+", "");
+                            }
+                            configuredDuavizHttpUrl = trimmedHttp.replaceAll("/+$", "");
+                        }
+                        model.put("duavizHttpUrl", configuredDuavizHttpUrl);
+                        model.put("duavizWsPath", "/ws/duaviz");
                         model.put("modelGroups", groups);
                         model.put("ttlabScorer", taInputMap);
                         model.put("cohMetrix", cohMetrixMap);
@@ -499,15 +540,43 @@ public class App {
                         ctx.render("imprint.ftl", model);
                     });
 
+                    boolean showDuavizRoutes = isDuavizEnabled(dataInterface)
+                            || Boolean.parseBoolean(System.getenv().getOrDefault("UCE_SHOW_DUAVIZ", "false"));
+
                     // A document reader view
-                    get("/documentReader", (ctx) -> (registry.get(DocumentApi.class)).getSingleDocumentReadView(ctx));
+                    get("/documentReader", (ctx) -> {
+                        if (showDuavizRoutes) {
+                            String id = ctx.queryParam("id");
+                            ctx.redirect("/#view=duaviz" + (id == null || id.isBlank() ? "" : "&documentFsId=" + id));
+                            return;
+                        }
+                        registry.get(DocumentApi.class).getSingleDocumentReadView(ctx);
+                    });
 
                     // A corpus World View
-                    get("/globe", (ctx) -> (registry.get(DocumentApi.class)).get3dGlobe(ctx));
+                    get("/globe", (ctx) -> {
+                        if (showDuavizRoutes) {
+                            String id = ctx.queryParam("id");
+                            String type = ctx.queryParam("type");
+                            String key = "document".equalsIgnoreCase(type) ? "documentFsId" : "corpusId";
+                            ctx.redirect("/#view=duaviz" + (id == null || id.isBlank() ? "" : "&" + key + "=" + id));
+                            return;
+                        }
+                        registry.get(DocumentApi.class).get3dGlobe(ctx);
+                    });
 
                     // Graph-capable domain scope explorer
                     get("/domainPlayground", (ctx) -> (registry.get(DomainApi.class)).getPlaygroundView(ctx));
 
+                    // DUA native type/artifact/document explorer
+                    if (showDuavizRoutes) {
+                        get("/duaviz", (ctx) -> (registry.get(DUAVizApi.class)).view(ctx));
+                        get("/duaviz-dummy", (ctx) -> ctx.redirect("/#view=duaviz&duavizDummy=true"));
+
+                        // Query-style lazy DUA transport for DUAViz tree expansion, graphs, and readers.
+                        ws("/ws/duaviz", (ws) -> (registry.get(DUAVizApi.class)).websocket(ws));
+                        ws("/ws/duaviz-dummy", (ws) -> (registry.get(DUAVizApi.class)).dummyWebsocket(ws));
+                    }
 
                     path("/auth", () -> {
                         get("/login", (ctx) -> (registry.get(AuthenticationApi.class)).loginCallback(ctx));
@@ -561,6 +630,7 @@ public class App {
 
                         path("/search", () -> {
                             post("/default", (ctx) -> (registry.get(SearchApi.class)).search(ctx));
+                            post("/records", (ctx) -> (registry.get(SearchApi.class)).searchRecords(ctx));
                             post("/semanticRole", (ctx) -> (registry.get(SearchApi.class)).semanticRoleSearch(ctx));
                             post("/layered", (ctx) -> (registry.get(SearchApi.class)).layeredSearch(ctx));
                             get("/active/page", (ctx) -> (registry.get(SearchApi.class)).activeSearchPage(ctx));
@@ -611,6 +681,11 @@ public class App {
                         });
                     });
                 });
+    }
+
+    private static boolean isDuavizEnabled(DataInterface dataInterface) {
+        return "dua".equalsIgnoreCase(dataInterface.backendName())
+                || "lmdb".equalsIgnoreCase(System.getenv().getOrDefault("DUAS_BACKEND", ""));
     }
 
     private static JsonMapper getJsonMapper() {

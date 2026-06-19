@@ -101,6 +101,10 @@ function navigateToView(id, options = {}) {
             }, 750);
         }
     }
+    if (id === 'duaviz' && window.initializeDuaviz) {
+        $('.wiki-page-modal').remove();
+        window.initializeDuaviz();
+    }
 
     currentView = id;
     stripLegacyLexiconQueryParams();
@@ -136,9 +140,6 @@ function navigateToView(id, options = {}) {
     if (id === 'search' && typeof ensureSearchViewStateOnEnter === 'function') {
         window.setTimeout(() => ensureSearchViewStateOnEnter(), 0);
     }
-    if (id === 'domain' && window.domainPlayground && typeof window.domainPlayground.reload === 'function') {
-        window.setTimeout(() => window.domainPlayground.reload(), 0);
-    }
 }
 
 function setCorpusInspectorRouteState(corpusId) {
@@ -160,8 +161,23 @@ function closeCorpusInspector(clearRouteState = true) {
     }
 }
 
+function isDuaCorpusMode() {
+    return window.uceDuaMode === true;
+}
+
 function openCorpusInspector(corpusId) {
     if (corpusId === undefined || corpusId === null || String(corpusId).trim() === '') return;
+
+    if (isDuaCorpusMode()) {
+        closeCorpusInspector();
+        navigateToView('duaviz');
+        if (window.duavizOpenCorpus) {
+            window.duavizOpenCorpus(Number(corpusId));
+        } else {
+            window.uceUiState.set('corpusId', String(corpusId));
+        }
+        return;
+    }
 
     $('.corpus-inspector-include').show(0);
     $('.corpus-inspector-include').attr('data-active-corpus-id', String(corpusId));
@@ -251,6 +267,9 @@ $('body').on('change', '#corpus-select', function () {
     const hasGeoNameAnnotations = selectedOption.getAttribute("data-hasgeonameannotations");
     const oldCorpusId = selectedCorpus;
     selectedCorpus = parseInt(selectedOption.getAttribute("data-id"));
+    if (typeof CorpusSelectorComponent !== 'undefined' && CorpusSelectorComponent.syncFromSelect) {
+        CorpusSelectorComponent.syncFromSelect();
+    }
     // Do not auto-run a search during first-time initialization.
     if (!window.__uceSuppressAutoSearchOnCorpusChange && oldCorpusId !== -1 && oldCorpusId !== selectedCorpus) {
         // We have switched corpora then, start a new empty search.
@@ -301,6 +320,338 @@ $('body').on('change', '#corpus-select', function () {
     updateSearchHistoryUI();
 })
 
+var uceLogLevels = {trace: 10, debug: 20, info: 30, warn: 40, error: 50, silent: 100};
+window.uceFrontendLogLevel = window.uceFrontendLogLevel || 'info';
+window.uceSetFrontendLogLevel = level => {
+    window.uceFrontendLogLevel = uceLogLevels[level] ? level : 'info';
+    uceFrontendLog('info', 'log-level', {level: window.uceFrontendLogLevel});
+};
+
+function uceFrontendLog(level, message, data) {
+    const levels = uceLogLevels || {trace: 10, debug: 20, info: 30, warn: 40, error: 50, silent: 100};
+    const current = levels[window.uceFrontendLogLevel] || levels.info;
+    const requested = levels[level] || levels.info;
+    if (requested < current || current >= levels.silent) return;
+    const method = level === 'error' ? 'error' : (level === 'warn' ? 'warn' : (level === 'debug' || level === 'trace' ? 'debug' : 'info'));
+    console[method]('[UCE][' + level.toUpperCase() + '] ' + message, data === undefined ? '' : data);
+}
+
+function shouldUseCorpusSelector() {
+    if (isDuaCorpusMode && isDuaCorpusMode()) return false;
+    const search = String(window.location.hash || '') + ' ' + String(window.location.pathname || '');
+    if (/view=duaviz/i.test(search) || /\/duaviz/i.test(String(window.location.pathname || ''))) return false;
+    return true;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+}
+
+function uceWsUrl(path) {
+    const protocol = (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
+    const requested = String(path || '');
+    const defaultDuavizWs = protocol + '//127.0.0.1:18011/ws/duaviz';
+
+    const ensureDuaPath = (raw) => {
+        const cfg = String(raw || '').trim();
+        if (!cfg) return '';
+        if (cfg.startsWith('//')) return protocol + cfg;
+        if (/^wss?:\/\//i.test(cfg)) return cfg.replace(/\/+$/, '');
+        if (cfg.startsWith('/')) {
+            const safe = cfg.endsWith('/ws/duaviz') ? cfg : cfg.replace(/\/?$/, '/ws/duaviz');
+            return protocol + '//' + window.location.host + safe.replace(/\/+$/, '');
+        }
+        if (cfg.includes(':')) {
+            if (cfg.includes('/')) {
+                const normalized = cfg.replace(/\/+$/, '');
+                if (normalized.endsWith('/ws/duaviz')) return protocol + '//' + normalized;
+                return protocol + '//' + normalized;
+            }
+            return protocol + '//' + cfg.replace(/\/+$/, '') + '/ws/duaviz';
+        }
+        return protocol + '//' + window.location.host + '/' + cfg.replace(/^\/+/, '').replace(/\/+$/, '') + '/ws/duaviz';
+    }
+
+    if (requested === '/ws/duaviz' || requested === 'ws/duaviz') {
+        const configured = resolveDuaWsEndpoint();
+        const resolved = ensureDuaPath(configured || defaultDuavizWs);
+        return resolved || defaultDuavizWs;
+    }
+
+    if (/^wss?:\/\//i.test(requested)) return requested;
+    const normalized = requested.startsWith('/') ? requested : ('/' + requested);
+    return protocol + '//' + window.location.host + (normalized.endsWith('/ws/duaviz') ? normalized : normalized);
+}
+
+function resolveDuaWsEndpoint() {
+    const entries = [
+        window.uceDuavizWsUrl,
+        window.uceDuavizEndpoint,
+        window.uceDuavizWsPath
+    ]
+        .map(entry => (entry === undefined || entry === null) ? '' : String(entry).trim())
+        .filter(entry => !!entry)
+        .filter(entry => !entry.startsWith('#'));
+
+    const protocol = (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
+    for (const entry of entries) {
+        if (!entry || /^(file:|data:)/i.test(entry)) continue;
+        const normalized = entry.startsWith('//') ? protocol + entry : entry;
+        if (/^wss?:\/\//i.test(normalized)) return normalized;
+    }
+    for (const entry of entries) {
+        if (entry.startsWith('/')) return protocol + '//' + window.location.host + entry;
+        if (entry.includes(':')) return protocol + '//' + entry;
+    }
+    return '';
+}
+
+function uceWsQuery(path, action, payload) {
+    const requestId = 'uce-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+    return new Promise((resolve, reject) => {
+        const ws = new WebSocket(uceWsUrl(path));
+        uceFrontendLog('info', 'websocket connecting', {path, action});
+        ws.onopen = () => {
+            uceFrontendLog('debug', 'websocket query', {requestId, action, payload: payload || {}});
+            ws.send(JSON.stringify({requestId, action, payload: payload || {}}));
+        };
+        ws.onerror = event => {
+            uceFrontendLog('error', 'websocket error', {path, action, event});
+            reject(new Error('UCE websocket connection failed.'));
+        };
+        ws.onclose = event => {
+            uceFrontendLog('debug', 'websocket closed', {path, code: event.code, reason: event.reason});
+        };
+        ws.onmessage = event => {
+            uceFrontendLog('trace', 'websocket message', event.data);
+            const message = JSON.parse(event.data || '{}');
+            if (!message.requestId) return;
+            ws.close();
+            if (Number(message.status) >= 400) reject(new Error(message.message || 'UCE websocket query failed.'));
+            else resolve(message);
+        };
+    });
+}
+window.uceWsQuery = uceWsQuery;
+
+const CorpusSelectorComponent = (() => {
+    const state = {
+        mounted: false,
+        open: false,
+        status: 'idle',
+        items: [],
+        selectedId: null,
+        error: null
+    };
+
+    function refs() {
+        return {
+            root: $('.corpus-badge-select'),
+            trigger: $('.corpus-badge-trigger'),
+            menu: $('.corpus-badge-menu'),
+            select: $('#corpus-select'),
+            kind: $('.corpus-selector-badge-type'),
+            label: $('.corpus-selector-badge-name')
+        };
+    }
+
+    function mount() {
+        if (state.mounted) return;
+        state.mounted = true;
+        $('body').on('click', '.corpus-badge-trigger', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            snapshot().open ? close() : open();
+        });
+        $('body').on('click', '.corpus-badge-option', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            select(String($(event.currentTarget).data('corpus-id')));
+        });
+        $('body').on('click', event => {
+            if (!$(event.target).closest('.corpus-badge-select').length) close();
+        });
+    }
+
+    function update(patch) {
+        Object.assign(state, patch);
+        render();
+    }
+
+    function open() {
+        if (state.status !== 'ready') return;
+        update({open: true});
+    }
+
+    function close() {
+        update({open: false});
+    }
+
+    function select(corpusId) {
+        const index = state.items.findIndex(item => String(item.fsId) === String(corpusId));
+        if (index < 0) return;
+        const {select} = refs();
+        select[0].selectedIndex = index;
+        update({selectedId: String(corpusId), open: false});
+        select.trigger('change');
+    }
+
+    function snapshot() {
+        const selected = state.items.find(item => String(item.fsId) === String(state.selectedId));
+        const status = state.status;
+        const open = state.open && status === 'ready';
+        return {
+            open,
+            status,
+            selected,
+            selectedId: selected ? String(selected.fsId) : null,
+            items: state.items.slice(),
+            hasSelection: !!selected,
+            hasError: status === 'error',
+            disabled: status === 'loading' || status === 'error',
+            typeLabel: 'Corpus',
+            nameLabel: status === 'loading'
+                ? 'Loading corpus'
+                : (status === 'error' ? 'Corpus unavailable' : (selected ? selected.name : 'Select corpus'))
+        };
+    }
+
+    function render() {
+        const {root, trigger, menu, select, kind, label} = refs();
+        const view = snapshot();
+        root.toggleClass('is-open', view.open);
+        root.toggleClass('is-loading', view.status === 'loading');
+        root.toggleClass('is-loaded', view.status === 'ready');
+        root.toggleClass('has-selection', view.hasSelection);
+        root.toggleClass('has-error', view.hasError);
+        trigger.attr('aria-expanded', view.open ? 'true' : 'false');
+        trigger.attr('aria-disabled', view.disabled ? 'true' : 'false');
+        trigger.prop('disabled', view.disabled);
+        menu.toggleClass('display-none', !view.open);
+        menu.attr('role', 'listbox');
+        kind.text(view.typeLabel);
+        label.text(view.nameLabel);
+        select.empty();
+        menu.empty();
+        view.items.forEach(item => {
+            select.append(optionFor(item));
+            menu.append(optionButtonFor(item, view.selectedId));
+        });
+        if (view.selected) {
+            select.val(String(view.selected.fsId));
+        }
+    }
+
+    function optionFor(item) {
+        const option = document.createElement('option');
+        option.value = String(item.fsId);
+        const attrs = Object.assign({
+            id: String(item.fsId),
+            hasbiofid: 'false',
+            hasembeddings: 'false',
+            hasragbot: 'false',
+            hastaxonannotations: 'false',
+            hastimeannotations: 'false',
+            hasgeonameannotations: 'false',
+            sparqlalive: 'false',
+            hassr: 'false'
+        }, item.attrs || {});
+        Object.entries(attrs).forEach(([key, value]) => option.setAttribute('data-' + key, String(value)));
+        option.textContent = item.name;
+        return option;
+    }
+
+    function optionButtonFor(item, selectedId) {
+        const selected = String(item.fsId) === String(selectedId);
+        return '<button class="corpus-badge-option ' + (selected ? 'is-selected' : '') + '" role="option" aria-selected="' + (selected ? 'true' : 'false') + '" type="button" data-corpus-id="' + escapeHtml(String(item.fsId)) + '" data-artifact-subtype="Corpus">' +
+            '<span class="corpus-selector-badge">' +
+                '<span class="corpus-selector-badge-type">Corpus</span>' +
+                '<span class="corpus-selector-badge-name">' + escapeHtml(item.name) + '</span>' +
+            '</span>' +
+        '</button>';
+    }
+
+    function syncFromSelect() {
+        const selectEl = refs().select.get(0);
+        if (!selectEl || selectEl.selectedIndex < 0) return;
+        const option = selectEl.options[selectEl.selectedIndex];
+        if (!option) return;
+        const selectedId = String(option.value || option.getAttribute('data-id') || '');
+        if (!selectedId || selectedId === String(state.selectedId)) return;
+        if (!state.items.some(item => String(item.fsId) === selectedId)) return;
+        update({selectedId, open: false});
+    }
+
+    function itemsFromSelect() {
+        const selectEl = refs().select.get(0);
+        if (!selectEl || !selectEl.options) return [];
+        return Array.from(selectEl.options).map(option => ({
+            fsId: option.getAttribute('data-id') || option.value,
+            name: option.textContent || option.getAttribute('data-id') || option.value,
+            attrs: {
+                id: option.getAttribute('data-id') || option.value,
+                hasbiofid: option.getAttribute('data-hasbiofid') || 'false',
+                hasembeddings: option.getAttribute('data-hasembeddings') || 'false',
+                hasragbot: option.getAttribute('data-hasragbot') || 'false',
+                hastaxonannotations: option.getAttribute('data-hastaxonannotations') || 'false',
+                hastimeannotations: option.getAttribute('data-hastimeannotations') || 'false',
+                hasgeonameannotations: option.getAttribute('data-hasgeonameannotations') || 'false',
+                sparqlalive: option.getAttribute('data-sparqlalive') || 'false',
+                hassr: option.getAttribute('data-hassr') || 'false'
+            }
+        })).filter(item => item.fsId);
+    }
+
+    async function load() {
+        mount();
+        if (state.status === 'ready' || state.status === 'loading') return;
+        if (!shouldUseCorpusSelector()) {
+            update({status: 'ready', items: [], selectedId: null, error: null, open: false});
+            return;
+        }
+        if (!isDuaCorpusMode()) {
+            const items = itemsFromSelect();
+            update({
+                status: 'ready',
+                items,
+                selectedId: items.length ? String(items[0].fsId) : null,
+                error: null,
+                open: false
+            });
+            if (state.selectedId) refs().select.trigger('change');
+            return;
+        }
+        update({status: 'loading', open: false, items: [], selectedId: null, error: null});
+        try {
+            const typesResponse = await uceWsQuery('/ws/duaviz', 'types', {});
+            const schemaTypes = (typesResponse.schema && Array.isArray(typesResponse.schema.types)) ? typesResponse.schema.types : [];
+            const corpusType = schemaTypes.find(type => /(^|\.)Corpus$/.test(String(type.name || '')) || String(type.label || '') === 'Corpus');
+            if (!corpusType) throw new Error('Corpus type not found.');
+            const response = await uceWsQuery('/ws/duaviz', 'instancesByType', {typeCode: corpusType.typeCode, offset: 0, limit: 100});
+            const items = ((response.page && response.page.instances) || []).map(item => ({
+                fsId: item.fsId,
+                name: item.name || ('Corpus ' + item.fsId)
+            }));
+            update({
+                status: 'ready',
+                items,
+                selectedId: items.length ? String(items[0].fsId) : null,
+                error: null,
+                open: false
+            });
+            if (state.selectedId) refs().select.trigger('change');
+            uceFrontendLog('info', 'loaded corpus selector from Corpus websocket', {count: items.length});
+        } catch (error) {
+            update({status: 'error', error, open: false, items: [], selectedId: null});
+            uceFrontendLog('error', 'failed loading corpus selector from Corpus websocket', {message: error.message});
+        }
+    }
+
+    return {load, mount, syncFromSelect};
+})();
+
 /**
  * Triggers whenever an open-corpus inspector button is clicked.
  */
@@ -341,6 +692,12 @@ $('body').on('click', 'a.ui-action-disabled, button.ui-action-disabled, [role="b
  * @param $target
  */
 function loadCorpusDocuments(corpusId, $target) {
+    if (isDuaCorpusMode()) {
+        if ($target && $target.length) {
+            $target.html('<div class="simple-loader display-none"></div>');
+        }
+        return;
+    }
     $.ajax({
         url: "/api/corpus/documentsList?corpusId=" + corpusId + "&page=" + 1,
         type: "GET",
@@ -402,6 +759,15 @@ function openNewGlobeView(type, id) {
     if (id === undefined || id === '') {
         return;
     }
+    if (isDuaCorpusMode()) {
+        navigateToView('duaviz');
+        if (type === 'document' && window.duavizOpenDocument) {
+            window.duavizOpenDocument(Number(id));
+        } else if (window.duavizOpenCorpus) {
+            window.duavizOpenCorpus(Number(id));
+        }
+        return;
+    }
     console.log('New Globe View for: ' + id);
     window.open("/globe?id=" + id + "&type=" + type, '_blank');
 }
@@ -411,6 +777,15 @@ function openNewGlobeView(type, id) {
  */
 function openNewDocumentReadView(id, searchId) {
     if (id === undefined || id === '') {
+        return;
+    }
+    if (isDuaCorpusMode()) {
+        navigateToView('duaviz');
+        if (window.duavizOpenDocument) {
+            window.duavizOpenDocument(Number(id));
+        } else if (window.uceUiState) {
+            window.uceUiState.set('documentFsId', String(id));
+        }
         return;
     }
     const params = new URLSearchParams();
@@ -483,7 +858,8 @@ function activatePopovers() {
  * We have some UI components that need to be refreshed when the corpus is loaded.
  */
 function reloadCorpusComponents() {
-    $('#corpus-select').change();
+    if (!shouldUseCorpusSelector()) return Promise.resolve();
+    return CorpusSelectorComponent.load();
 }
 
 function sanitizeLegacyVizQueryParams() {

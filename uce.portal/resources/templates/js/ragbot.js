@@ -9,7 +9,7 @@ $('body').on('click', '.chat-window-container .start-new-chat-btn', function () 
     const $select = $(this).prev('.ragbot-model-select');
     const model = $select.get(0).options[$select.get(0).selectedIndex].getAttribute('data-id');
     // NOTE Model streaming is set by the model for now, but we will provide it via JavaScript so in the future we can easily add a per-chat option for the user here
-    ragStream = $select.get(0).options[$select.get(0).selectedIndex].getAttribute('data-streaming');
+    ragStream = $select.get(0).options[$select.get(0).selectedIndex].getAttribute('data-streaming') === 'true';
 
     $.ajax({
         url: "/api/rag/new?model=" + encodeURIComponent(model),

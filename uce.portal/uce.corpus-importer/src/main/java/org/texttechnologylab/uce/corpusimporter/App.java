@@ -16,6 +16,7 @@ import org.texttechnologylab.uce.common.models.imp.UCEImport;
 import org.texttechnologylab.uce.common.security.DocumentAccessManager;
 import org.texttechnologylab.uce.common.services.DataInterface;
 import org.texttechnologylab.uce.common.services.StorageMaintenanceService;
+import org.texttechnologylab.uce.common.services.UCEBackend;
 import org.texttechnologylab.uce.common.utils.SystemStatus;
 
 import java.io.File;
@@ -48,11 +49,12 @@ public class App {
 
             // Execute the external database scripts
             var commonConfig = new CommonConfig();
-            logger.info("Executing external database scripts from " + commonConfig.getDatabaseScriptsLocation());
+            var backend = context.getBean(UCEBackend.class);
+            logger.info("Initializing UCE backend " + backend.name() + ".");
             ExceptionUtils.tryCatchLog(
-                    () -> SystemStatus.executeExternalDatabaseScripts(commonConfig.getDatabaseScriptsLocation(), context.getBean(StorageMaintenanceService.class)),
-                    (ex) -> logger.warn("Couldn't read the db scripts in the external database scripts folder; path wasn't found or other IO problems. ", ex));
-            logger.info("Finished with executing external database scripts.");
+                    () -> backend.initialize(commonConfig),
+                    (ex) -> logger.warn("Couldn't initialize the UCE backend.", ex));
+            logger.info("Finished initializing UCE backend " + backend.name() + ".");
 
             // Read the import path from the CLI
             var options = getOptions();
@@ -92,7 +94,7 @@ public class App {
                     var fileCount = ExceptionUtils.tryCatchLog(importer::getXMICountInPath,
                             (ex) -> logger.warn("There was an IO error counting the importable UIMA files - the import will probably fail at some point.", ex));
                     uceImport.setTotalDocuments(fileCount == null ? -1 : fileCount);
-                    context.getBean(DataInterface.class).saveOrUpdateUceImport(uceImport);
+                    backend.data().saveOrUpdateUceImport(uceImport);
                 } else {
                     // TODO: This was meant to be prepared for the incorporation into DUUI, but this isn't decided yet.
                     ;

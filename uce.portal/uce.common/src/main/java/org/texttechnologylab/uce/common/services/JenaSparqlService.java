@@ -830,7 +830,7 @@ public class JenaSparqlService {
     }
 
     private boolean isServerResponsive() throws IOException {
-        String testQuery = "ASK WHERE { ?s ?p ?o }";
+        String testQuery = "ASK {}";
         var response = executeCommand(testQuery, RDFAskDto.class);
         if (response == null) return false;
         return response.isBool();

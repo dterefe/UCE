@@ -18,6 +18,7 @@
         <#include "*/css/analysis.css">
         <#include "*/css/domain-playground.css">
         <#include "*/css/proModeSearchBar.css">
+        <#include "*/css/duaviz.css">
 
         <#-- leaflet specific requirements -->
         <#include "*/css/leaflet/MarkerCluster.css">
@@ -137,12 +138,30 @@
                                data-content="${languageResource.get("openCorpus")}">
                                 <i class="fas fa-globe large-font mt-1 text-dark mr-1 ml-1"></i>
                             </a>
-                            <select class="form-control" id="corpus-select" aria-label="Default select example"
+                            <div class="corpus-badge-select">
+                                <button class="corpus-badge-trigger"
+                                        type="button"
+                                        aria-haspopup="listbox"
+                                        aria-expanded="false"
+                                        data-trigger="hover"
+                                        data-toggle="popover"
+                                        data-placement="right"
+                                        data-content="${languageResource.get("selectCorpus")}">
+                                    <span class="corpus-selector-badge">
+                                        <span class="corpus-selector-badge-type">Corpus</span>
+                                        <span class="corpus-selector-badge-name">Select corpus</span>
+                                    </span>
+                                    <i class="fas fa-chevron-down corpus-badge-chevron"></i>
+                                </button>
+                                <div class="corpus-badge-menu display-none">
+                                </div>
+                            </div>
+                            <select class="form-control corpus-select-native" id="corpus-select" aria-label="Default select example"
                                     data-trigger="hover"
                                     data-toggle="popover" data-placement="right"
                                     data-content="${languageResource.get("selectCorpus")}">
                                 <#list corpora as corpusVm>
-                                    <option data-id="${corpusVm.getCorpus().getId()}"
+                                    <option data-id="${corpusVm.getCorpus().getId()?c}"
                                             data-hasbiofid="${corpusVm.getCorpusConfig().getAnnotations().getTaxon().isBiofidOnthologyAnnotated()?c}"
                                             data-hasembeddings="${corpusVm.getCorpusConfig().getOther().isEnableEmbeddings()?c}"
                                             data-hasragbot="${corpusVm.getCorpusConfig().getOther().isEnableRAGBot()?c}"
@@ -168,10 +187,10 @@
                             <a class="switch-view-btn btn text" data-id="lexicon" data-trigger="hover" data-toggle="popover"
                             data-placement="bottom" data-content="${languageResource.get("lexicon")}"><i
                                         class="fas fa-atlas color-prime"></i></a>
-                            <a class="switch-view-btn btn text" data-id="domain" data-trigger="hover"
-                            data-toggle="popover"
-                            data-placement="bottom" data-content="Domain Playground"><i
-                                        class="fas fa-project-diagram color-prime"></i></a>
+                            <a class="switch-view-btn btn text" data-id="duaviz" data-trigger="hover"
+                               data-toggle="popover"
+                               data-placement="bottom" data-content="CorpusViz"><i
+                                            class="fas fa-sitemap color-prime"></i></a>
                             <a class="switch-view-btn btn text" data-id="timeline-map" data-trigger="hover"
                             data-toggle="popover"
                             data-placement="bottom" data-content="${languageResource.get("map")}"><i
@@ -325,7 +344,7 @@
                                     && corpusVm.getCorpus().getUceMetadataFilters()?has_content
                                     && corpusVm.getCorpus().getUceMetadataFilters()?size gt 0>
                                         <div class="uce-corpus-search-filter display-none"
-                                             data-id="${corpusVm.getCorpus().getId()}">
+                                             data-id="${corpusVm.getCorpus().getId()?c}">
                                             <div class="flexed align-items-center bg-lightgray p-2 justify-content-between card-shadow light-border rounded">
                                                 <p class="text-center w-100 mb-0 text-dark">Filters</p>
                                                 <i class="fas fa-filter"></i>
@@ -447,9 +466,9 @@
             </#if>
         </div>
 
-        <!-- Domain playground -->
-        <div class="view display-none" data-id="domain">
-            <#include "*/domain/domainPlayground.ftl" />
+        <!-- Corpus native visualization -->
+        <div class="view display-none" data-id="duaviz">
+            <#include "*/dua/duaviz.ftl" />
         </div>
 
         <!-- team -->
@@ -587,7 +606,14 @@
 </script>
 
 <script>
+    window.uceBackendName = "${(uceBackendName!'')?js_string}";
+    window.uceDuaMode = /dua/i.test(window.uceBackendName || '');
+    window.uceDuavizVisible = true;
+    window.uceDuavizDefaultDummy = ${(duavizDefaultDummy!false)?c};
+    window.uceDuavizHttpUrl = "${(duavizHttpUrl!'')?js_string}" || "http://127.0.0.1:17883";
+    window.uceDuavizEndpoint = window.uceDuavizHttpUrl;
     <#include "js/site.js">
+    <#include "js/duaClient.js">
     <#include "js/language.js">
     <#include "js/search.js">
     <#include "js/layeredSearch.js">
@@ -595,7 +621,9 @@
     <#include "js/analysis.js">
     <#include "js/analysisAPI.js">
     <#include "js/proModeSearchBar.js">
-    <#include "js/domainPlayground.js">
+    <#include "js/duaviz.js">
+
+
 </script>
 
 </html>

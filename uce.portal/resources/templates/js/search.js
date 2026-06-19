@@ -2,6 +2,270 @@ let currentCorpusUniverseHandler = undefined;
 let searchRestoreInProgress = false;
 let searchViewBootstrapInProgress = false;
 let searchVizToggleInProgressUntil = 0;
+let duaSearchState = null;
+let backendRecordSearchState = null;
+const DUA_VIZ_WS_PATH = '/ws/duaviz';
+
+function isDuaSearchMode() {
+    return window.uceDuaMode === true
+        && /dua/i.test(String(window.uceBackendName || ''))
+        && (typeof window.uceWsQuery === 'function' || window.DUAClient);
+}
+
+function duavizSocketPath() {
+    return DUA_VIZ_WS_PATH;
+}
+
+async function duavizWsQuery(action, payload) {
+    if (window.DUAClient && typeof window.DUAClient.request === 'function') {
+        return window.DUAClient.request(action, payload || {});
+    }
+    return window.uceWsQuery(duavizSocketPath(), action, payload || {});
+}
+
+function duaShortLabel(value) {
+    const text = String(value || '');
+    const hash = text.lastIndexOf('#');
+    const dot = text.lastIndexOf('.');
+    const slash = text.lastIndexOf('/');
+    const index = Math.max(hash, dot, slash);
+    return index >= 0 && index < text.length - 1 ? text.slice(index + 1) : text;
+}
+
+function duaTypeLabel(type) {
+    return String((type && (type.label || duaShortLabel(type.name))) || '');
+}
+
+function duaInstanceLabel(item) {
+    const raw = String(item && (
+        item.label ||
+        item.displayName ||
+        item.title ||
+        item.name ||
+        item.documentTitle ||
+        item.corpusName ||
+        item.typeName
+    ) || '');
+    const label = duaShortLabel(raw);
+    if (label && !/^\d+$/.test(label)) return label;
+    return 'Document fs ' + (item && item.fsId ? item.fsId : '');
+}
+
+async function ensureDuaSearchSchema() {
+    if (duaSearchState && duaSearchState.schemaTypes) return duaSearchState;
+    const response = await duavizWsQuery('types');
+    const schemaTypes = (response.schema && Array.isArray(response.schema.types)) ? response.schema.types
+        : (Array.isArray(response.types) ? response.types : []);
+    const documentType = schemaTypes.find(type => /(^|\.)Document$/.test(String(type.name || '')) || duaTypeLabel(type) === 'Document');
+    const corpusType = schemaTypes.find(type => /(^|\.)Corpus$/.test(String(type.name || '')) || duaTypeLabel(type) === 'Corpus');
+    duaSearchState = {
+        schemaTypes,
+        documentType,
+        corpusType,
+        searchId: 'dua-' + Date.now(),
+        query: '',
+        corpusId: null,
+        page: 1,
+        take: 10,
+        results: []
+    };
+    return duaSearchState;
+}
+
+function renderDuaSearchResults() {
+    const state = duaSearchState || {results: [], page: 1, take: 10, searchId: 'dua'};
+    const total = state.results.length;
+    const totalPages = Math.max(1, Math.ceil(total / state.take));
+    const currentPage = Math.min(Math.max(1, state.page), totalPages);
+    const start = (currentPage - 1) * state.take;
+    const pageItems = state.results.slice(start, start + state.take);
+    const cards = pageItems.map(item => {
+        const label = escapeHtml(duaInstanceLabel(item));
+        const fsId = escapeHtml(String(item.fsId || ''));
+        const typeName = escapeHtml(item.typeName || item.name || 'Document');
+        return '<div class="flexed justify-content-center">' +
+            '<div class="document-card" data-id="' + fsId + '">' +
+                '<div class="content p-3">' +
+                    '<div class="flexed justify-content-between align-items-start">' +
+                        '<div>' +
+                            '<h5 class="mb-1">' + label + '</h5>' +
+                            '<div class="text small-font">' + typeName + '</div>' +
+                        '</div>' +
+                        '<span class="corpus-selector-badge-type">fs ' + fsId + '</span>' +
+                    '</div>' +
+                    '<button class="btn mt-2 open-document" type="button" data-id="' + fsId + '">Open</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+    const prevDisabled = currentPage <= 1 ? ' disabled' : '';
+    const nextDisabled = currentPage >= totalPages ? ' disabled' : '';
+    $('.view .search-result-container').html(
+        '<div class="search-state" data-id="' + escapeHtml(state.searchId) + '"></div>' +
+        '<div class="mb-2 text small-font">' + total + ' Corpus document feature structures</div>' +
+        '<div class="document-list-include">' + (cards || '<p class="text p-3">No Corpus documents matched.</p>') + '</div>' +
+        '<div class="navigation-include">' +
+            '<div class="pagination" data-max="' + totalPages + '" data-cur="' + currentPage + '">' +
+                '<a class="btn mr-3 rounded-a next-page-btn' + prevDisabled + '" data-direction="-" aria-disabled="' + (currentPage <= 1 ? 'true' : 'false') + '"><i class="fas fa-chevron-left"></i></a>' +
+                '<a class="btn rounded-a current-page page-btn" data-page="' + currentPage + '">' + currentPage + '</a>' +
+                '<a class="btn ml-3 rounded-a next-page-btn' + nextDisabled + '" data-direction="+" aria-disabled="' + (currentPage >= totalPages ? 'true' : 'false') + '"><i class="fas fa-chevron-right"></i></a>' +
+            '</div>' +
+        '</div>' +
+        '<div class="keyword-in-context-include"></div>'
+    );
+    refreshPaginationControls();
+}
+
+function selectedCorpusId() {
+    const selectElement = document.getElementById("corpus-select");
+    const selectedOption = selectElement && selectElement.options
+        ? selectElement.options[selectElement.selectedIndex]
+        : null;
+    return selectedOption ? selectedOption.getAttribute("data-id") : null;
+}
+
+function searchResultLooksValid() {
+    return $('.view .search-result-container').find('.search-state').length > 0;
+}
+
+function recordTitle(record) {
+    return record && (record.title || record.documentTitle || record.documentId || record.id || 'Document');
+}
+
+function recordSnippet(record) {
+    const text = String((record && (record.snippet || record.fullTextCleaned || record.fullText)) || '');
+    return text.length > 360 ? text.slice(0, 357) + '...' : text;
+}
+
+function renderBackendRecordSearchResults() {
+    const state = backendRecordSearchState;
+    if (!state) return;
+    const records = state.records || [];
+    const currentPage = Math.max(1, Number(state.page || 1));
+    const hasPrevious = currentPage > 1;
+    const hasNext = records.length >= state.take;
+    const cards = records.map(record => {
+        const id = escapeHtml(String(record.id || record.key || ''));
+        const title = escapeHtml(recordTitle(record));
+        const docId = escapeHtml(String(record.documentId || ''));
+        const language = escapeHtml(String(record.language || ''));
+        const snippet = escapeHtml(recordSnippet(record));
+        return '<div class="flexed justify-content-center">' +
+            '<div class="document-card" data-id="' + id + '">' +
+                '<div class="content p-3">' +
+                    '<div class="flexed justify-content-between align-items-start">' +
+                        '<div>' +
+                            '<h5 class="mb-1">' + title + '</h5>' +
+                            '<div class="text small-font">' + [docId, language].filter(Boolean).join(' / ') + '</div>' +
+                        '</div>' +
+                        '<span class="corpus-selector-badge-type">ID ' + id + '</span>' +
+                    '</div>' +
+                    '<p class="text small-font mt-2 mb-2">' + snippet + '</p>' +
+                    '<button class="btn mt-1 open-document" type="button" data-id="' + id + '">Open</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+    $('.view .search-result-container').html(
+        '<div class="search-state" data-id="' + escapeHtml(state.searchId) + '" data-backend-record-search="true"></div>' +
+        '<div class="document-list-include">' + (cards || '<p class="text p-3">No documents matched.</p>') + '</div>' +
+        '<div class="navigation-include">' +
+            '<div class="pagination" data-max="' + (hasNext ? currentPage + 1 : currentPage) + '" data-cur="' + currentPage + '">' +
+                '<a class="btn mr-3 rounded-a next-page-btn' + (hasPrevious ? '' : ' disabled') + '" data-direction="-" aria-disabled="' + (!hasPrevious ? 'true' : 'false') + '"><i class="fas fa-chevron-left"></i></a>' +
+                '<a class="btn rounded-a current-page page-btn" data-page="' + currentPage + '">' + currentPage + '</a>' +
+                '<a class="btn ml-3 rounded-a next-page-btn' + (hasNext ? '' : ' disabled') + '" data-direction="+" aria-disabled="' + (!hasNext ? 'true' : 'false') + '"><i class="fas fa-chevron-right"></i></a>' +
+            '</div>' +
+        '</div>' +
+        '<div class="keyword-in-context-include"></div>'
+    );
+    refreshPaginationControls();
+}
+
+function runBackendRecordSearch(searchInput, corpusId, fulltextOrNeLayer, proMode, metadataFilters, page, reloadCorpus) {
+    const take = 10;
+    const targetPage = Math.max(1, Number(page || 1));
+    return $.ajax({
+        url: "/api/search/records",
+        type: "POST",
+        data: JSON.stringify({
+            searchInput: searchInput || '',
+            corpusId: corpusId,
+            fulltextOrNeLayer: fulltextOrNeLayer || 'FULLTEXT',
+            proMode: !!proMode,
+            uceMetadataFilters: JSON.stringify(metadataFilters || []),
+            skip: (targetPage - 1) * take,
+            take: take
+        }),
+        contentType: "application/json",
+        dataType: "json"
+    }).then(function (response) {
+        if (!response || Number(response.status || 500) >= 400) {
+            throw new Error((response && response.message) || 'Backend record search failed.');
+        }
+        backendRecordSearchState = {
+            searchId: 'records-' + Date.now(),
+            query: String(searchInput || ''),
+            corpusId: corpusId,
+            fulltextOrNeLayer: fulltextOrNeLayer || 'FULLTEXT',
+            proMode: !!proMode,
+            metadataFilters: metadataFilters || [],
+            page: targetPage,
+            take: take,
+            records: response.records || []
+        };
+        renderBackendRecordSearchResults();
+        if (window.uceUiState) {
+            window.uceUiState.set('searchId', backendRecordSearchState.searchId);
+            window.uceUiState.set('page', targetPage > 1 ? String(targetPage) : '');
+        }
+        if (reloadCorpus) {
+            reloadCorpusComponents();
+            addSearchToHistory(searchInput);
+        }
+    });
+}
+
+async function startDuaSearch(searchInput, corpusId, proMode, layeredState, reloadCorpus) {
+    const state = await ensureDuaSearchSchema();
+    if (!state.documentType) throw new Error('Document type not found in Corpus schema.');
+    const query = String(searchInput || '').toLowerCase();
+    let instances = [];
+    if (window.DUAClient && typeof window.DUAClient.search === 'function') {
+        try {
+            const response = await window.DUAClient.search({
+                query: String(searchInput || ''),
+                corpusFsRef: corpusId || '',
+                documentTypeCode: state.documentType.typeCode,
+                documentType: state.documentType.name,
+                limit: 500,
+                offset: 0,
+                proMode: !!proMode
+            });
+            instances = (response && response.documents) || (response && response.result && response.result.documents) || [];
+        } catch (error) {
+            instances = [];
+        }
+    }
+    if (!instances.length) {
+        const response = await duavizWsQuery('instancesByType', {
+            typeCode: state.documentType.typeCode,
+            type: state.documentType.name,
+            includeSubtypes: true,
+            offset: 0,
+            limit: 500
+        });
+        instances = ((response.page && response.page.instances) || []);
+    }
+    state.query = String(searchInput || '');
+    state.corpusId = corpusId;
+    state.page = 1;
+    state.results = query
+        ? instances.filter(item => JSON.stringify(item).toLowerCase().includes(query))
+        : instances;
+    persistSearchRequestToRoute(searchInput, corpusId, proMode, layeredState);
+    renderDuaSearchResults();
+    if (reloadCorpus) addSearchToHistory(searchInput);
+}
 
 function encodeLayeredSearchStateForRoute(state) {
     if (!state) return '';
@@ -697,6 +961,17 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
     $('.search-menu-div').hide();
     showSearchViewLoader();
 
+    if (isDuaSearchMode()) {
+        const proMode = $('#proModeSwitch').is(':checked');
+        return startDuaSearch(searchInput, corpusId, proMode, null, reloadCorpus)
+            .catch(function (error) {
+                $('.view .search-result-container').html('<p class="text-danger p-3">' + escapeHtml(error.message) + '</p>');
+            })
+            .finally(function () {
+                hideSearchViewLoader();
+            });
+    }
+
     // Get the selected search layers
     const fulltextOrNeLayer = $('.search-menu-div .search-settings-div input[name="searchLayerRadioOptions"]:checked').val() || 'FULLTEXT';
     const embeddings = $('.search-menu-div .search-settings-div .option input[data-id="EMBEDDINGS"]').is(':checked');
@@ -750,6 +1025,17 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
         }
     })
 
+    if (isDuaSearchMode()) {
+        startDuaSearch(searchInput, corpusId, proMode, layeredState, reloadCorpus)
+            .catch(function (error) {
+                $('.view .search-result-container').html('<p class="text-danger p-3">' + escapeHtml(error.message) + '</p>');
+            })
+            .finally(function () {
+                hideSearchViewLoader();
+            });
+        return;
+    }
+
     // Start a new search TODO: Outsource this into new prototype maybe
     $.ajax({
         url: "/api/search/default",
@@ -770,6 +1056,17 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
         //dataType: "json",
         success: function (response) {
             $('.view .search-result-container').html(response);
+            if (!searchResultLooksValid()) {
+                runBackendRecordSearch(searchInput, corpusId, fulltextOrNeLayer, proMode, metadataFilters, 1, reloadCorpus)
+                    .catch(function (fallbackError) {
+                        console.error(fallbackError);
+                        $('.view .search-result-container').html(response);
+                    })
+                    .always(function () {
+                        hideSearchViewLoader();
+                    });
+                return;
+            }
             activatePopovers();
             refreshPaginationControls();
             if (reloadCorpus) {
@@ -805,10 +1102,17 @@ function startNewSearch(searchInput, reloadCorpus = true, options = {}) {
         error: function (xhr, status, error) {
             if (xhr.status === 406) {
                 showMessageModal("Query Error", xhr.responseText);
+                hideSearchViewLoader();
             } else {
-                $('.view .search-result-container').html(xhr.responseText);
+                runBackendRecordSearch(searchInput, corpusId, fulltextOrNeLayer, proMode, metadataFilters, 1, reloadCorpus)
+                    .catch(function (fallbackError) {
+                        console.error(fallbackError);
+                        $('.view .search-result-container').html(xhr.responseText);
+                    })
+                    .always(function () {
+                        hideSearchViewLoader();
+                    });
             }
-            hideSearchViewLoader();
         }
     }).always(function () {
         if (!$('.view .search-result-container').find('.search-state').length) {
@@ -952,6 +1256,10 @@ $('body').on('click', '.search-menu-div .backdrop', function () {
  * Handles the opening of the sr builder
  */
 $('body').on('click', '.open-sr-builder-btn', function () {
+    if (isDuaSearchMode()) {
+        showMessageModal("Unavailable", "Semantic role builder is not available in Corpus WebSocket mode.");
+        return;
+    }
     // Get the selected corpus
     const selectElement = document.getElementById("corpus-select");
     const selectedOption = selectElement.options[selectElement.selectedIndex];
@@ -1000,6 +1308,32 @@ $('body').on('click', '.search-result-container .next-page-btn', function () {
 })
 
 async function handleSwitchingOfPage(page) {
+    if (isDuaSearchMode() && duaSearchState) {
+        duaSearchState.page = page;
+        renderDuaSearchResults();
+        if (window.uceUiState) window.uceUiState.set('page', page);
+        return;
+    }
+
+    if (backendRecordSearchState && $('.search-state[data-backend-record-search="true"]').length > 0) {
+        showSearchResultsLoader();
+        runBackendRecordSearch(
+            backendRecordSearchState.query,
+            backendRecordSearchState.corpusId,
+            backendRecordSearchState.fulltextOrNeLayer,
+            backendRecordSearchState.proMode,
+            backendRecordSearchState.metadataFilters,
+            page,
+            false
+        ).catch(function (error) {
+            console.error(error);
+            showMessageModal("Error", "There was a problem fetching the right page on the server, operation cancelled.");
+        }).always(function () {
+            hideSearchResultsLoader();
+        });
+        return;
+    }
+
     const searchId = $('.search-state').data('id');
     showSearchResultsLoader();
 
@@ -1074,6 +1408,12 @@ $('body').on('click', '.sort-container .sort-btn', function () {
     const orderBy = $(this).data('orderby');
     const curOrder = String($(this).data('curorder') || 'ASC').toUpperCase();
     const nextOrder = curOrder === "ASC" ? "DESC" : "ASC";
+    if (isDuaSearchMode() && duaSearchState) {
+        duaSearchState.results.reverse();
+        renderDuaSearchResults();
+        $(this).data('curorder', nextOrder);
+        return;
+    }
     const searchId = $('.search-state').data('id');
     if (!searchId) return;
     showSearchResultsLoader();

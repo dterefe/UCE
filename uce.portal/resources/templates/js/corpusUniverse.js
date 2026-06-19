@@ -35,6 +35,11 @@ var CorpusUniverseHandler = (function () {
      * Opens a new, full-screen, seperated view for the universe
      */
     CorpusUniverseHandler.prototype.openUniverseInNewTab = function(corpusId){
+        if (typeof isDuaCorpusMode === 'function' && isDuaCorpusMode()) {
+            navigateToView('duaviz');
+            if (window.duavizOpenCorpus) window.duavizOpenCorpus(Number(corpusId));
+            return;
+        }
         const currentCenter = this.world.getCurrentCenter();
         let url = window.location.origin;
         url += "/api/corpusUniverse/new?corpusId=" + corpusId;
@@ -49,6 +54,11 @@ var CorpusUniverseHandler = (function () {
      */
     CorpusUniverseHandler.prototype.fromCorpus = async function(corpusId, currentCenter) {
         console.log('New universe from corpus with id ' + corpusId + ' with center ' + currentCenter);
+        if (typeof isDuaCorpusMode === 'function' && isDuaCorpusMode()) {
+            navigateToView('duaviz');
+            if (window.duavizOpenCorpus) await window.duavizOpenCorpus(Number(corpusId));
+            return;
+        }
 
         let networkDto = undefined;
         // Wrap AJAX call in a Promise to use await properly
@@ -91,6 +101,9 @@ var CorpusUniverseHandler = (function () {
      * @returns {Promise<void>}
      */
     CorpusUniverseHandler.prototype.fromSearch = async function(searchId){
+        if (typeof isDuaCorpusMode === 'function' && isDuaCorpusMode()) {
+            return;
+        }
         let networkDto = undefined;
         // Wrap AJAX call in a Promise to use await properly
         let result = await new Promise((resolve, reject) => {

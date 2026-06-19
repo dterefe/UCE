@@ -7,6 +7,7 @@ import org.texttechnologylab.uce.common.exceptions.DocumentAccessDeniedException
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -30,7 +31,16 @@ public class PostgresStorageMaintenanceService implements StorageMaintenanceServ
 
     @Override
     public void executeExternalStorageScripts(String path) throws IOException {
-        try (var fileStream = Files.list(Paths.get(path))) {
+        if (path == null || path.isBlank()) {
+            logger.info("No external PostgreSQL storage script path configured; skipping storage script execution.");
+            return;
+        }
+        Path scriptPath = Paths.get(path);
+        if (!Files.isDirectory(scriptPath)) {
+            logger.info("External PostgreSQL storage script path does not exist or is not a directory: {}; skipping storage script execution.", path);
+            return;
+        }
+        try (var fileStream = Files.list(scriptPath)) {
             fileStream
                     .filter(Files::isRegularFile)
                     .filter(file -> file.toString().endsWith(".sql"))

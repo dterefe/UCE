@@ -283,14 +283,15 @@ public class RAGService {
             var promptMessages = buildPromptMessages(chatHistory);
             params.put("promptMessages", promptMessages);
 
-            // Add MCP tools
-            // TODO initialize MCP client
-            // TODO should we use only one client for all requests or per chat? when to create?
-            mcpClient = initMcpClient();
-
-            // Get available tools from MCP servers
-            var mcpTools = mcpClient.listTools();
-            var usingTools = mcpTools != null && !mcpTools.tools().isEmpty();
+            var usingTools = false;
+            McpSchema.ListToolsResult mcpTools = null;
+            if (SystemStatus.UceConfig.getSettings().getMcp().isEnabled()) {
+                // Add MCP tools only when the UCE runtime explicitly enables MCP.
+                // The normal search portal RAG path talks directly to the configured RAG webserver.
+                mcpClient = initMcpClient();
+                mcpTools = mcpClient.listTools();
+                usingTools = mcpTools != null && !mcpTools.tools().isEmpty();
+            }
             if (usingTools) {
                 var tools = new ArrayList<Tool>();
                 // TODO check format

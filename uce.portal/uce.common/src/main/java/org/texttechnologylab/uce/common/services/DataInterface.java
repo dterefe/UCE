@@ -57,6 +57,364 @@ public interface DataInterface {
         return getClass().getSimpleName();
     }
 
+    public default List<Map<String, Object>> duavizTypes() throws DatabaseOperationException, DocumentAccessDeniedException {
+        return List.of(
+                Map.of("typeCode", 1, "name", "Corpus", "superTypeCode", 0, "superTypeName", "", "annotation", false, "artifact", true, "instanceCount", getAllCorpora().size()),
+                Map.of("typeCode", 2, "name", "Document", "superTypeCode", 1, "superTypeName", "Corpus", "annotation", false, "artifact", true, "instanceCount", countDocumentsInCorpus(0))
+        );
+    }
+
+    public default Map<String, Object> duavizSchema() throws DatabaseOperationException, DocumentAccessDeniedException {
+        Map<String, Object> schema = new java.util.LinkedHashMap<>();
+        schema.put("format", "UIMA-CAS-JSON");
+        schema.put("types", duavizTypes());
+        return schema;
+    }
+
+    public default List<Map<String, Object>> duavizArtifacts() throws DatabaseOperationException, DocumentAccessDeniedException {
+        List<Map<String, Object>> artifacts = new java.util.ArrayList<>();
+        for (Corpus corpus : getAllCorpora()) {
+            Map<String, Object> corpusArtifact = new java.util.LinkedHashMap<>();
+            corpusArtifact.put("fsId", corpus.getId());
+            corpusArtifact.put("typeCode", 1);
+            corpusArtifact.put("typeName", "Corpus");
+            corpusArtifact.put("artifactKind", "corpus");
+            corpusArtifact.put("name", corpusTitle(corpus));
+            corpusArtifact.put("count", countDocumentsInCorpus(corpus.getId()));
+            corpusArtifact.put("cas", casJson(corpusFs(corpus)));
+            corpusArtifact.put("fs", corpusFs(corpus));
+            artifacts.add(corpusArtifact);
+            for (Document document : getDocumentsByCorpusId(corpus.getId(), 0, 250)) {
+                Map<String, Object> documentArtifact = new java.util.LinkedHashMap<>();
+                documentArtifact.put("fsId", document.getId());
+                documentArtifact.put("typeCode", 2);
+                documentArtifact.put("typeName", "Document");
+                documentArtifact.put("artifactKind", "document");
+                documentArtifact.put("name", documentTitle(document));
+                documentArtifact.put("corpusFsId", corpus.getId());
+                documentArtifact.put("count", 1);
+                documentArtifact.put("cas", casJson(documentFs(document, false)));
+                documentArtifact.put("fs", documentFs(document, false));
+                artifacts.add(documentArtifact);
+            }
+        }
+        return artifacts;
+    }
+
+    public default Map<String, Object> duavizInstancesByType(int typeCode, int offset, int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        int boundedOffset = Math.max(0, offset);
+        int boundedLimit = Math.max(1, Math.min(limit, 100));
+        List<Map<String, Object>> page = new java.util.ArrayList<>();
+        int total = 0;
+        boolean hasMore = false;
+        if (typeCode == 1) {
+            List<Corpus> corpora = getAllCorpora();
+            total = corpora.size();
+            for (Corpus corpus : corpora.stream().skip(boundedOffset).limit(boundedLimit).toList()) {
+                Map<String, Object> corpusArtifact = new java.util.LinkedHashMap<>();
+                corpusArtifact.put("fsId", corpus.getId());
+                corpusArtifact.put("typeCode", 1);
+                corpusArtifact.put("typeName", "Corpus");
+                corpusArtifact.put("artifactKind", "corpus");
+                corpusArtifact.put("name", corpusTitle(corpus));
+                corpusArtifact.put("count", 0);
+                page.add(corpusArtifact);
+            }
+            hasMore = boundedOffset + page.size() < total;
+        } else if (typeCode == 2) {
+            int skipped = 0;
+            int requested = boundedOffset + boundedLimit + 1;
+            for (Corpus corpus : getAllCorpora()) {
+                for (Document document : getDocumentsByCorpusId(corpus.getId(), 0, requested)) {
+                    total++;
+                    if (skipped++ < boundedOffset) {
+                        continue;
+                    }
+                    if (page.size() >= boundedLimit) {
+                        hasMore = true;
+                        break;
+                    }
+                    Map<String, Object> documentArtifact = new java.util.LinkedHashMap<>();
+                    documentArtifact.put("fsId", document.getId());
+                    documentArtifact.put("typeCode", 2);
+                    documentArtifact.put("typeName", "Document");
+                    documentArtifact.put("artifactKind", "document");
+                    documentArtifact.put("name", documentTitle(document));
+                    documentArtifact.put("corpusFsId", corpus.getId());
+                    documentArtifact.put("count", 1);
+                    documentArtifact.put("cas", casJson(documentFs(document, false)));
+                    documentArtifact.put("fs", documentFs(document, false));
+                    page.add(documentArtifact);
+                }
+                if (hasMore) {
+                    break;
+                }
+            }
+            total = hasMore ? boundedOffset + page.size() + 1 : total;
+        } else {
+            List<Map<String, Object>> matching = duavizArtifacts().stream()
+                    .filter(artifact -> Number.class.isAssignableFrom(artifact.get("typeCode").getClass()))
+                    .filter(artifact -> ((Number) artifact.get("typeCode")).intValue() == typeCode)
+                    .toList();
+            page.addAll(matching.stream()
+                    .skip(boundedOffset)
+                    .limit(boundedLimit)
+                    .toList());
+            total = matching.size();
+            hasMore = boundedOffset + page.size() < total;
+        }
+        return Map.of(
+                "instances", page,
+                "offset", boundedOffset,
+                "limit", boundedLimit,
+                "total", total,
+                "hasMore", hasMore,
+                "cas", casJson(page.stream()
+                        .map(artifact -> artifact.get("fs"))
+                        .filter(Map.class::isInstance)
+                        .map(fs -> (Map<String, Object>) fs)
+                        .toList())
+        );
+    }
+
+    public default Map<String, Object> duavizGraph(long rootFsId, int depth, int limit) throws DatabaseOperationException, DocumentAccessDeniedException {
+        Corpus corpus = getCorpusById(rootFsId);
+        if (corpus == null) {
+            return Map.of("nodes", List.of(), "edges", List.of());
+        }
+        int boundedLimit = Math.max(1, Math.min(limit, 1000));
+        List<Map<String, Object>> nodes = new java.util.ArrayList<>();
+        List<Map<String, Object>> edges = new java.util.ArrayList<>();
+        Map<String, Object> corpusNode = new java.util.LinkedHashMap<>(corpusFs(corpus));
+        corpusNode.put("depth", 0);
+        corpusNode.put("fsId", corpus.getId());
+        corpusNode.put("typeCode", 1);
+        corpusNode.put("typeName", "Corpus");
+        corpusNode.put("artifactKind", "corpus");
+        corpusNode.put("title", corpusTitle(corpus));
+        corpusNode.put("uri", "corpus:" + corpus.getId());
+        nodes.add(corpusNode);
+        for (Document document : getDocumentsByCorpusId(corpus.getId(), 0, boundedLimit)) {
+            Map<String, Object> documentNode = new java.util.LinkedHashMap<>(documentFs(document, false));
+            documentNode.put("depth", 1);
+            documentNode.put("fsId", document.getId());
+            documentNode.put("typeCode", 2);
+            documentNode.put("typeName", "Document");
+            documentNode.put("artifactKind", "document");
+            documentNode.put("title", documentTitle(document));
+            documentNode.put("uri", document.getDocumentId() == null ? "" : document.getDocumentId());
+            nodes.add(documentNode);
+            Map<String, Object> edge = new java.util.LinkedHashMap<>();
+            edge.put("sourceFsId", corpus.getId());
+            edge.put("targetFsId", document.getId());
+            edge.put("featureCode", 0);
+            edge.put("featureName", "documents");
+            edge.put("edgeKind", "CONTAINS");
+            edge.put("ordinal", edges.size());
+            edge.put("source", corpus.getId());
+            edge.put("target", document.getId());
+            edge.put("feature", "org.texttechnologylab.annotations.dua.Corpus:documents");
+            edges.add(edge);
+        }
+        return Map.of("nodes", nodes, "edges", edges, "cas", casJson(nodes));
+    }
+
+    public default Map<String, Object> duavizFs(long fsId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        Corpus corpus = getCorpusById(fsId);
+        if (corpus != null) {
+            Map<String, Object> fs = corpusFs(corpus);
+            return Map.of("fs", fs, "cas", casJson(fs));
+        }
+        Document document = getDocumentById(fsId);
+        if (document != null) {
+            Map<String, Object> fs = documentFs(document, true);
+            return Map.of("fs", fs, "cas", casJson(fs));
+        }
+        return Map.of("fs", Map.of(), "cas", casJson(List.of()));
+    }
+
+    public default Map<String, Object> duavizDocument(long documentFsId, List<Integer> typeCodes, int limit) throws DatabaseOperationException, DocumentAccessDeniedException {
+        Document document = getDocumentById(documentFsId);
+        if (document == null) {
+            return Map.of("document", Map.of(), "annotationTypes", List.of(), "spans", List.of());
+        }
+        Map<String, Object> header = documentFs(document, true);
+        header.put("fsId", document.getId());
+        header.put("artifactKind", "document");
+        header.put("title", documentTitle(document));
+        header.put("uri", document.getDocumentId() == null ? "" : document.getDocumentId());
+        header.put("typeCode", 2);
+        header.put("typeName", "Document");
+        header.put("sofaFsId", document.getId());
+        header.put("viewName", "_InitialView");
+        header.put("mimeType", document.getMimeType() == null ? "" : document.getMimeType());
+        header.put("text", document.getFullText() == null ? "" : document.getFullText());
+        return Map.of("document", header, "annotationTypes", List.of(), "spans", List.of(), "cas", casJson(header));
+    }
+
+    public default Map<String, Object> casJson(Map<String, Object>... featureStructures) {
+        return casJson(java.util.Arrays.asList(featureStructures));
+    }
+
+    public default Map<String, Object> casJson(List<Map<String, Object>> featureStructures) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("format", "UIMA-CAS-JSON");
+        result.put("views", Map.of("_InitialView", Map.of("members", featureStructures.stream().map(fs -> fs.get("_id")).toList())));
+        result.put("types", List.of(
+                typeSchema("org.texttechnologylab.annotations.dua.Artifact", "uima.cas.TOP", List.of("title", "uri", "metadata")),
+                typeSchema("org.texttechnologylab.annotations.dua.Corpus", "org.texttechnologylab.annotations.dua.Artifact", List.of("documents")),
+                typeSchema("org.texttechnologylab.annotations.dua.Document", "org.texttechnologylab.annotations.dua.Artifact", List.of("origin", "mimeType", "text"))
+        ));
+        result.put("featureStructures", featureStructures);
+        return result;
+    }
+
+    public default Map<String, Object> typeSchema(String name, String superType, List<String> features) {
+        Map<String, Object> schema = new java.util.LinkedHashMap<>();
+        schema.put("name", name);
+        schema.put("superType", superType);
+        schema.put("features", features);
+        return schema;
+    }
+
+    public default Map<String, Object> corpusFs(Corpus corpus) throws DatabaseOperationException, DocumentAccessDeniedException {
+        Map<String, Object> fs = new java.util.LinkedHashMap<>();
+        fs.put("_id", corpus.getId());
+        fs.put("_type", "org.texttechnologylab.annotations.dua.Corpus");
+        fs.put("features", Map.of(
+                "title", corpusTitle(corpus),
+                "uri", "corpus:" + corpus.getId(),
+                "metadata", "",
+                "documents", getDocumentsByCorpusId(corpus.getId(), 0, 1000).stream().map(Document::getId).toList()
+        ));
+        return fs;
+    }
+
+    public default Map<String, Object> documentFs(Document document, boolean includeText) {
+        Map<String, Object> features = new java.util.LinkedHashMap<>();
+        features.put("title", documentTitle(document));
+        features.put("uri", document.getDocumentId() == null ? "" : document.getDocumentId());
+        features.put("metadata", "");
+        features.put("origin", document.getDocumentId() == null ? "" : document.getDocumentId());
+        features.put("mimeType", document.getMimeType() == null ? "" : document.getMimeType());
+        if (includeText) {
+            features.put("text", document.getFullText() == null ? "" : document.getFullText());
+        }
+        Map<String, Object> fs = new java.util.LinkedHashMap<>();
+        fs.put("_id", document.getId());
+        fs.put("_type", "org.texttechnologylab.annotations.dua.Document");
+        fs.put("features", features);
+        return fs;
+    }
+
+    public default String corpusTitle(Corpus corpus) {
+        return corpus.getName() == null || corpus.getName().isBlank() ? "Corpus " + corpus.getId() : corpus.getName();
+    }
+
+    public default String documentTitle(Document document) {
+        return document.getDocumentTitle() == null || document.getDocumentTitle().isBlank()
+                ? (document.getDocumentId() == null || document.getDocumentId().isBlank() ? "Document " + document.getId() : document.getDocumentId())
+                : document.getDocumentTitle();
+    }
+
+    public default Map<String, Object> duavizUpsertAnnotation(long fsId, long sofaFsId, long documentFsId,
+                                                              String viewName, int typeCode, long begin, long end,
+                                                              Map<String, Object> features)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of("fsId", fsId, "status", "unavailable");
+    }
+
+    public default Map<String, Object> duavizDelete(long fsId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of("fsId", fsId, "status", "unavailable");
+    }
+
+    public default Map<String, Object> duavizRestore(long fsId) throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of("fsId", fsId, "status", "unavailable");
+    }
+
+    public default Map<String, Object> duavizTelemetrySchema() throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry schema not configured for this backend."
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetrySummaries(String component, String operation)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry summaries not configured for this backend.",
+                "summaries", List.of()
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryObservations(String component, String operation, Boolean failed, int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry observations not configured for this backend.",
+                "observations", List.of()
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryHealth()
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry health not configured for this backend."
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryDiagnostics()
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry diagnostics not configured for this backend."
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryOperations(String component)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry operations not configured for this backend.",
+                "operations", List.of(),
+                "components", List.of()
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryProgress(String component, String operation, Integer windowMinutes, int limit)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry progress not configured for this backend.",
+                "points", List.of()
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryOverview()
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry overview not configured for this backend."
+        );
+    }
+
+    public default Map<String, Object> duavizTelemetryAttributes(String component, String operation)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return duavizTelemetryAttributes(component, operation, null);
+    }
+
+    public default Map<String, Object> duavizTelemetryAttributes(String component, String operation, Integer topValues)
+            throws DatabaseOperationException, DocumentAccessDeniedException {
+        return Map.of(
+                "status", "unavailable",
+                "message", "DUA telemetry attributes not configured for this backend.",
+                "attributes", List.of()
+        );
+    }
+
     /**
      * Fetches annotations (NE, Taxon, Time,...) of a given corpus.
      * @throws DocumentAccessDeniedException 

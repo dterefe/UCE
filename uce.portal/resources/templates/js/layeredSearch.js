@@ -239,6 +239,12 @@ let LayeredSearchHandler = (function () {
         let applicableDepths = Object.keys(this.layers).filter(d => d <= depth);
         let applicableLayers = this.buildApplicableLayers(applicableDepths);
 
+        if (typeof isDuaCorpusMode === 'function' && isDuaCorpusMode()) {
+            this.updateLayerResults(applicableLayers);
+            applicableDepths.forEach((d) => this.setLayerIsLoading(d, false));
+            return;
+        }
+
         $.ajax({
             url: "/api/search/layered",
             type: "POST",

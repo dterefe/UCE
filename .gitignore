@@ -58,3 +58,11 @@ data/*
 
 .dev/
 dev/venv/*
+audit-eval-output/*
+reports/*
+plans/*
+uce-shadcn-lab/*
+uce-shadcn-svelte-lab/*
+.codex-logs/*
+logs/*
+logs/*

@@ -9,7 +9,7 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "wikiDataHyponym")
-@Typesystem(types = {org.hucompute.textimager.uima.type.wikidata.WikiDataHyponym.class})
+@Typesystem(types = {Object.class})
 public class WikiDataHyponym extends ModelBase {
 
     @Column(name = "\"valuee\"")

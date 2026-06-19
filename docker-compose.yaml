@@ -49,7 +49,7 @@ services:
     environment:
       VIRTUAL_HOST: ${UCE_PUBLIC_HOST:-}
       VIRTUAL_PORT: ${UCE_PUBLISHED_PORT:-}
-      UCE_STORAGE_BACKEND: ${UCE_STORAGE_BACKEND:-postgres}
+      UCE_STORAGE_BACKEND: ${UCE_STORAGE_BACKEND:-dua}
       UCE_DUA_STORE: ${UCE_DUA_STORE_CONTAINER_PATH:-/app/dua/uce-dua-store.bin}
       UCE_DUA_FLUSH_EVERY_MUTATIONS: ${UCE_DUA_FLUSH_EVERY_MUTATIONS:-1}
       # Compose-derived legacy runtime vars (deduplicated from .env host/port primitives).
@@ -59,6 +59,12 @@ services:
       POSTGRESQL_HIBERNATE_CONNECTION_URL: jdbc:postgresql://${DB_HOST:-}:${DB_RUNTIME_PORT:-5432}/${DB_NAME:-}
       POSTGRESQL_HIBERNATE_CONNECTION_USERNAME: ${DB_USER:-}
       POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD: ${DB_PASSWORD:-}
+      SPARQL_HOST: ${SPARQL_HOST:-http://uce-fuseki-sparql:5430/}
+      SPARQL_ENDPOINT: ${SPARQL_ENDPOINT:-biofid-search/sparql}
+      SPARQL_MAX_ENRICHMENT: ${SPARQL_MAX_ENRICHMENT:-100}
+      SPARQL_CONCURRENT_REQUESTS_MAX: ${SPARQL_CONCURRENT_REQUESTS_MAX:-64}
+      RAG_WEBSERVER_BASE_URL: ${RAG_WEBSERVER_BASE_URL:-http://uce-rag-service:5678/}
+      UCE_DUAVIZ_HTTP_URL: ${UCE_DUAVIZ_HTTP_URL:-http://127.0.0.1:17875}
     ports:
       - "${UCE_PUBLISHED_PORT:-}:${UCE_INTERNAL_PORT:-4567}"
     depends_on:
@@ -76,6 +82,7 @@ services:
     command: [
       "java",
       "--add-opens=java.base/java.util=ALL-UNNAMED",
+      "--add-opens=java.base/java.time=ALL-UNNAMED",
       "-jar",
       "./target/webportal-jar-with-dependencies.jar",
       "-cf",
@@ -150,7 +157,7 @@ services:
     env_file:
       - ${UCE_COMPOSE_ENV_FILE:-.env}
     environment:
-      UCE_STORAGE_BACKEND: ${UCE_STORAGE_BACKEND:-postgres}
+      UCE_STORAGE_BACKEND: ${UCE_STORAGE_BACKEND:-dua}
       UCE_DUA_STORE: ${UCE_DUA_STORE_CONTAINER_PATH:-/app/dua/uce-dua-store.bin}
       UCE_DUA_FLUSH_EVERY_MUTATIONS: ${UCE_DUA_FLUSH_EVERY_MUTATIONS:-1}
       UCE_DUUI_GNFINDER_ENABLED: ${UCE_DUUI_GNFINDER_ENABLED:-false}
@@ -164,6 +171,12 @@ services:
       POSTGRESQL_HIBERNATE_CONNECTION_URL: jdbc:postgresql://${DB_HOST:-}:${DB_RUNTIME_PORT:-5432}/${DB_NAME:-}
       POSTGRESQL_HIBERNATE_CONNECTION_USERNAME: ${DB_USER:-}
       POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD: ${DB_PASSWORD:-}
+      SPARQL_HOST: ${SPARQL_HOST:-http://uce-fuseki-sparql:5430/}
+      SPARQL_ENDPOINT: ${SPARQL_ENDPOINT:-biofid-search/sparql}
+      SPARQL_MAX_ENRICHMENT: ${SPARQL_MAX_ENRICHMENT:-100}
+      SPARQL_CONCURRENT_REQUESTS_MAX: ${SPARQL_CONCURRENT_REQUESTS_MAX:-64}
+      BIOFID_FUSEKI_ENDPOINT: ${BIOFID_FUSEKI_ENDPOINT:-http://uce-fuseki-sparql:5430/biofid-search/sparql}
+      RAG_WEBSERVER_BASE_URL: ${RAG_WEBSERVER_BASE_URL:-http://uce-rag-service:5678/}
     networks:
       - app_net
     volumes:
@@ -178,7 +191,7 @@ services:
       "java",
       "-cp",
       "./target/importer.jar",
-      "org.texttechnologylab.uce.corpusimporter.DUUIImporter",
+      "org.texttechnologylab.uce.corpusimporter.duui.BIOfidPipelineImporter",
       "-src", "${IMPORTER_IMPORT_SRC:-/app/input}",
       "-num", "${IMPORTER_NUMBER:-1}",
       "-t", "${IMPORTER_THREADS:-4}"
@@ -341,10 +354,10 @@ services:
     ports:
       - "8030:5430"
     volumes:
-      - ${TDB2_DATA}:/fuseki/databases/${TDB2_ENDPOINT}
+      - ${TDB2_DATA:-/storage/projects/bagci/BioFID/database/data/sparql/biofid-search}:/fuseki/databases/${TDB2_ENDPOINT:-biofid-search}
     environment:
-      - JAVA_OPTIONS=${JAVA_OPTIONS}
-    command: --update --tdb2 --port 5430 --loc /fuseki/databases/${TDB2_ENDPOINT} /${TDB2_ENDPOINT}
+      - JAVA_OPTIONS=${JAVA_OPTIONS:-}
+    command: --update --tdb2 --port 5430 --loc /fuseki/databases/${TDB2_ENDPOINT:-biofid-search} /${TDB2_ENDPOINT:-biofid-search}
     networks:
       - app_net
     

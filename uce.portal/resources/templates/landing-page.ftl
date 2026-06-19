@@ -34,7 +34,11 @@
                                     data-id="${corpusVm.getCorpus().getId()}">
                                     <i class="fas fa-globe mr-2"></i> ${corpusVm.getCorpus().getName()?trim}
                                 </h5>
-                                <p class="text mb-0 small"><i class="fas fa-pen-nib mr-1"></i> ${corpusVm.getCorpus().getAuthor()}</p>
+                                <#assign corpusAuthorLabel = corpusVm.getCorpus().getAuthor()>
+                                <#if corpusAuthorLabel == "DUA">
+                                    <#assign corpusAuthorLabel = "Corpus">
+                                </#if>
+                                <p class="text mb-0 small"><i class="fas fa-pen-nib mr-1"></i> ${corpusAuthorLabel}</p>
                             </div>
                             <div>
                                 <a class="btn open-corpus-inspector-btn mb-1" data-trigger="hover"

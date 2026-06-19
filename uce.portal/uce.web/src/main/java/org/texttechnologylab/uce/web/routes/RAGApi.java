@@ -31,6 +31,8 @@ import java.util.regex.Pattern;
 
 public class RAGApi implements UceApi {
     private static final Logger logger = LogManager.getLogger(RAGApi.class);
+    private static final String RAG_UNAVAILABLE_MESSAGE_KEY = "ragBotUnavailableMessage";
+    private static final String RAG_UNAVAILABLE_FALLBACK_MESSAGE = "The chat model is currently unavailable. Search is connected; please use the search view while the language model endpoint is restored.";
     private Configuration freemarkerConfig;
     private RAGService ragService;
     private EmbeddingService embeddingService;
@@ -200,12 +202,12 @@ public class RAGApi implements UceApi {
                 // no context needed, the model can get it by using tools
                 contextNeeded = 0;
             }
-            else {
-                contextNeeded = ExceptionUtils.tryCatchLog(
-                        () -> ragService.postRAGContextNeeded(userMessage),
-                        (ex) -> logger.error("Error getting the ContextNeeded info from the rag service.", ex));
-                if (contextNeeded == null) contextNeeded = 1;
-            }
+                else {
+                    contextNeeded = ExceptionUtils.tryCatchLog(
+                            () -> ragService.postRAGContextNeeded(userMessage),
+                            (ex) -> logger.warn("RAG context classifier is unavailable; fetching context by default.", ex));
+                    if (contextNeeded == null) contextNeeded = 1;
+                }
 
             // Check if the user wants to work with just one document or with multiple documents,
             // unless a specific id is already given in the request
@@ -236,7 +238,7 @@ public class RAGApi implements UceApi {
                     }
                     documentTitle = ExceptionUtils.tryCatchLog(
                             () -> ragService.postRAGDocTitle(userMessage, part, chatState.getModel()),
-                            (ex) -> logger.error("Error getting the postRAGDocTitle info from the rag service.", ex));
+                            (ex) -> logger.warn("RAG document-title helper is unavailable; continuing without title extraction.", ex));
                     if (documentTitle != null && documentTitle.equalsIgnoreCase("null")) {
                         documentTitle = null;
                     }
@@ -280,7 +282,7 @@ public class RAGApi implements UceApi {
             if (documentId == null && !usingMcp) {
                 amountOfDocs = ExceptionUtils.tryCatchLog(
                         () -> ragService.postRAGAmountDocs(userMessage, chatState.getModel()),
-                        (ex) -> logger.error("Error getting the AmountDocs info from the rag service.", ex));
+                        (ex) -> logger.warn("RAG document-count helper is unavailable; using the default document count.", ex));
                 if (amountOfDocs == null) amountOfDocs = 3;
                 // only max 10 docs...
                 int docsLimit = 10;
@@ -329,36 +331,42 @@ public class RAGApi implements UceApi {
                     prompt = prompt.replace(prompt_replace_text, contextText);
                 }
                 else {
-                    nearestDocumentChunkEmbeddings = embeddingService.getClosestDocumentChunkEmbeddings(userMessage, amountOfDocs, -1);
-                    // foreach fetched document embedding, we also fetch the actual documents so the chat can show them
+                    try {
+                        nearestDocumentChunkEmbeddings = embeddingService.getClosestDocumentChunkEmbeddings(userMessage, amountOfDocs, -1);
+                        // foreach fetched document embedding, we also fetch the actual documents so the chat can show them
 
-                    // TODO Why is converting to int necessary here? document_id is long
-                    foundDocuments = db.getManyDocumentsByIds(nearestDocumentChunkEmbeddings.stream().map(d -> d.getDocument_id()).toList(), hibernateInit);
-                    StringBuilder contextText = new StringBuilder();
-                    contextText.append("The following documents contain information, ordered by relevance.\n\n");
-                    int docInd = 0;
-                    for (var nearestDocumentChunkEmbedding : nearestDocumentChunkEmbeddings) {
-                        if (docInd >= foundDocuments.size()) break; // TODO this should not happen?!
-                        Document doc = foundDocuments.get(docInd);
-                        docInd++;
+                        // TODO Why is converting to int necessary here? document_id is long
+                        foundDocuments = db.getManyDocumentsByIds(nearestDocumentChunkEmbeddings.stream().map(d -> d.getDocument_id()).toList(), hibernateInit);
+                        StringBuilder contextText = new StringBuilder();
+                        contextText.append("The following documents contain information, ordered by relevance.\n\n");
+                        int docInd = 0;
+                        for (var nearestDocumentChunkEmbedding : nearestDocumentChunkEmbeddings) {
+                            if (docInd >= foundDocuments.size()) break; // TODO this should not happen?!
+                            Document doc = foundDocuments.get(docInd);
+                            docInd++;
 
-                        List<Image> docImages = doc.getImages();
-                        foundImages.addAll(docImages);
-                        // remove images if more than maxImages
-                        if (foundImages.size() > maxImages) {
-                            foundImages = foundImages.subList(0, maxImages);
+                            List<Image> docImages = doc.getImages();
+                            foundImages.addAll(docImages);
+                            // remove images if more than maxImages
+                            if (foundImages.size() > maxImages) {
+                                foundImages = foundImages.subList(0, maxImages);
+                            }
+
+                            contextText.append("<document>").append("\n");
+                            contextText.append("Document #").append(docInd).append("\n");
+                            contextText.append("ID: ").append(doc.getId()).append("\n");
+                            contextText.append("Title: ").append(doc.getDocumentTitle()).append("\n");
+                            contextText.append("Language: ").append(doc.getLanguage()).append("\n");
+                            contextText.append("Images: ").append(docImages.size()).append(" images provided.").append("\n");
+                            contextText.append("Search result:\n").append(nearestDocumentChunkEmbedding.getCoveredText()).append("\n");
+                            contextText.append("</document>").append("\n\n");
                         }
-
-                        contextText.append("<document>").append("\n");
-                        contextText.append("Document #").append(docInd).append("\n");
-                        contextText.append("ID: ").append(doc.getId()).append("\n");
-                        contextText.append("Title: ").append(doc.getDocumentTitle()).append("\n");
-                        contextText.append("Language: ").append(doc.getLanguage()).append("\n");
-                        contextText.append("Images: ").append(docImages.size()).append(" images provided.").append("\n");
-                        contextText.append("Search result:\n").append(nearestDocumentChunkEmbedding.getCoveredText()).append("\n");
-                        contextText.append("</document>").append("\n\n");
+                        prompt = prompt.replace(prompt_replace_text, contextText);
+                    } catch (Exception ex) {
+                        logger.warn("RAG embeddings are unavailable; continuing without document context.", ex);
+                        nearestDocumentChunkEmbeddings = new ArrayList<>();
+                        foundDocuments = new ArrayList<>();
                     }
-                    prompt = prompt.replace(prompt_replace_text, contextText);
                 }
             }
             userRagMessage.setPrompt(prompt);
@@ -392,10 +400,10 @@ public class RAGApi implements UceApi {
             String finalPrompt = prompt;
             var answer = ExceptionUtils.tryCatchLog(
                     () -> ragService.postNewRAGPrompt(chatState),
-                    (ex) -> logger.error("Error getting the next response from our LLM RAG service. The prompt: " + finalPrompt, ex));
+                    (ex) -> logger.warn("RAG model service is unavailable; returning a degraded assistant response. The prompt: " + finalPrompt, ex));
             if (answer == null) {
                 var languageResources = LanguageResources.fromRequest(ctx);
-                answer = languageResources.get("ragBotErrorMessage");
+                answer = languageResources.get(RAG_UNAVAILABLE_MESSAGE_KEY);
             }
             var systemResponseMessage = new RAGChatMessage();
             systemResponseMessage.setRole(Roles.ASSISTANT);
@@ -419,6 +427,13 @@ public class RAGApi implements UceApi {
 
         } catch (Exception ex) {
             logger.error("Unknown Error getting the response of the ragbot; request body:\n " + ctx.body(), ex);
+            if ("application/json".equals(ctx.header("Accept"))) {
+                ctx.status(200);
+                ctx.json(Map.of(
+                        "message", RAG_UNAVAILABLE_FALLBACK_MESSAGE
+                ));
+                return;
+            }
             ctx.render("defaultError.ftl");
             return;
         }

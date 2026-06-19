@@ -27,6 +27,8 @@ import org.texttechnologylab.uce.web.freeMarker.AccessDeniedRenderer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -261,6 +263,199 @@ public class SearchApi implements UceApi {
         }
     }
 
+    public void searchRecords(Context ctx) {
+        var gson = new Gson();
+        var requestBody = gson.fromJson(ctx.body(), Map.class);
+        var result = new HashMap<String, Object>();
+        try {
+            if (requestBody == null || requestBody.get("corpusId") == null) {
+                ctx.status(400);
+                result.put("status", 400);
+                result.put("message", "No corpus selected.");
+                ctx.json(result);
+                return;
+            }
+
+            String searchInput = stringFromRequest(requestBody, "searchInput", stringFromRequest(requestBody, "search", ""));
+            long corpusId = longFromJsonNumber(requestBody.get("corpusId"), -1);
+            int skip = (int) longFromJsonNumber(requestBody.get("skip"), 0);
+            int take = (int) longFromJsonNumber(requestBody.get("take"), 10);
+            boolean proMode = Boolean.parseBoolean(stringFromRequest(requestBody, "proMode", "false"));
+            String fulltextOrNeLayer = stringFromRequest(requestBody, "fulltextOrNeLayer", "FULLTEXT");
+            SearchLayer layer = "NAMED_ENTITIES".equals(fulltextOrNeLayer)
+                    ? SearchLayer.NAMED_ENTITIES
+                    : SearchLayer.FULLTEXT;
+
+            ArrayList<UCEMetadataFilterDto> metadataFilters = new ArrayList<>();
+            if (requestBody.get("uceMetadataFilters") != null) {
+                metadataFilters = ExceptionUtils.tryCatchLog(
+                        () -> gson.fromJson(
+                                requestBody.get("uceMetadataFilters").toString(),
+                                new TypeToken<ArrayList<UCEMetadataFilterDto>>() {
+                                }.getType()),
+                        (ex) -> logger.warn("Ignoring invalid UCE metadata filters for backend record search.", ex));
+                if (metadataFilters == null) {
+                    metadataFilters = new ArrayList<>();
+                }
+            }
+
+            List<String> searchTokens = searchInput.isBlank() ? List.of() : List.of(searchInput);
+            var searchResult = db.defaultSearchForDocuments(
+                    skip,
+                    take,
+                    searchInput,
+                    searchTokens,
+                    layer,
+                    false,
+                    SearchOrder.DESC,
+                    OrderByColumn.RANK,
+                    corpusId,
+                    metadataFilters,
+                    false,
+                    null,
+                    null,
+                    null);
+
+            result.put("status", 200);
+            List<Map<String, Object>> records = new ArrayList<>();
+            for (Long documentId : searchResult.getDocumentIds()) {
+                var document = db.getDocumentById(documentId);
+                if (document != null) {
+                    records.add(documentRecord(document));
+                }
+            }
+            result.put("records", records);
+            ctx.json(result);
+        } catch (ProModeSyntaxException syntaxException) {
+            ctx.status(406);
+            result.put("status", 406);
+            result.put("message", syntaxException.getMessage());
+            ctx.json(result);
+        } catch (Exception ex) {
+            if (isBackendRecordSearchUnavailable(ex)) {
+                logger.warn("Backend record search function failed; using document-page fallback.", ex);
+                try {
+                    result.put("status", 200);
+                    result.put("message", "backend record search fallback");
+                    result.put("records", fallbackDocumentRecords(requestBody));
+                    ctx.json(result);
+                } catch (DocumentAccessDeniedException dade) {
+                    AccessDeniedRenderer.render(ctx, dade, logger);
+                } catch (Exception fallbackEx) {
+                    logger.error("Backend record search fallback failed with the request body:\n " + gson.toJson(requestBody), fallbackEx);
+                    ctx.status(500);
+                    result.put("status", 500);
+                    result.put("message", "backend record search fallback failed");
+                    ctx.json(result);
+                }
+                return;
+            }
+            logger.error("Error executing backend record search with the request body:\n " + gson.toJson(requestBody), ex);
+            ctx.status(500);
+            result.put("status", 500);
+            result.put("message", "backend record search failed");
+            ctx.json(result);
+        }
+    }
+
+    private boolean isBackendRecordSearchUnavailable(Throwable ex) {
+        Throwable current = ex;
+        while (current != null) {
+            if (current instanceof SQLGrammarException) {
+                String message = String.valueOf(current.getCause() == null ? current.getMessage() : current.getCause().getMessage());
+                if (message.contains("function uce_search_layer_fulltext") || message.contains("function uce_search_layer_named_entities")) {
+                    return true;
+                }
+            }
+            String message = String.valueOf(current.getMessage());
+            if (message.contains("function uce_search_layer_fulltext")
+                    || message.contains("function uce_search_layer_named_entities")
+                    || message.contains("invalid byte sequence for encoding \"UTF8\"")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private List<Map<String, Object>> fallbackDocumentRecords(Map<String, Object> requestBody)
+            throws DocumentAccessDeniedException, org.texttechnologylab.uce.common.exceptions.DatabaseOperationException {
+        String searchInput = stringFromRequest(requestBody, "searchInput", stringFromRequest(requestBody, "search", ""));
+        long corpusId = longFromJsonNumber(requestBody.get("corpusId"), -1);
+        int skip = (int) longFromJsonNumber(requestBody.get("skip"), 0);
+        int take = Math.max(0, Math.min((int) longFromJsonNumber(requestBody.get("take"), 10), 50));
+
+        if (take == 0) {
+            return List.of();
+        }
+        if (searchInput.isBlank()) {
+            return db.getDocumentsByCorpusId(corpusId, skip, take).stream()
+                    .map(this::documentRecord)
+                    .toList();
+        }
+
+        String needle = searchInput.toLowerCase(Locale.ROOT);
+        List<Map<String, Object>> records = new ArrayList<>();
+        int matched = 0;
+        int offset = 0;
+        int batchSize = 100;
+        int maxScanned = 5000;
+        while (records.size() < take && offset < maxScanned) {
+            List<org.texttechnologylab.uce.common.models.corpus.Document> batch =
+                    db.getDocumentsByCorpusId(corpusId, offset, batchSize);
+            if (batch.isEmpty()) {
+                break;
+            }
+            for (var document : batch) {
+                if (matchesDocumentFallback(document, needle)) {
+                    if (matched++ >= skip) {
+                        records.add(documentRecord(document));
+                        if (records.size() >= take) {
+                            break;
+                        }
+                    }
+                }
+            }
+            offset += batch.size();
+            if (batch.size() < batchSize) {
+                break;
+            }
+        }
+        return records;
+    }
+
+    private boolean matchesDocumentFallback(org.texttechnologylab.uce.common.models.corpus.Document document, String needle) {
+        return containsIgnoreCase(document.getDocumentTitle(), needle)
+                || containsIgnoreCase(document.getDocumentId(), needle)
+                || containsIgnoreCase(document.getLanguage(), needle)
+                || containsIgnoreCase(document.getFullTextCleaned(), needle)
+                || containsIgnoreCase(document.getFullText(), needle);
+    }
+
+    private boolean containsIgnoreCase(String value, String needle) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(needle);
+    }
+
+    private Map<String, Object> documentRecord(org.texttechnologylab.uce.common.models.corpus.Document document) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        Map<String, Object> fs = db.documentFs(document, true);
+        values.put("kind", "document");
+        values.put("key", Long.toString(document.getId()));
+        values.put("id", document.getId());
+        values.put("corpusId", document.getCorpusId());
+        values.put("documentId", document.getDocumentId());
+        values.put("title", document.getDocumentTitle());
+        values.put("language", document.getLanguage());
+        values.put("mimeType", document.getMimeType());
+        values.put("postProcessed", document.isPostProcessed());
+        values.put("fullText", document.getFullText());
+        values.put("fullTextCleaned", document.getFullTextCleaned());
+        values.put("snippet", document.getFullTextSnippet(85));
+        values.put("fs", fs);
+        values.put("cas", db.casJson(fs));
+        return values;
+    }
+
     public void layeredSearch(Context ctx) throws IOException {
         var model = new HashMap<String, Object>();
         var gson = new Gson();
@@ -425,6 +620,11 @@ public class SearchApi implements UceApi {
         } catch (NumberFormatException ex) {
             return fallback;
         }
+    }
+
+    private static String stringFromRequest(Map<String, Object> requestBody, String key, String fallback) {
+        Object value = requestBody.get(key);
+        return value == null ? fallback : value.toString();
     }
 
 }

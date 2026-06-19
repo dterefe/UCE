@@ -3,7 +3,6 @@ package org.texttechnologylab.uce.common.services;
 import java.util.Locale;
 
 public enum UceStorageBackend {
-    POSTGRES,
     DUA;
 
     public static final String ENV_NAME = "UCE_STORAGE_BACKEND";
@@ -15,11 +14,10 @@ public enum UceStorageBackend {
             raw = System.getenv(ENV_NAME);
         }
         if (raw == null || raw.isBlank()) {
-            return POSTGRES;
+            return DUA;
         }
         return switch (raw.trim().toLowerCase(Locale.ROOT)) {
             case "dua" -> DUA;
-            case "postgres", "postgresql", "pg" -> POSTGRES;
             default -> throw new IllegalArgumentException("Unsupported " + ENV_NAME + " value: " + raw);
         };
     }

@@ -100,15 +100,24 @@ public class HibernateConf {
         var config = new CommonConfig();
         // Hibernate expects the fully-qualified keys here (hibernate.*). If these are wrong,
         // Hibernate falls back and the logs show "using driver [null]".
-        settings.put("hibernate.connection.driver_class", config.getPostgresqlProperty("connection.driver_class"));
-        settings.put("hibernate.dialect", config.getPostgresqlProperty("dialect"));
-        settings.put("hibernate.connection.url",config.getPostgresqlProperty("hibernate.connection.url"));
-        settings.put("hibernate.connection.username", config.getPostgresqlProperty("hibernate.connection.username"));
-        settings.put("hibernate.connection.password", config.getPostgresqlProperty("hibernate.connection.password"));
-        settings.put("hibernate.current_session_context_class", config.getPostgresqlProperty("hibernate.current_session_context_class"));
-        settings.put("hibernate.show_sql", config.getPostgresqlProperty("hibernate.show_sql"));
-        settings.put("hibernate.format_sql", config.getPostgresqlProperty("hibernate.format_sql"));
-        settings.put("hibernate.hbm2ddl.auto", config.getPostgresqlProperty("hibernate.hbm2ddl.auto"));
+        putSetting(settings, "hibernate.connection.driver_class",
+                value(config, "connection.driver_class", "POSTGRESQL_CONNECTION_DRIVER_CLASS", "org.postgresql.Driver"));
+        putSetting(settings, "hibernate.dialect",
+                value(config, "dialect", "POSTGRESQL_DIALECT", "org.hibernate.dialect.PostgreSQLDialect"));
+        putSetting(settings, "hibernate.connection.url",
+                value(config, "hibernate.connection.url", "POSTGRESQL_HIBERNATE_CONNECTION_URL", null));
+        putSetting(settings, "hibernate.connection.username",
+                value(config, "hibernate.connection.username", "POSTGRESQL_HIBERNATE_CONNECTION_USERNAME", "POSTGRES_USER", null));
+        putSetting(settings, "hibernate.connection.password",
+                value(config, "hibernate.connection.password", "POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD", "POSTGRES_PASSWORD", null));
+        putSetting(settings, "hibernate.current_session_context_class",
+                value(config, "hibernate.current_session_context_class", "POSTGRESQL_HIBERNATE_CURRENT_SESSION_CONTEXT_CLASS", "thread"));
+        putSetting(settings, "hibernate.show_sql",
+                value(config, "hibernate.show_sql", "POSTGRESQL_HIBERNATE_SHOW_SQL", "false"));
+        putSetting(settings, "hibernate.format_sql",
+                value(config, "hibernate.format_sql", "POSTGRESQL_HIBERNATE_FORMAT_SQL", "true"));
+        putSetting(settings, "hibernate.hbm2ddl.auto",
+                value(config, "hibernate.hbm2ddl.auto", "POSTGRESQL_HIBERNATE_HBM2DDL_AUTO", "update"));
         
         // Keep pool implementation internal to the PostgreSQL adapter boundary.
         settings.put("hibernate.hikari.connectionTimeout", String.valueOf(config.getPostgresqlPoolConnectionTimeoutMs()));
@@ -124,5 +133,29 @@ public class HibernateConf {
         settings.put("hibernate.connection.provider_class", "com.zaxxer.hikari.hibernate.HikariConnectionProvider");
         
         return settings;
+    }
+
+    private static void putSetting(HashMap<Object, Object> settings, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            settings.put(key, value);
+        }
+    }
+
+    private static String value(CommonConfig config, String property, String envName, String defaultValue) {
+        return value(config, property, envName, null, defaultValue);
+    }
+
+    private static String value(CommonConfig config, String property, String envName, String aliasEnvName, String defaultValue) {
+        String value = config.getPostgresqlProperty(property);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(envName);
+        }
+        if ((value == null || value.isBlank()) && aliasEnvName != null) {
+            value = System.getenv(aliasEnvName);
+        }
+        if (value == null || value.isBlank()) {
+            value = defaultValue;
+        }
+        return value;
     }
 }

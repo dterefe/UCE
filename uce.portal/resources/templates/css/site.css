@@ -553,8 +553,8 @@ nav .selected-nav-btn.text::before {
 .corpus-selection-div {
     border-radius: 6px;
     height: 100%;
-    margin-left: 3rem;
-    margin-right: 3rem;
+    margin-left: 1.5rem;
+    margin-right: 1.5rem;
     align-self: center;
 }
 
@@ -569,6 +569,135 @@ nav .selected-nav-btn.text::before {
     padding-left: 15px;
     padding-right: 15px;
     background-color: var(--default);
+}
+
+.corpus-select-native {
+    position: absolute;
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px !important;
+    min-width: 1px !important;
+    max-width: 1px !important;
+}
+
+.corpus-badge-select {
+    position: relative;
+    height: 36px;
+    min-width: 260px;
+}
+
+.corpus-badge-trigger {
+    align-items: center;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    display: inline-flex;
+    height: 36px;
+    min-width: 260px;
+    padding: 0 8px 0 0 !important;
+    background: #ffffff !important;
+    cursor: pointer;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+.corpus-badge-trigger:hover,
+.corpus-badge-trigger:focus {
+    border-color: #9ca3af !important;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+    outline: none;
+}
+
+.corpus-badge-trigger:disabled {
+    cursor: wait;
+    opacity: 1;
+}
+
+.corpus-badge-select.is-open .corpus-badge-trigger {
+    border-color: #9ca3af !important;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+}
+
+.corpus-badge-select.has-error .corpus-badge-trigger {
+    border-color: #b91c1c !important;
+}
+
+.corpus-selector-badge {
+    align-items: stretch;
+    align-self: stretch;
+    display: inline-flex;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.corpus-selector-badge-type {
+    align-items: center;
+    align-self: stretch;
+    background-color: #f3f4f6;
+    border-radius: 5px 0 0 5px;
+    color: #374151;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 650;
+    padding: 0 10px;
+    white-space: nowrap;
+}
+
+.corpus-selector-badge-name {
+    align-items: center;
+    background-color: transparent;
+    color: #111827;
+    display: inline-flex;
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    height: 100%;
+    max-width: 260px;
+    overflow: hidden;
+    padding: 0 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.corpus-badge-option.is-selected {
+    background: #eef4e4;
+}
+
+.corpus-badge-chevron {
+    color: hsl(215.4 16.3% 46.9%);
+    font-size: 10px;
+    margin-left: auto;
+}
+
+.corpus-badge-menu {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    left: 0;
+    min-width: 320px;
+    padding: 6px;
+    position: absolute;
+    top: 42px;
+    z-index: 50;
+}
+
+.corpus-badge-option {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    height: 34px;
+    overflow: hidden;
+    padding: 0;
+    width: 100%;
+}
+
+.corpus-badge-option:hover {
+    background: #f3f4f6;
 }
 
 .open-corpus-inspector-btn {

@@ -1,0 +1,112 @@
+services:
+  duas:
+    image: ${DUAS_IMAGE:-docker.texttechnologylab.org/duas:0.1.0-SNAPSHOT}
+    container_name: uce-duas-isengart
+    restart: unless-stopped
+    ports:
+      - "${DUAS_PUBLISHED_PORT:-9714}:9714"
+    environment:
+      DUAS_BACKEND: lmdb
+      DUAS_STORE: /mnt/bioFID/TTLabExports/2026_06_12_dua_isengart/store
+      DUAS_PACKAGE: /mnt/bioFID/TTLabExports/2026_06_12_dua_isengart/package/biofid-2026-06-09.duapackage.gz
+      DUAS_MAP_SIZE_BYTES: ${DUAS_MAP_SIZE_BYTES:-549755813888}
+      DUAS_LOAD_PACKAGE: "false"
+    volumes:
+      - /mnt/bioFID/TTLabExports:/mnt/bioFID/TTLabExports:rw
+      - /home/stud_homes/s0424382/projects/ttlab/duui-alpha/DockerUnifiedUIMAInterface/duui-dua/dua-service/target/dua-service-0.1.0-SNAPSHOT-all.jar:/opt/duas/duas.jar:ro
+    networks:
+      - app_net
+
+  duas-import:
+    image: ${DUAS_IMAGE:-docker.texttechnologylab.org/duas:0.1.0-SNAPSHOT}
+    container_name: uce-duas-import-isengart
+    environment:
+      DUAS_BACKEND: lmdb
+    entrypoint:
+      - java
+    volumes:
+      - /mnt/bioFID/TTLabExports:/mnt/bioFID/TTLabExports:rw
+      - /home/stud_homes/s0424382/projects/ttlab/duui-alpha/DockerUnifiedUIMAInterface/duui-dua/dua-service/target/dua-service-0.1.0-SNAPSHOT-all.jar:/opt/duas/duas.jar:ro
+    command:
+      - --add-opens=java.base/java.nio=ALL-UNNAMED
+      - --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+      - -Xmx${DUA_IMPORT_HEAP:-96g}
+      - -Dduas.import.overwrite=false
+      - -Dduas.import.failFast=false
+      - -Dduas.import.durability=BULK_LOAD
+      - -Dduas.import.progressEvery=${DUA_IMPORT_PROGRESS_EVERY:-25}
+      - -Dduas.import.readerParallelism=${DUA_IMPORT_READER_PARALLELISM:-8}
+      - -Dduas.import.maxMaterializedBatches=${DUA_IMPORT_MAX_MATERIALIZED_BATCHES:-64}
+      - -Dduas.import.writeChunkSize=${DUA_IMPORT_WRITE_CHUNK_SIZE:-10000}
+      - -cp
+      - /opt/duas/duas.jar
+      - org.texttechnologylab.duui.dua.service.DUASRawXmiCorpusImport
+      - /mnt/bioFID/TTLabExports/2026_06_09_NERTools
+      - /mnt/bioFID/TTLabExports/2026_06_12_dua_isengart/store
+      - biofid-2026-06-09
+      - "${DUA_IMPORT_LIMIT:-0}"
+      - "${DUAS_MAP_SIZE_BYTES:-549755813888}"
+    networks:
+      - app_net
+
+  uce-web:
+    image: uce-web:local-fast
+    build:
+      context: .
+      dockerfile: ./uce.portal/uce.web/Dockerfile
+    container_name: uce-web-isengart-dua
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "4568:4568"
+    environment:
+      UCE_STORAGE_BACKEND: dua
+      UCE_DUA_REMOTE: "true"
+      UCE_DUA_TELEMETRY_BASE_URL: http://duas:9714
+      SPARQL_HOST: ${UCE_SPARQL_HOST:-http://anduin.hucompute.org:8098/}
+      SPARQL_ENDPOINT: ${SPARQL_ENDPOINT:-biofid-search/sparql}
+      RAG_WEBSERVER_BASE_URL: ${UCE_RAG_HOST:-http://anduin.hucompute.org:5678/}
+      UCE_CONFIG_PATH: /app/config/uceConfig.json
+    volumes:
+      - ./.dev/storage/UceConfig.json:/app/config/uceConfig.json:ro
+      - ./database:/app/database:ro
+      - ./uce.portal/resources/templates:/app/uce.portal/resources/templates:rw
+    command:
+      - java
+      - --add-opens=java.base/java.util=ALL-UNNAMED
+      - --add-opens=java.base/java.nio=ALL-UNNAMED
+      - --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+      - -cp
+      - /app/uce.portal/uce.common/target/classes:/app/uce.portal/uce.corpus-importer/target/classes:/app/uce.portal/uce.search/target/classes:/app/uce.portal/uce.analysis/target/classes:/app/uce.portal/uce.web/target/classes:/app/uce.portal/uce.web/target/dependency/*
+      - org.texttechnologylab.uce.web.App
+      - -cf
+      - /app/config/uceConfig.json
+    depends_on:
+      duas:
+        condition: service_started
+    networks:
+      - app_net
+
+  uce-minio-storage:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT:-19000}:9000"
+      - "${MINIO_CONSOLE_PORT:-19001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-uce-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-uce-minio-password}
+    volumes:
+      - ./data/minio:/data:rw
+    command:
+      - server
+      - /data
+      - --console-address
+      - ":9001"
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    name: uce-dua-isengart_app_net
