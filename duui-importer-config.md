@@ -31,7 +31,7 @@ postgresql.pool.max.lifetime.ms=1800000
 postgresql.pool.leak.detection.threshold.ms=60000
 ```
 
-The importer calls `PostgresqlDataInterface_Impl`, `AgeGraphService`, `S3StorageService`, `JenaSparqlService`, `LexiconService`, and `EmbeddingService` directly. If a service has finite capacity, it must block, queue, retry, or fail according to its own configuration and policy.
+The importer calls `PostgresqlDataInterface_Impl`, `S3StorageService`, `JenaSparqlService`, `LexiconService`, and `EmbeddingService` directly. If a service has finite capacity, it must block, queue, retry, or fail according to its own configuration and policy.
 
 ## Rule
 

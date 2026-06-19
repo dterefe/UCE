@@ -139,7 +139,6 @@ Concrete tests to add before full import:
 | Test Class | Scope |
 | --- | --- |
 | `PostgresqlServiceRobustnessTest` | connection pool blocking/retry, transient SQL retry, no session leaks |
-| `AgeGraphServiceDomainTest` | domain node merge, association merge, repeated import idempotence |
 | `JenaSparqlServiceRobustnessTest` | timeout/retry behavior, service unavailable behavior |
 | `DUUIImporterSampleImportTest` | two-document domain import end-to-end |
 | `DUUIImporterRepeatedImportTest` | repeated sample import and duplicate policy |
@@ -167,7 +166,6 @@ Use minimal annotations such as:
 ```java
 @UCEProfiled("extract-document")
 @UCEProfiled("persist-document")
-@UCEProfiled("persist-age-graph")
 @UCEProfiled("postprocess-document")
 ```
 
@@ -237,7 +235,6 @@ Use averages only as a rough baseline. The useful indicators are:
 | service wait time | detects contention before service execution | service-owned timing around pool/semaphore acquisition |
 | DB connection wait time | detects pool pressure | Hikari/JFR/JDBC timing |
 | DB transaction time | detects long transactions | service timing and PostgreSQL views |
-| AGE write time | graph materialization bottleneck | profiled `persist-age-graph` scope split into build/wait/execute |
 | SPARQL time | ontology/taxonomy bottleneck | profiled SPARQL calls split into wait/execute/parse |
 | error rate | robustness | UCEOperation/DUUIEvent errors per stage |
 | retry count | transient instability | service retry counters/logs |

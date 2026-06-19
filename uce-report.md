@@ -804,9 +804,7 @@ UCEImport
             identify-document
             extract-document-core
             extract-annotations
-            persist-document
-            persist-age-graph
-            postprocess-document
+            persist-document            postprocess-document
        corpus-finalize
   runtime-finalize
 ```

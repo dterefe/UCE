@@ -161,11 +161,6 @@ public class SpringConfig {
     }
 
     @Bean
-    public DomainGraphService domainGraphService(DataInterface databaseService) {
-        return new DuaDomainGraphService();
-    }
-
-    @Bean
     public LexiconService lexiconService(DataInterface databaseService) {
         return new LexiconService(databaseService);
     }

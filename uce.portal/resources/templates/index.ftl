@@ -16,7 +16,6 @@
         <#include "*/css/kwic.css">
         <#include "*/css/drawflow.css">
         <#include "*/css/analysis.css">
-        <#include "*/css/domain-playground.css">
         <#include "*/css/proModeSearchBar.css">
         <#include "*/css/duaviz.css">
 

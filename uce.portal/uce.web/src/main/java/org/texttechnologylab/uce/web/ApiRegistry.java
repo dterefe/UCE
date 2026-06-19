@@ -21,7 +21,6 @@ public class ApiRegistry {
                 Map.entry(MapApi.class, new MapApi(context, configuration)),
                 Map.entry(AuthenticationApi.class, new AuthenticationApi(context, configuration)),
                 Map.entry(McpApi.class, new McpApi(context, configuration)),
-                Map.entry(DomainApi.class, new DomainApi(context, configuration)),
                 Map.entry(DUAVizApi.class, new DUAVizApi(context, configuration))
         );
     }
