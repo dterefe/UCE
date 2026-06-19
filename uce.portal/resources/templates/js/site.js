@@ -409,30 +409,19 @@ function resolveDuaWsEndpoint() {
 }
 
 function uceWsQuery(path, action, payload) {
-    const requestId = 'uce-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
-    return new Promise((resolve, reject) => {
-        const ws = new WebSocket(uceWsUrl(path));
-        uceFrontendLog('info', 'websocket connecting', {path, action});
-        ws.onopen = () => {
-            uceFrontendLog('debug', 'websocket query', {requestId, action, payload: payload || {}});
-            ws.send(JSON.stringify({requestId, action, payload: payload || {}}));
-        };
-        ws.onerror = event => {
-            uceFrontendLog('error', 'websocket error', {path, action, event});
-            reject(new Error('UCE websocket connection failed.'));
-        };
-        ws.onclose = event => {
-            uceFrontendLog('debug', 'websocket closed', {path, code: event.code, reason: event.reason});
-        };
-        ws.onmessage = event => {
-            uceFrontendLog('trace', 'websocket message', event.data);
-            const message = JSON.parse(event.data || '{}');
-            if (!message.requestId) return;
-            ws.close();
-            if (Number(message.status) >= 400) reject(new Error(message.message || 'UCE websocket query failed.'));
-            else resolve(message);
-        };
+    if (!window.UCE || !window.UCE.RequestHandler) {
+        return Promise.reject(new Error('UCE RequestHandler is not installed.'));
+    }
+    const handleName = window.UCE.RequestHandler.HandleName.DUAVIZ_LEGACY_WS;
+    window.UCE.RequestHandler.registerHandle(handleName, {
+        kind: window.UCE.RequestHandler.HandleKind.WS_RPC,
+        url: uceWsUrl(path),
+        operations: {
+            [String(action || '')]: {action: String(action || ''), responseKind: 'json'}
+        }
     });
+    uceFrontendLog('info', 'websocket query', {path, action});
+    return window.UCE.RequestHandler.request(handleName, action, payload || {});
 }
 window.uceWsQuery = uceWsQuery;
 
@@ -623,17 +612,23 @@ const CorpusSelectorComponent = (() => {
             if (state.selectedId) refs().select.trigger('change');
             return;
         }
-        update({status: 'loading', open: false, items: [], selectedId: null, error: null});
-        try {
-            const typesResponse = await uceWsQuery('/ws/duaviz', 'types', {});
-            const schemaTypes = (typesResponse.schema && Array.isArray(typesResponse.schema.types)) ? typesResponse.schema.types : [];
-            const corpusType = schemaTypes.find(type => /(^|\.)Corpus$/.test(String(type.name || '')) || String(type.label || '') === 'Corpus');
-            if (!corpusType) throw new Error('Corpus type not found.');
-            const response = await uceWsQuery('/ws/duaviz', 'instancesByType', {typeCode: corpusType.typeCode, offset: 0, limit: 100});
-            const items = ((response.page && response.page.instances) || []).map(item => ({
-                fsId: item.fsId,
-                name: item.name || ('Corpus ' + item.fsId)
-            }));
+	        update({status: 'loading', open: false, items: [], selectedId: null, error: null});
+	        try {
+	            if (!window.DUAClient || typeof window.DUAClient.typesystem !== 'function') throw new Error('DUAClient is not installed.');
+	            const schemaTypes = await window.DUAClient.typesystem({});
+	            const corpusType = schemaTypes.find(type => /(^|\.)Corpus$/.test(String(type.name || '')) || String(type.label || '') === 'Corpus');
+	            if (!corpusType) throw new Error('Corpus type not found.');
+	            const page = await window.DUAClient.selectFs({
+	                type: corpusType.name || corpusType.typeName || '',
+	                typeCode: corpusType.typeCode,
+	                offset: 0,
+	                limit: 100,
+	                includeSubtypes: true
+	            });
+	            const items = ((page && page.instances) || []).map(item => ({
+	                fsId: item.fsId,
+	                name: item.name || ('Corpus ' + item.fsId)
+	            }));
             update({
                 status: 'ready',
                 items,
@@ -958,10 +953,10 @@ $(window).on('hashchange', function () {
         modalOpen = false;
     }
 
-    function startAuthPingOnUserAttention() {
-        const authEnabled = ${uceConfig.authIsEnabled()?c};
-        if (!authEnabled) return;
-        if (!window.fetch) return;
+	    function startAuthPingOnUserAttention() {
+	        const authEnabled = ${uceConfig.authIsEnabled()?c};
+	        if (!authEnabled) return;
+	        if (!window.UCEBackendClient || !window.UCEBackendClient.auth || typeof window.UCEBackendClient.auth.ping !== 'function') return;
 
         function triggerAuthPing() {
             if (modalOpen) return;
@@ -970,10 +965,10 @@ $(window).on('hashchange', function () {
             const now = Date.now();
             if (now - lastAuthPingAt < 5000) return;
             lastAuthPingAt = now;
-            window.fetch('/api/auth/ping', {cache: 'no-store'})
-                .then(function (res) {
-                    if (res && res.status === 204) {
-                        markHadSession();
+	            window.UCEBackendClient.auth.ping()
+	                .then(function (res) {
+	                    if (res && res.status === 204) {
+	                        markHadSession();
                     }
                 })
                 .catch(function () {});
@@ -1038,20 +1033,10 @@ $(window).on('hashchange', function () {
         cleanup();
     });
 
-    // Intercept fetch() centrally (covers code using fetch directly)
-    if (window.fetch) {
-        const originalFetch = window.fetch.bind(window);
-        window.fetch = function (input, init) {
-            return originalFetch(input, init).then(function (res) {
-                if (res && res.status === 401) {
-                    openModalOnce();
-                }
-                return res;
-            }).catch(function (err) {
-                throw err;
-            });
-        };
-    }
+	    window.UCE = window.UCE || {};
+	    window.UCE.onUnauthorizedResponse = function () {
+	        openModalOnce();
+	    };
 
     // Intercept jQuery ajax globally (covers $.ajax usage)
     $(document).ajaxError(function (event, xhr) {

@@ -611,8 +611,12 @@
     window.uceDuavizDefaultDummy = ${(duavizDefaultDummy!false)?c};
     window.uceDuavizHttpUrl = "${(duavizHttpUrl!'')?js_string}" || "http://127.0.0.1:17883";
     window.uceDuavizEndpoint = window.uceDuavizHttpUrl;
+    <#include "js/clients/models/duaModels.js">
+    <#include "js/clients/models/uceBackendModels.js">
+    <#include "js/clients/requestHandler.js">
+    <#include "js/clients/duaClient.js">
+    <#include "js/clients/uceBackendClient.js">
     <#include "js/site.js">
-    <#include "js/duaClient.js">
     <#include "js/language.js">
     <#include "js/search.js">
     <#include "js/layeredSearch.js">

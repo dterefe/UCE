@@ -471,96 +471,15 @@
     }
 
     function ensureSocket() {
-        if (socket && socket.readyState === WebSocket.OPEN) return Promise.resolve(socket);
-        if (socketReady) return socketReady;
-        socketReady = new Promise((resolve, reject) => {
-            socket = new WebSocket(socketUrl());
-            socket.onopen = () => resolve(socket);
-            socket.onerror = () => reject(new Error('DUAViz websocket connection failed.'));
-            socket.onclose = () => {
-                socketReady = null;
-                socket = null;
-                pendingRequests.forEach(request => request.reject(new Error('DUAViz websocket closed.')));
-                pendingRequests.clear();
-                pendingRequestQueue = [];
-            };
-            socket.onmessage = event => {
-                let message = {};
-                try {
-                    message = JSON.parse(event.data || '{}');
-                } catch (error) {
-                    if (pendingRequestQueue.length) {
-                        const requestId = pendingRequestQueue.shift();
-                        const request = pendingRequests.get(String(requestId));
-                        if (request) {
-                            pendingRequests.delete(String(requestId));
-                            request.reject(error);
-                        }
-                    }
-                    return;
-                }
-                if (isReadyFrame(message)) {
-                    return;
-                }
-                if (isErrorFrame(message)) {
-                    const requestId = requestIdFromMessage(message) || (pendingRequestQueue.length ? pendingRequestQueue.shift() : null);
-                    if (!requestId) return;
-                    const request = pendingRequests.get(String(requestId));
-                    if (!request) return;
-                    pendingRequests.delete(String(requestId));
-                    request.reject(new Error(message.message || message.error || 'DUAViz websocket query failed.'));
-                    return;
-                }
-                let requestId = requestIdFromMessage(message);
-                if (!requestId || !pendingRequests.has(requestId)) {
-                    requestId = pendingRequestQueue.length ? pendingRequestQueue.shift() : null;
-                }
-                if (!requestId) return;
-                const request = pendingRequests.get(String(requestId));
-                if (!request) return;
-                pendingRequests.delete(String(requestId));
-                request.resolve(message);
-            };
-        });
-        return socketReady;
+        return Promise.reject(new Error('DUAViz direct socket is disabled; use DUAClient.'));
     }
 
     async function wsQuery(action, payload) {
-        const httpMapped = ['types', 'telemetry', 'select', 'instancesByType', 'fs', 'span'].includes(String(action || ''));
+        if (window.DUAClient && typeof window.DUAClient.request === 'function') {
+            return await window.DUAClient.request(action, payload || {});
+        }
         try {
             return await duaHttpRequest(action, payload || {});
-        } catch (httpError) {
-            if (httpMapped && duavizHttpEndpoint()) throw httpError;
-        }
-        if (window.DUAClient && typeof window.DUAClient.request === 'function') {
-            try {
-                return await window.DUAClient.request(action, payload || {});
-            } catch (clientError) {
-            }
-        }
-        const requestId = nextDuavizRequestId();
-        const frame = buildDuavizFrame(action, payload, requestId);
-        try {
-            const ws = await ensureSocket();
-            return await new Promise((resolve, reject) => {
-                const timer = window.setTimeout(() => {
-                    pendingRequests.delete(requestId);
-                    pendingRequestQueue = pendingRequestQueue.filter(item => String(item) !== String(requestId));
-                    reject(new Error('DUAViz CAS request timed out.'));
-                }, 2500);
-                pendingRequests.set(requestId, {
-                    resolve: value => {
-                        window.clearTimeout(timer);
-                        resolve(value);
-                    },
-                    reject: error => {
-                        window.clearTimeout(timer);
-                        reject(error);
-                    }
-                });
-                pendingRequestQueue.push(String(requestId));
-                ws.send(JSON.stringify(frame));
-            });
         } catch (error) {
             if (['types', 'instancesByType', 'select', 'fs', 'span', 'graph'].includes(action)) {
                 const fallbackPayload = Object.assign({}, payload || {});
@@ -571,54 +490,10 @@
     }
 
     async function duaHttpRequest(action, payload) {
-        const op = String(action || payload && (payload.op || payload.action) || '').trim();
-        const request = Object.assign({}, payload || {});
-        let path = '';
-        const params = {};
-        if (op === 'types') {
-            path = '/types';
-        } else if (op === 'telemetry') {
-            path = '/stats';
-        } else if (op === 'select' || op === 'instancesByType') {
-            path = '/query/fsrefs';
-            const typeName = request.type || request.fallbackType || casTypeName(request.typeCode) || '';
-            if (!typeName) throw new Error('DUA HTTP select requires type or typeCode.');
-            params.type = typeName;
-            params.limit = request.limit || instancePageSize;
-            params.includeSubtypes = request.includeSubtypes !== false;
-        } else if (op === 'fs') {
-            path = '/fs';
-            params.fsRef = request.fsRef;
-        } else if (op === 'span') {
-            if (request.begin !== undefined || request.end !== undefined || request.predicate) {
-                path = '/span/query';
-                params.type = request.type || '';
-                params.predicate = request.predicate || 'overlapping';
-                params.sofaFsRef = request.sofaFsRef || 0;
-                params.begin = request.begin || 0;
-                params.end = request.end || Number.MAX_SAFE_INTEGER;
-                params.limit = request.limit || 100;
-                params.includeSubtypes = request.includeSubtypes !== false;
-            } else {
-                path = '/span';
-                params.fsRef = request.fsRef;
-            }
-        } else {
-            throw new Error('No DUA HTTP mapping for op ' + op);
+        if (!window.DUAClient || typeof window.DUAClient.httpCas !== 'function') {
+            throw new Error('DUAClient HTTP operations are not installed.');
         }
-        const query = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') query.set(key, String(value));
-        });
-        query.set('t', String(Date.now()));
-        const url = duavizHttpEndpoint() + path + '?' + query.toString();
-        const response = await fetch(url, {cache: 'no-store', mode: 'cors'});
-        if (!response.ok) throw new Error('DUA HTTP ' + response.status + ' for ' + path);
-        const result = await response.json();
-        if (op === 'types') return {op: 'types', types: result.types || []};
-        if (op === 'telemetry') return {op: 'telemetry', stats: result};
-        if (op === 'select' || op === 'instancesByType') return {op: op, fsRefs: result.fsRefs || []};
-        return Object.assign({op: op}, result);
+        return window.DUAClient.httpCas(action, payload || {});
     }
 
     async function cachedFsQuery(fsRef) {
@@ -705,36 +580,10 @@
     }
 
     function directCasQueryOnce(url, payload) {
-        return new Promise((resolve, reject) => {
-            const ws = new WebSocket(url);
-            const frame = buildDuavizFrame(null, payload);
-            const timer = window.setTimeout(() => {
-                try { ws.close(); } catch (error) {}
-                reject(new Error('CAS websocket timed out.'));
-            }, 2000);
-            ws.onopen = () => ws.send(JSON.stringify(frame));
-            ws.onerror = () => {
-                window.clearTimeout(timer);
-                reject(new Error('CAS websocket failed.'));
-            };
-            ws.onmessage = event => {
-                try {
-                    const message = JSON.parse(event.data || '{}');
-                    if (isReadyFrame(message)) return;
-                    window.clearTimeout(timer);
-                    try { ws.close(); } catch (error) {}
-                    if (isErrorFrame(message)) {
-                        reject(new Error(message.message || message.error || 'DUAViz CAS request failed.'));
-                        return;
-                    }
-                    resolve(message);
-                } catch (parseError) {
-                    window.clearTimeout(timer);
-                    try { ws.close(); } catch (error) {}
-                    reject(parseError);
-                }
-            };
-        });
+        if (!window.DUAClient || typeof window.DUAClient.directCas !== 'function') {
+            return Promise.reject(new Error('DUAClient direct CAS operation is not installed.'));
+        }
+        return window.DUAClient.directCas(url, payload || {}, {timeoutMs: 2000});
     }
 
     function directCasQuery(payload) {
@@ -766,12 +615,10 @@
     async function directCasTypes() {
         let lastError = null;
         try {
-            const response = await fetch(duavizHttpEndpoint() + '/duaviz/schema', {
-                cache: 'no-store',
-                headers: {'Accept': 'application/json'}
-            });
-            if (!response.ok) throw new Error('DUA schema HTTP ' + response.status);
-            const schema = await response.json();
+            if (!window.DUAClient || !window.DUAClient.schema || typeof window.DUAClient.schema.get !== 'function') {
+                throw new Error('DUAClient schema operation is not installed.');
+            }
+            const schema = await window.DUAClient.schema.get();
             const types = Array.isArray(schema && schema.types) ? schema.types : [];
             if (types.length) return {schema: {types: directCasTypeRows(types)}};
         } catch (error) {

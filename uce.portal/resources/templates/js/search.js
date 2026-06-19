@@ -9,7 +9,7 @@ const DUA_VIZ_WS_PATH = '/ws/duaviz';
 function isDuaSearchMode() {
     return window.uceDuaMode === true
         && /dua/i.test(String(window.uceBackendName || ''))
-        && (typeof window.uceWsQuery === 'function' || window.DUAClient);
+        && !!window.DUAClient;
 }
 
 function duavizSocketPath() {
@@ -20,7 +20,7 @@ async function duavizWsQuery(action, payload) {
     if (window.DUAClient && typeof window.DUAClient.request === 'function') {
         return window.DUAClient.request(action, payload || {});
     }
-    return window.uceWsQuery(duavizSocketPath(), action, payload || {});
+    throw new Error('DUAClient is not available.');
 }
 
 function duaShortLabel(value) {
