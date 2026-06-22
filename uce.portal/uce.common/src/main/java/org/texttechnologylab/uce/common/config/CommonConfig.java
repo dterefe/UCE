@@ -82,6 +82,7 @@ public class CommonConfig {
         }
 
         applyEnvironmentOverrides();
+        applyPostgresqlRuntimeAliases();
 
         // Now load in the GeoNames feature Codes.
         try {
@@ -145,6 +146,28 @@ public class CommonConfig {
             }
             case "postgresql.hibernate.connection.username" -> env.get("POSTGRES_USER");
             case "postgresql.hibernate.connection.password" -> env.get("POSTGRES_PASSWORD");
+            case "postgresql.connection.driver_class" -> env.get("POSTGRESQL_CONNECTION_DRIVER_CLASS");
+            case "postgresql.connection.username" -> {
+                var v = env.get("POSTGRESQL_HIBERNATE_CONNECTION_USERNAME");
+                if (v == null || v.isBlank()) {
+                    v = env.get("POSTGRES_USER");
+                }
+                yield v;
+            }
+            case "postgresql.connection.password" -> {
+                var v = env.get("POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD");
+                if (v == null || v.isBlank()) {
+                    v = env.get("POSTGRES_PASSWORD");
+                }
+                yield v;
+            }
+            case "embedding.webserver.base.url" -> {
+                var v = env.get("RAG_WEBSERVER_BASE_URL");
+                if (v == null || v.isBlank()) {
+                    v = env.get("UCE_RAG_HOST");
+                }
+                yield v;
+            }
             default -> null;
         };
     }
@@ -154,6 +177,43 @@ public class CommonConfig {
                 .replace('.', '_')
                 .replace('-', '_')
                 .toUpperCase();
+    }
+
+    private void applyPostgresqlRuntimeAliases() {
+        var env = System.getenv();
+        putIfPresent("postgresql.connection.driver_class", env.getOrDefault("POSTGRESQL_CONNECTION_DRIVER_CLASS", "org.postgresql.Driver"));
+        putIfPresent("postgresql.hibernate.connection.url", env.get("POSTGRESQL_HIBERNATE_CONNECTION_URL"));
+        putIfPresent("postgresql.hibernate.connection.username", firstNonBlank(
+                env.get("POSTGRESQL_HIBERNATE_CONNECTION_USERNAME"),
+                env.get("POSTGRES_USER"),
+                properties.getProperty("postgresql.connection.username")));
+        putIfPresent("postgresql.hibernate.connection.password", firstNonBlank(
+                env.get("POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD"),
+                env.get("POSTGRES_PASSWORD"),
+                properties.getProperty("postgresql.connection.password")));
+        putIfPresent("postgresql.connection.username", firstNonBlank(
+                env.get("POSTGRESQL_HIBERNATE_CONNECTION_USERNAME"),
+                env.get("POSTGRES_USER"),
+                properties.getProperty("postgresql.hibernate.connection.username")));
+        putIfPresent("postgresql.connection.password", firstNonBlank(
+                env.get("POSTGRESQL_HIBERNATE_CONNECTION_PASSWORD"),
+                env.get("POSTGRES_PASSWORD"),
+                properties.getProperty("postgresql.hibernate.connection.password")));
+    }
+
+    private void putIfPresent(String key, String value) {
+        if (value != null && !value.isBlank()) {
+            properties.setProperty(key, value);
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (var value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private InputStream resolveCommonConfigInputStream() throws Exception {

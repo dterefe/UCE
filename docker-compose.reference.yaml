@@ -1,0 +1,55 @@
+services:
+  duas-reference:
+    container_name: duas-reference
+    image: docker.texttechnologylab.org/duas:20260619-dua-reference
+    restart: unless-stopped
+    ports:
+      - "${DUA_REFERENCE_HTTP_PORT:-17975}:17875"
+      - "${DUA_REFERENCE_WS_PORT:-17976}:17876"
+    environment:
+      DUA_SERVICE_BIND_HOST: ${DUA_SERVICE_BIND_HOST:-0.0.0.0}
+      DUA_SERVICE_PUBLIC_HOST: ${DUA_SERVICE_PUBLIC_HOST:-127.0.0.1}
+      DUA_STORE_PATH: ${DUA_REFERENCE_STORE_CONTAINER_PATH:-/data/dua}
+      DUA_PORT: "17875"
+      SPARQL_HOST: ${SPARQL_HOST:-http://uce-fuseki-sparql:5430/}
+      SPARQL_ENDPOINT: ${SPARQL_ENDPOINT:-biofid-search/sparql}
+    volumes:
+      - "${DUA_REFERENCE_STORE_HOST_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/biofid-dua/2026_06_18_heideltime-reference}:${DUA_REFERENCE_STORE_CONTAINER_PATH:-/data/dua}:rw"
+      - "${DUA_SERVICE_SOURCE_HOST_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/2026_06_18_heideltime}:${DUA_SERVICE_SOURCE_CONTAINER_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/2026_06_18_heideltime}:ro"
+    command:
+      - java
+      - --enable-preview
+      - --enable-native-access=ALL-UNNAMED
+      - --add-opens
+      - java.base/java.nio=ALL-UNNAMED
+      - --add-exports
+      - java.base/sun.nio.ch=ALL-UNNAMED
+      - -cp
+      - /opt/dua/lib/*
+      - org.texttechnologylab.duui.dua.service.DUAServiceLauncher
+      - ${DUA_REFERENCE_STORE_CONTAINER_PATH:-/data/dua}
+      - "17875"
+    networks:
+      - app_net
+
+  uce-dua-web-reference:
+    container_name: uce-dua-web-reference
+    image: localhost/uce-dua-web:20260619-dua-reference
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: "4579"
+      UCE_DUA_WS_URL: ${UCE_DUA_WEB_REFERENCE_WS_URL:-ws://duas-reference:17876}
+    ports:
+      - "${UCE_DUA_WEB_REFERENCE_PORT:-4589}:4579"
+    depends_on:
+      duas-reference:
+        condition: service_started
+        required: false
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    name: uce_app_net
+    external: true

@@ -8,7 +8,7 @@ class InstructLLM:
 
     def __init__(self, model_name, url):
         if model_name.startswith("openai/"):
-            self.model = ChatGPT(model_name.replace("openai/", ""))
+            self.model = ChatGPT(model_name.replace("openai/", ""), url)
         elif model_name.startswith("ollama/"):
             self.model = OllamaModel(model_name.replace("ollama/", ""), url)
         else:
@@ -31,14 +31,18 @@ class InstructLLM:
 
 class ChatGPT:
 
-    def __init__(self, model):
+    def __init__(self, model, base_url=None):
         self.model = model
+        self.base_url = base_url.rstrip("/") if base_url else None
 
     def complete(self, messages, api_key, tools=None):
         if tools is not None:
             print("WARNING, tools are not supported with this model type, ignoring tools parameter.")
 
-        client = OpenAI(api_key=api_key)
+        client_kwargs = {"api_key": api_key}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        client = OpenAI(**client_kwargs)
         response = client.chat.completions.create(
             model=self.model,
             messages=messages

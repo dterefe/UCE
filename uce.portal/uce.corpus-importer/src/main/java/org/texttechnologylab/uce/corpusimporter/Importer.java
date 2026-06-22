@@ -503,8 +503,11 @@ public class Importer {
      */
     public Document XMIToDocument(InputStream inputStream, Corpus corpus, String filePath, String documentId) {
         try {
+            var corpusConfig = gson.fromJson(corpus.getCorpusJsonConfig(), CorpusConfig.class);
+            var casBytes = inputStream.readAllBytes();
+            uploadRawXmiBeforeDeserialization(corpusConfig, corpus, filePath, documentId, casBytes);
             var jCas = JCasFactory.createJCas();
-            CasIOUtils.load(inputStream, null, jCas.getCas(), CasLoadMode.LENIENT);
+            CasIOUtils.load(new ByteArrayInputStream(casBytes), null, jCas.getCas(), CasLoadMode.LENIENT);
 
             // NOTE we need to specify the view here, the serialized data is the full CAS even when starting with a selected view
             if (casView != null) {
@@ -523,6 +526,8 @@ public class Importer {
      */
     public Document XMIToDocument(String filename, Corpus corpus) {
         try {
+            var corpusConfig = gson.fromJson(corpus.getCorpusJsonConfig(), CorpusConfig.class);
+            uploadRawXmiBeforeDeserialization(corpusConfig, corpus, filename, null);
             var jCas = JCasFactory.createJCas();
             try (InputStream inputStream = openInputStreamBasedOnExtension(filename)) {
                 if (inputStream == null) {
@@ -680,17 +685,6 @@ public class Importer {
 
             setMetadataTitleInfo(document, jCas, corpusConfig);
 
-            if (corpusConfig.getOther().isEnableS3Storage()) {
-                var fileExtension = StringUtils.getFileExtension(filePath);
-                var contentType = StringUtils.getContentTypeByExtension(fileExtension);
-
-                var minioObjectName = this.s3StorageService.buildCasXmiObjectName(corpus.getId(), document.getDocumentId());
-                ExceptionUtils.tryCatchLog(
-                        () -> this.s3StorageService.uploadCasInputStream(
-                                Objects.requireNonNull(openInputStreamBasedOnExtension(filePath)), minioObjectName, contentType, new HashMap<>()),
-                        (ex) -> logImportWarn("Was not able to upload XMI to S3 Storage!", ex, filePath));
-            }
-
             if (corpusConfig.getAnnotations().isUceMetadata())
                 ExceptionUtils.tryCatchLog(
                         () -> setUceMetadata(document, jCas, corpus.getId()),
@@ -787,6 +781,39 @@ public class Importer {
         } finally {
             logger.info("Finished with importing that CAS.\n\n\n");
         }
+    }
+
+    private void uploadRawXmiBeforeDeserialization(CorpusConfig corpusConfig, Corpus corpus, String filePath, String documentId) {
+        if (!corpusConfig.getOther().isEnableS3Storage()) {
+            return;
+        }
+        ExceptionUtils.tryCatchLog(
+                () -> {
+                    try (InputStream inputStream = Objects.requireNonNull(openInputStreamBasedOnExtension(filePath))) {
+                        uploadRawXmiBeforeDeserialization(corpusConfig, corpus, filePath, documentId, inputStream.readAllBytes());
+                    }
+                },
+                (ex) -> logImportWarn("Was not able to upload raw XMI to S3 Storage before deserialization!", ex, filePath));
+    }
+
+    private void uploadRawXmiBeforeDeserialization(CorpusConfig corpusConfig, Corpus corpus, String filePath, String documentId, byte[] rawXmi) {
+        if (!corpusConfig.getOther().isEnableS3Storage()) {
+            return;
+        }
+        var fileExtension = StringUtils.getFileExtension(filePath);
+        var contentType = StringUtils.getContentTypeByExtension(fileExtension);
+        var minioObjectName = rawCasXmiObjectName(corpus.getId(), documentId, filePath);
+        ExceptionUtils.tryCatchLog(
+                () -> this.s3StorageService.uploadCasInputStream(
+                        new ByteArrayInputStream(rawXmi), minioObjectName, contentType, new HashMap<>()),
+                (ex) -> logImportWarn("Was not able to upload raw XMI to S3 Storage before deserialization!", ex, filePath));
+    }
+
+    private static String rawCasXmiObjectName(long corpusId, String documentId, String filePath) {
+        var stableName = documentId != null && !documentId.isBlank()
+                ? documentId
+                : Paths.get(filePath).getFileName().toString();
+        return corpusId + "_raw_" + stableName.replaceAll("[^A-Za-z0-9._-]+", "_");
     }
 
     private void setPermissions(Document document, JCas jCas) {

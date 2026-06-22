@@ -584,12 +584,28 @@ public class RAGService {
                 config.getPostgresqlProperty("hibernate.connection.username"),
                 config.getPostgresqlProperty("hibernate.connection.password"));
 
-        // After we have the connection, we set up some vector extension requirements.
-        var setupStmt = connection.createStatement();
-        setupStmt.executeUpdate("CREATE EXTENSION IF NOT EXISTS vector");
+        try (var setupStmt = connection.createStatement()) {
+            setupStmt.executeUpdate("CREATE EXTENSION IF NOT EXISTS vector");
+        } catch (SQLException ignored) {
+            // The deployed BioFID database already has pgvector installed; runtime users may not own CREATE EXTENSION.
+        }
         PGvector.addVectorType(connection);
 
         return connection;
+    }
+
+    private Connection requireVectorDbConnection() throws SQLException {
+        if (this.config == null) {
+            this.config = new CommonConfig();
+        }
+        if (this.vectorDbConnection == null || this.vectorDbConnection.isClosed()) {
+            try {
+                this.vectorDbConnection = setupVectorDbConnection();
+            } catch (ClassNotFoundException ex) {
+                throw new SQLException("Failed to load PostgreSQL JDBC driver.", ex);
+            }
+        }
+        return this.vectorDbConnection;
     }
 
 }

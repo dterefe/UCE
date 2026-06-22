@@ -86,7 +86,7 @@ public class EmbeddingService {
                 .replace(":vector", "?")
                 .replace(":limit", "?");
 
-        var statement = vectorDbConnection.prepareStatement(sql);
+        var statement = requireVectorDbConnection().prepareStatement(sql);
         int idx = 1;
         statement.setString(idx++, accessManager.current().principal());
         statement.setInt(idx++, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ.ordinal());
@@ -101,7 +101,7 @@ public class EmbeddingService {
         //         + "WHERE d.corpusid = ? "
         //         + "ORDER BY e.tsne3d <-> ? "
         //         + "LIMIT ?";
-        // var statement = vectorDbConnection.prepareStatement(query);
+        // var statement = requireVectorDbConnection().prepareStatement(query);
         // statement.setObject(1, corpusId);
         // statement.setObject(2, new PGvector(tsne3d));
         // statement.setInt(3, range);
@@ -134,7 +134,7 @@ public class EmbeddingService {
         queryBuilder.append(placeholders).append(")");
 
         var query = queryBuilder.toString();
-        var statement = vectorDbConnection.prepareStatement(query);
+        var statement = requireVectorDbConnection().prepareStatement(query);
 
         // Set the document IDs in the prepared statement
         for (int i = 0; i < documentIds.size(); i++) {
@@ -156,12 +156,28 @@ public class EmbeddingService {
                 config.getPostgresqlProperty("hibernate.connection.username"),
                 config.getPostgresqlProperty("hibernate.connection.password"));
 
-        // After we have the connection, we set up some vector extension requirements.
-        var setupStmt = connection.createStatement();
-        setupStmt.executeUpdate("CREATE EXTENSION IF NOT EXISTS vector");
+        try (var setupStmt = connection.createStatement()) {
+            setupStmt.executeUpdate("CREATE EXTENSION IF NOT EXISTS vector");
+        } catch (SQLException ignored) {
+            // The deployed BioFID database already has pgvector installed; runtime users may not own CREATE EXTENSION.
+        }
         PGvector.addVectorType(connection);
 
         return connection;
+    }
+
+    private Connection requireVectorDbConnection() throws SQLException {
+        if (this.config == null) {
+            this.config = new CommonConfig();
+        }
+        if (this.vectorDbConnection == null || this.vectorDbConnection.isClosed()) {
+            try {
+                this.vectorDbConnection = setupVectorDbConnection();
+            } catch (ClassNotFoundException ex) {
+                throw new SQLException("Failed to load PostgreSQL JDBC driver.", ex);
+            }
+        }
+        return this.vectorDbConnection;
     }
 
     /**
@@ -261,7 +277,7 @@ public class EmbeddingService {
      *
      */
     private void executeUpdate(String query, Object... params) throws SQLException {
-        var statement = vectorDbConnection.prepareStatement(query);
+        var statement = requireVectorDbConnection().prepareStatement(query);
         for (int i = 0; i < params.length; i++) {
             if (params[i] instanceof PGvector) {
                 statement.setObject(i + 1, params[i]);
@@ -354,7 +370,7 @@ public class EmbeddingService {
         accessManager.checkAccess(documentId, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ);
 
         String query = "SELECT COUNT(*) FROM documentsentenceembeddings WHERE document_id = ?";
-        try (var statement = vectorDbConnection.prepareStatement(query)) {
+        try (var statement = requireVectorDbConnection().prepareStatement(query)) {
             statement.setLong(1, documentId);
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
@@ -395,7 +411,7 @@ public class EmbeddingService {
         accessManager.checkAccess(documentId, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ);
 
         String query = "SELECT COUNT(*) FROM documentembeddings WHERE document_id = ?";
-        try (var statement = vectorDbConnection.prepareStatement(query)) {
+        try (var statement = requireVectorDbConnection().prepareStatement(query)) {
             statement.setLong(1, documentId);
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
@@ -451,7 +467,7 @@ public class EmbeddingService {
         accessManager.checkAccess(documentId, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ);
 
         String query = "SELECT COUNT(*) FROM documentchunkembeddings WHERE document_id = ?";
-        try (var statement = vectorDbConnection.prepareStatement(query)) {
+        try (var statement = requireVectorDbConnection().prepareStatement(query)) {
             statement.setLong(1, documentId);
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
@@ -515,7 +531,7 @@ public class EmbeddingService {
         accessManager.checkAccess(documentId, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ);
 
         var query = "SELECT * FROM documentsentenceembeddings WHERE document_id = ?";
-        var statement = vectorDbConnection.prepareStatement(query);
+        var statement = requireVectorDbConnection().prepareStatement(query);
         statement.setLong(1, documentId);
         var resultSet = statement.executeQuery();
         return buildDocumentSentenceEmbeddingsFromResultSet(resultSet);
@@ -584,7 +600,7 @@ public class EmbeddingService {
         accessManager.checkAccess(documentId, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ);
 
         var query = "SELECT * FROM documentchunkembeddings WHERE document_id = ?";
-        var statement = vectorDbConnection.prepareStatement(query);
+        var statement = requireVectorDbConnection().prepareStatement(query);
         statement.setLong(1, documentId);
         var resultSet = statement.executeQuery();
         return buildDocumentChunkEmbeddingsFromResultSet(resultSet);
@@ -618,7 +634,7 @@ public class EmbeddingService {
         accessManager.checkAccess(documentId, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ);
 
         var query = "SELECT * FROM documentembeddings WHERE document_id = ?";
-        var statement = vectorDbConnection.prepareStatement(query);
+        var statement = requireVectorDbConnection().prepareStatement(query);
         statement.setLong(1, documentId);
         var resultSet = statement.executeQuery();
         // We return the first found docucment embedding as there should be only one.
@@ -724,7 +740,7 @@ public class EmbeddingService {
 
         sql.append(" ORDER BY e.embedding <-> ? LIMIT ? ");
 
-        var statement = vectorDbConnection.prepareStatement(sql.toString());
+        var statement = requireVectorDbConnection().prepareStatement(sql.toString());
         int paramIndex = 1;
         statement.setString(paramIndex++, accessManager.current().principal());
         statement.setInt(paramIndex++, DocumentPermission.DOCUMENT_PERMISSION_LEVEL.READ.ordinal());
@@ -752,7 +768,7 @@ public class EmbeddingService {
         //             + "ORDER BY e.embedding <-> ? "
         //             + "LIMIT ?";
         // }
-        // var statement = vectorDbConnection.prepareStatement(query);
+        // var statement = requireVectorDbConnection().prepareStatement(query);
         // if (corpusId == -1) {
         //     statement.setObject(1, new PGvector(getEmbeddingForText(text)));
         //     statement.setInt(2, range);

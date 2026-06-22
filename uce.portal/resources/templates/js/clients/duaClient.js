@@ -18,6 +18,13 @@
         if (!url) url = '/ws/duaviz';
         if (url.startsWith('http://') || url.startsWith('https://')) {
             const parsed = new URL(url);
+            if (global.location && parsed.host === global.location.host) {
+                parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+                parsed.pathname = '/ws/duaviz';
+                parsed.search = '';
+                parsed.hash = '';
+                return parsed.toString().replace(/\/+$/, '');
+            }
             parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
             parsed.port = String(Number(parsed.port || (parsed.protocol === 'wss:' ? 443 : 80)) + 1);
             parsed.pathname = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname : '/';
@@ -30,16 +37,16 @@
         return url.replace(/\/+$/, '');
     }
 
-	    function configuredEndpoint() {
-	        return normalizeWsUrl(
-                global.uceDuaWsUrl ||
-                global.uceDuavizWsUrl ||
-                global.uceDuavizHttpUrl ||
-                global.uceDuavizEndpoint ||
-                global.uceDuavizWsPath ||
-                '/ws/duaviz'
-	        );
-	    }
+    function configuredEndpoint() {
+        return normalizeWsUrl(
+            global.uceDuaWsUrl ||
+            global.uceDuavizWsUrl ||
+            global.uceDuavizWsPath ||
+            global.uceDuavizHttpUrl ||
+            global.uceDuavizEndpoint ||
+            '/ws/duaviz'
+        );
+    }
 
 	    function configuredHttpEndpoint() {
 	        return String(
@@ -53,6 +60,13 @@
         return Array.isArray(value) ? value : [];
     }
 
+    function duaData(message) {
+        if (message && typeof message === 'object' && message.result && typeof message.result === 'object') return message.result;
+        if (message && typeof message === 'object' && message.payload && typeof message.payload === 'object') return message.payload;
+        if (message && typeof message === 'object' && message.data && typeof message.data === 'object') return message.data;
+        return message || {};
+    }
+
     function shortName(value) {
         const text = String(value || '');
         const index = Math.max(text.lastIndexOf('.'), text.lastIndexOf(':'), text.lastIndexOf('/'), text.lastIndexOf('#'));
@@ -60,12 +74,11 @@
     }
 
     function typeRows(message) {
-        const source = message && (
-                message.types ||
-                message.schema && message.schema.types ||
-                message.selection && message.selection.types ||
-                message.payload && message.payload.types ||
-                message.data && message.data.types
+        const data = duaData(message);
+        const source = data && (
+                data.types ||
+                data.schema && data.schema.types ||
+                data.selection && data.selection.types
         );
         return asArray(source).map(entry => {
             if (typeof entry === 'string') {
@@ -86,6 +99,7 @@
     }
 
     function pagePayload(message) {
+        message = duaData(message);
         if (!message || typeof message !== 'object') return {};
         if (message.page && typeof message.page === 'object') return message.page;
         if (message.selection && typeof message.selection === 'object' && !Array.isArray(message.selection)) return message.selection.page || message.selection;
@@ -133,7 +147,8 @@
     }
 
     function featureStructure(message) {
-        const source = message && message.fs && typeof message.fs === 'object' ? message.fs : message;
+        const data = duaData(message);
+        const source = data && data.fs && typeof data.fs === 'object' ? data.fs : data;
         if (!source || typeof source !== 'object') return source;
         const fsRef = Number(source.fsId || source.fsRef || source._id || 0);
         return Object.assign({}, source, {
@@ -148,6 +163,7 @@
     }
 
     function documentPayload(message) {
+        message = duaData(message);
         const document = Object.assign({}, message && message.document || {});
         const features = document.features || {};
         const text = String(message && message.text || document.text || document.sofaString || features.sofaString || features.text || '');

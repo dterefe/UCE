@@ -487,6 +487,66 @@ const CorpusSelectorComponent = (() => {
         select.trigger('change');
     }
 
+    function scopeAttrs(item) {
+        return Object.assign({
+            id: String(item && item.fsId !== undefined ? item.fsId : 0),
+            hasbiofid: 'true',
+            hasembeddings: 'true',
+            hasragbot: 'true',
+            hastaxonannotations: 'true',
+            hastimeannotations: 'true',
+            hasgeonameannotations: 'true',
+            sparqlalive: 'true',
+            hassr: 'true'
+        }, item && item.attrs || {});
+    }
+
+    function fullCorpusItem() {
+        return {
+            fsId: 0,
+            name: 'Full corpus',
+            typeLabel: 'Corpus scope',
+            attrs: scopeAttrs({fsId: 0})
+        };
+    }
+
+    const DUA_CORPUS_TYPE_NAMES = new Set([
+        'org.texttechnologylab.annotations.dua.Corpus',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidCollection',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidJournal',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidVolume',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidIssue'
+    ]);
+
+    const DUA_DOCUMENT_TYPE_NAMES = new Set([
+        'org.texttechnologylab.annotations.dua.Document',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidArticle',
+        'uima.tcas.DocumentAnnotation'
+    ]);
+
+    function fullTypeName(type) {
+        return String(type && (type.name || type.typeName || type.type || '') || '');
+    }
+
+    function typeNameIn(type, names) {
+        return names.has(fullTypeName(type));
+    }
+
+    function documentScopeType(schemaTypes) {
+        return schemaTypes.find(type => typeNameIn(type, DUA_CORPUS_TYPE_NAMES))
+            || schemaTypes.find(type => typeNameIn(type, DUA_DOCUMENT_TYPE_NAMES));
+    }
+
+    function scopeTypeLabel(type) {
+        if (typeNameIn(type, DUA_CORPUS_TYPE_NAMES)) return 'Corpus';
+        if (typeNameIn(type, DUA_DOCUMENT_TYPE_NAMES)) return 'Document';
+        return 'Corpus scope';
+    }
+
+    function typeLabelFor(item) {
+        return item && item.typeLabel ? item.typeLabel : 'Corpus scope';
+    }
+
     function snapshot() {
         const selected = state.items.find(item => String(item.fsId) === String(state.selectedId));
         const status = state.status;
@@ -500,10 +560,10 @@ const CorpusSelectorComponent = (() => {
             hasSelection: !!selected,
             hasError: status === 'error',
             disabled: status === 'loading' || status === 'error',
-            typeLabel: 'Corpus',
+            typeLabel: selected ? typeLabelFor(selected) : 'Corpus scope',
             nameLabel: status === 'loading'
-                ? 'Loading corpus'
-                : (status === 'error' ? 'Corpus unavailable' : (selected ? selected.name : 'Select corpus'))
+                ? 'Loading scopes'
+                : (status === 'error' ? 'Scope unavailable' : (selected ? selected.name : 'Select scope'))
         };
     }
 
@@ -536,17 +596,7 @@ const CorpusSelectorComponent = (() => {
     function optionFor(item) {
         const option = document.createElement('option');
         option.value = String(item.fsId);
-        const attrs = Object.assign({
-            id: String(item.fsId),
-            hasbiofid: 'false',
-            hasembeddings: 'false',
-            hasragbot: 'false',
-            hastaxonannotations: 'false',
-            hastimeannotations: 'false',
-            hasgeonameannotations: 'false',
-            sparqlalive: 'false',
-            hassr: 'false'
-        }, item.attrs || {});
+        const attrs = scopeAttrs(item);
         Object.entries(attrs).forEach(([key, value]) => option.setAttribute('data-' + key, String(value)));
         option.textContent = item.name;
         return option;
@@ -554,9 +604,10 @@ const CorpusSelectorComponent = (() => {
 
     function optionButtonFor(item, selectedId) {
         const selected = String(item.fsId) === String(selectedId);
-        return '<button class="corpus-badge-option ' + (selected ? 'is-selected' : '') + '" role="option" aria-selected="' + (selected ? 'true' : 'false') + '" type="button" data-corpus-id="' + escapeHtml(String(item.fsId)) + '" data-artifact-subtype="Corpus">' +
+        const typeLabel = typeLabelFor(item);
+        return '<button class="corpus-badge-option ' + (selected ? 'is-selected' : '') + '" role="option" aria-selected="' + (selected ? 'true' : 'false') + '" type="button" data-corpus-id="' + escapeHtml(String(item.fsId)) + '" data-artifact-subtype="' + escapeHtml(typeLabel) + '">' +
             '<span class="corpus-selector-badge">' +
-                '<span class="corpus-selector-badge-type">Corpus</span>' +
+                '<span class="corpus-selector-badge-type">' + escapeHtml(typeLabel) + '</span>' +
                 '<span class="corpus-selector-badge-name">' + escapeHtml(item.name) + '</span>' +
             '</span>' +
         '</button>';
@@ -614,21 +665,31 @@ const CorpusSelectorComponent = (() => {
         }
 	        update({status: 'loading', open: false, items: [], selectedId: null, error: null});
 	        try {
-	            if (!window.DUAClient || typeof window.DUAClient.typesystem !== 'function') throw new Error('DUAClient is not installed.');
-	            const schemaTypes = await window.DUAClient.typesystem({});
-	            const corpusType = schemaTypes.find(type => /(^|\.)Corpus$/.test(String(type.name || '')) || String(type.label || '') === 'Corpus');
-	            if (!corpusType) throw new Error('Corpus type not found.');
-	            const page = await window.DUAClient.selectFs({
-	                type: corpusType.name || corpusType.typeName || '',
-	                typeCode: corpusType.typeCode,
-	                offset: 0,
-	                limit: 100,
-	                includeSubtypes: true
-	            });
-	            const items = ((page && page.instances) || []).map(item => ({
-	                fsId: item.fsId,
-	                name: item.name || ('Corpus ' + item.fsId)
-	            }));
+            if (!window.DUAClient || typeof window.DUAClient.typesystem !== 'function') throw new Error('DUAClient is not installed.');
+            const schemaTypes = await window.DUAClient.typesystem({});
+            const scopeType = documentScopeType(schemaTypes);
+            let items = [fullCorpusItem()];
+            if (scopeType && typeof window.DUAClient.selectFs === 'function') {
+                const page = await window.DUAClient.selectFs({
+                    type: scopeType.name || scopeType.typeName || '',
+                    typeCode: scopeType.typeCode,
+                    offset: 0,
+                    limit: 100,
+                    includeSubtypes: true
+                });
+                const typeLabel = scopeTypeLabel(scopeType);
+                const scopes = ((page && page.instances) || []).map(item => ({
+                    fsId: item.fsId || item.fsRef,
+                    name: item.name || item.label || item.title || (typeLabel + ' ' + (item.fsId || item.fsRef)),
+                    typeLabel,
+                    attrs: scopeAttrs({fsId: item.fsId || item.fsRef})
+                })).filter(item => item.fsId);
+                if (typeNameIn(scopeType, DUA_CORPUS_TYPE_NAMES) && scopes.length) {
+                    items = scopes;
+                } else if (scopes.length) {
+                    items = items.concat(scopes);
+                }
+            }
             update({
                 status: 'ready',
                 items,
@@ -637,10 +698,12 @@ const CorpusSelectorComponent = (() => {
                 open: false
             });
             if (state.selectedId) refs().select.trigger('change');
-            uceFrontendLog('info', 'loaded corpus selector from Corpus websocket', {count: items.length});
+            uceFrontendLog('info', 'loaded DUA corpus scope selector', {count: items.length});
         } catch (error) {
-            update({status: 'error', error, open: false, items: [], selectedId: null});
-            uceFrontendLog('error', 'failed loading corpus selector from Corpus websocket', {message: error.message});
+            const items = [fullCorpusItem()];
+            update({status: 'ready', error: null, open: false, items, selectedId: String(items[0].fsId)});
+            refs().select.trigger('change');
+            uceFrontendLog('warn', 'DUA corpus scope selector fell back to Full corpus', {message: error.message});
         }
     }
 

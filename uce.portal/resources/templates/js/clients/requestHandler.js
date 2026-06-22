@@ -35,7 +35,30 @@
     const memoryCache = new Map();
     const inflight = new Map();
     const listeners = new Map();
+    const payloadEntries = [];
     let sequence = 0;
+
+    function payloadShape(value, depth) {
+        depth = depth || 0;
+        if (depth > 3) return typeof value;
+        if (Array.isArray(value)) return {kind: 'array', length: value.length, item: value.length ? payloadShape(value[0], depth + 1) : 'empty'};
+        if (!value || typeof value !== 'object') return typeof value;
+        const entries = Object.entries(value);
+        return {
+            kind: 'object',
+            keys: Object.keys(value).slice(0, 24),
+            fields: Object.fromEntries(entries.slice(0, 12).map(([key, entry]) => [key, payloadShape(entry, depth + 1)]))
+        };
+    }
+
+    function tracePayload(entry) {
+        payloadEntries.unshift(Object.assign({
+            id: nextRequestId('payload'),
+            at: new Date().toISOString(),
+            shape: payloadShape(entry.response)
+        }, entry));
+        if (payloadEntries.length > 120) payloadEntries.splice(120);
+    }
 
     function nextRequestId(prefix) {
         sequence += 1;
@@ -116,6 +139,13 @@
         const host = global.location && global.location.host ? global.location.host : '127.0.0.1';
         if (url.startsWith('http://') || url.startsWith('https://')) {
             const parsed = new URL(url);
+            if (global.location && parsed.host === global.location.host) {
+                parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+                parsed.pathname = '/ws/duaviz';
+                parsed.search = '';
+                parsed.hash = '';
+                return parsed.toString().replace(/\/+$/, '');
+            }
             parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
             parsed.port = String(Number(parsed.port || (parsed.protocol === 'wss:' ? 443 : 80)) + 1);
             parsed.pathname = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname : '/';
@@ -314,13 +344,16 @@
         if ((policy === CachePolicy.DEDUPE_INFLIGHT || policy === CachePolicy.MEMORY) && inflight.has(key)) return inflight.get(key);
         const promise = (async () => {
             emit('request:start', {handleName, operation, payload});
+            tracePayload({status: 'start', handleName, operation, request: payload || {}});
             const raw = handle.kind === HandleKind.WS_RPC || handle.kind === HandleKind.WS_STREAM
                     ? await wsRpc(handle, operation, payload || {}, options || {}, opConfig)
                     : await httpRequest(handle, operation, payload || {}, options || {}, opConfig);
             const normalized = normalizeResult(raw && raw.requestId || '', operation, raw);
+            tracePayload({status: 'ok', handleName, operation, request: payload || {}, response: raw});
             emit('request:success', {handleName, operation, response: normalized});
             return options && options.normalized ? normalized : raw;
         })().catch(error => {
+            tracePayload({status: 'error', handleName, operation, request: payload || {}, error: error && error.message || String(error)});
             emit('request:error', {handleName, operation, error});
             throw error;
         }).finally(() => inflight.delete(key));
@@ -350,6 +383,7 @@
         HandleName,
         HandleState,
         CachePolicy,
+        Payloads: {entries: payloadEntries},
         registerHandle,
         request,
         stream,
@@ -359,5 +393,6 @@
         normalizeWsUrl
     };
     global.UCE.RequestHandler = api;
+    global.UCE.Payloads = api.Payloads;
 })(window);
 </#noparse>

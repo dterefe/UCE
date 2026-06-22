@@ -498,7 +498,7 @@ public class App {
                         String hostPrefix = wsScheme + "://" + ctx.host();
                         String httpHostPrefix = httpScheme + "://" + ctx.host();
                         if (configuredDuavizWsUrl == null || configuredDuavizWsUrl.isBlank()) {
-                            configuredDuavizWsUrl = hostPrefix + "/ws/duaviz";
+                            configuredDuavizWsUrl = System.getenv().getOrDefault("UCE_DUA_WS_URL", "ws://127.0.0.1:17876");
                         } else {
                             String trimmed = configuredDuavizWsUrl.trim();
                             if (trimmed.startsWith("ws://") || trimmed.startsWith("wss://")) {
@@ -508,7 +508,7 @@ public class App {
                                 configuredDuavizWsUrl = hostPrefix + suffix;
                             }
                             configuredDuavizWsUrl = configuredDuavizWsUrl.replaceAll("/+$", "");
-                            if (!configuredDuavizWsUrl.toLowerCase().contains("/ws/duaviz")) {
+                            if (!(trimmed.startsWith("ws://") || trimmed.startsWith("wss://")) && !configuredDuavizWsUrl.toLowerCase().contains("/ws/duaviz")) {
                                 configuredDuavizWsUrl = configuredDuavizWsUrl + "/ws/duaviz";
                             }
                         }

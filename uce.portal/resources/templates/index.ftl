@@ -609,7 +609,10 @@
     window.uceDuaMode = /dua/i.test(window.uceBackendName || '');
     window.uceDuavizVisible = true;
     window.uceDuavizDefaultDummy = ${(duavizDefaultDummy!false)?c};
-    window.uceDuavizHttpUrl = "${(duavizHttpUrl!'')?js_string}" || "http://127.0.0.1:17883";
+    window.uceDuavizWsUrl = "${(duavizWsUrl!'')?js_string}" || "/ws/duaviz";
+    window.uceDuaWsUrl = "${(duaWsUrl!'')?js_string}" || "ws://127.0.0.1:17876";
+    window.uceDuavizWsPath = "${(duavizWsPath!'/ws/duaviz')?js_string}" || "/ws/duaviz";
+    window.uceDuavizHttpUrl = "${(duavizHttpUrl!'')?js_string}" || "http://127.0.0.1:17875";
     window.uceDuavizEndpoint = window.uceDuavizHttpUrl;
     <#include "js/clients/models/duaModels.js">
     <#include "js/clients/models/uceBackendModels.js">

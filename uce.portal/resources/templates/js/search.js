@@ -5,6 +5,18 @@ let searchVizToggleInProgressUntil = 0;
 let duaSearchState = null;
 let backendRecordSearchState = null;
 const DUA_VIZ_WS_PATH = '/ws/duaviz';
+const DUA_SEARCH_DOCUMENT_TYPE_NAMES = new Set([
+    'org.texttechnologylab.annotations.dua.Document',
+    'org.texttechnologylab.annotations.dua.biofid.BIOfidArticle',
+    'uima.tcas.DocumentAnnotation'
+]);
+const DUA_SEARCH_CORPUS_TYPE_NAMES = new Set([
+    'org.texttechnologylab.annotations.dua.Corpus',
+    'org.texttechnologylab.annotations.dua.biofid.BIOfidCollection',
+    'org.texttechnologylab.annotations.dua.biofid.BIOfidJournal',
+    'org.texttechnologylab.annotations.dua.biofid.BIOfidVolume',
+    'org.texttechnologylab.annotations.dua.biofid.BIOfidIssue'
+]);
 
 function isDuaSearchMode() {
     return window.uceDuaMode === true
@@ -36,6 +48,14 @@ function duaTypeLabel(type) {
     return String((type && (type.label || duaShortLabel(type.name))) || '');
 }
 
+function duaFullTypeName(type) {
+    return String(type && (type.name || type.typeName || type.type || '') || '');
+}
+
+function duaTypeNameIn(type, names) {
+    return names.has(duaFullTypeName(type));
+}
+
 function duaInstanceLabel(item) {
     const raw = String(item && (
         item.label ||
@@ -56,8 +76,8 @@ async function ensureDuaSearchSchema() {
     const response = await duavizWsQuery('types');
     const schemaTypes = (response.schema && Array.isArray(response.schema.types)) ? response.schema.types
         : (Array.isArray(response.types) ? response.types : []);
-    const documentType = schemaTypes.find(type => /(^|\.)Document$/.test(String(type.name || '')) || duaTypeLabel(type) === 'Document');
-    const corpusType = schemaTypes.find(type => /(^|\.)Corpus$/.test(String(type.name || '')) || duaTypeLabel(type) === 'Corpus');
+    const documentType = schemaTypes.find(type => duaTypeNameIn(type, DUA_SEARCH_DOCUMENT_TYPE_NAMES));
+    const corpusType = schemaTypes.find(type => duaTypeNameIn(type, DUA_SEARCH_CORPUS_TYPE_NAMES));
     duaSearchState = {
         schemaTypes,
         documentType,

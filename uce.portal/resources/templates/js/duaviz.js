@@ -1,5 +1,85 @@
 <#noparse>
 (function installDuaviz() {
+    const DUA_TYPE_NAMES = Object.freeze({
+        ARTIFACT: 'org.texttechnologylab.annotations.dua.Artifact',
+        CORPUS: 'org.texttechnologylab.annotations.dua.Corpus',
+        DOCUMENT: 'org.texttechnologylab.annotations.dua.Document',
+        VIEW: 'org.texttechnologylab.annotations.dua.View',
+        DUA_SOFA: 'org.texttechnologylab.annotations.dua.DUASofa',
+        BIOFID_COLLECTION: 'org.texttechnologylab.annotations.dua.biofid.BIOfidCollection',
+        BIOFID_JOURNAL: 'org.texttechnologylab.annotations.dua.biofid.BIOfidJournal',
+        BIOFID_VOLUME: 'org.texttechnologylab.annotations.dua.biofid.BIOfidVolume',
+        BIOFID_ISSUE: 'org.texttechnologylab.annotations.dua.biofid.BIOfidIssue',
+        BIOFID_ARTICLE: 'org.texttechnologylab.annotations.dua.biofid.BIOfidArticle',
+        TOP: 'uima.cas.TOP',
+        SOFA: 'cas:Sofa',
+        FS_ARRAY: 'cas:FSArray',
+        NULL: 'cas:NULL',
+        ANNOTATION: 'uima.tcas.Annotation',
+        DOCUMENT_ANNOTATION: 'uima.tcas.DocumentAnnotation'
+    });
+    const DUA_CORPUS_TYPE_NAMES = new Set([
+        DUA_TYPE_NAMES.CORPUS,
+        DUA_TYPE_NAMES.BIOFID_COLLECTION,
+        DUA_TYPE_NAMES.BIOFID_JOURNAL,
+        DUA_TYPE_NAMES.BIOFID_VOLUME,
+        DUA_TYPE_NAMES.BIOFID_ISSUE
+    ]);
+    const DUA_DOCUMENT_TYPE_NAMES = new Set([
+        DUA_TYPE_NAMES.DOCUMENT,
+        DUA_TYPE_NAMES.BIOFID_ARTICLE,
+        DUA_TYPE_NAMES.DOCUMENT_ANNOTATION
+    ]);
+    const DUA_ARTIFACT_TYPE_NAMES = new Set([
+        DUA_TYPE_NAMES.ARTIFACT,
+        DUA_TYPE_NAMES.CORPUS,
+        DUA_TYPE_NAMES.DOCUMENT,
+        DUA_TYPE_NAMES.BIOFID_COLLECTION,
+        DUA_TYPE_NAMES.BIOFID_JOURNAL,
+        DUA_TYPE_NAMES.BIOFID_VOLUME,
+        DUA_TYPE_NAMES.BIOFID_ISSUE,
+        DUA_TYPE_NAMES.BIOFID_ARTICLE
+    ]);
+    const DUA_EXACT_ANNOTATION_TYPE_NAMES = new Set([
+        DUA_TYPE_NAMES.ANNOTATION,
+        DUA_TYPE_NAMES.DOCUMENT_ANNOTATION
+    ]);
+    const DUA_METADATA_TITLE_TYPE_NAMES = new Set([
+        DUA_TYPE_NAMES.DOCUMENT,
+        DUA_TYPE_NAMES.BIOFID_ARTICLE,
+        DUA_TYPE_NAMES.DOCUMENT_ANNOTATION,
+        'type2:DocumentMetaData',
+        'uce:Metadata'
+    ]);
+    const DUA_CANONICAL_PRIMITIVE_RANGE_KINDS = Object.freeze({
+        'uima.cas.String': 'string',
+        'uima.cas.Boolean': 'boolean',
+        'uima.cas.Byte': 'integer',
+        'uima.cas.Short': 'integer',
+        'uima.cas.Integer': 'integer',
+        'uima.cas.Long': 'long',
+        'uima.cas.Float': 'float',
+        'uima.cas.Double': 'double'
+    });
+    const DUA_CANONICAL_FS_REFERENCE_RANGES = new Set([
+        'uima.cas.TOP',
+        'uima.tcas.Annotation',
+        'uima.tcas.DocumentAnnotation',
+        'cas:Sofa',
+        'cas:FSArray',
+        'uima.cas.Sofa',
+        'uima.cas.FSArray',
+        'org.texttechnologylab.annotations.dua.Artifact',
+        'org.texttechnologylab.annotations.dua.Corpus',
+        'org.texttechnologylab.annotations.dua.Document',
+        'org.texttechnologylab.annotations.dua.View',
+        'org.texttechnologylab.annotations.dua.DUASofa',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidCollection',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidJournal',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidVolume',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidIssue',
+        'org.texttechnologylab.annotations.dua.biofid.BIOfidArticle'
+    ]);
     const state = {
         types: [],
         children: new Map(),
@@ -103,8 +183,8 @@
     const pendingRequests = new Map();
     let pendingRequestQueue = [];
     let directCasEndpointFromTelemetry = null;
-    const DUA_ACTIVE_HTTP = 17883;
-    const DUA_ACTIVE_WS = 17884;
+    const DUA_ACTIVE_HTTP = 17875;
+    const DUA_ACTIVE_WS = 17876;
     const DUA_ACTIVE_WS_PATH = '/';
     const DUA_STATIC_DATA_URL = '';
     let staticCorpusLoadPromise = null;
@@ -401,13 +481,9 @@
         const trimmed = configured.trim().replace(/\/+$/, '');
         try {
             const url = new URL(trimmed, window.location.origin);
-            if (url.port === '17875') {
-                url.hostname = '127.0.0.1';
-                url.port = String(DUA_ACTIVE_HTTP);
-            }
             return url.toString().replace(/\/+$/, '');
         } catch (_) {
-            return trimmed.replace('17875', String(DUA_ACTIVE_HTTP));
+            return trimmed;
         }
     }
 
@@ -724,18 +800,13 @@
 
     function casSuperTypeName(typeName) {
         const name = String(typeName || '');
-        if (name === 'uima.cas.TOP') return '';
-        if (name === 'org.texttechnologylab.annotations.dua.Artifact') return 'uima.cas.TOP';
-        if (name === 'org.texttechnologylab.annotations.dua.Corpus' || name === 'org.texttechnologylab.annotations.dua.Document') return 'org.texttechnologylab.annotations.dua.Artifact';
-        if ([
-            'org.texttechnologylab.annotations.dua.biofid.BIOfidCollection',
-            'org.texttechnologylab.annotations.dua.biofid.BIOfidJournal',
-            'org.texttechnologylab.annotations.dua.biofid.BIOfidVolume',
-            'org.texttechnologylab.annotations.dua.biofid.BIOfidIssue'
-        ].includes(name)) return 'org.texttechnologylab.annotations.dua.Corpus';
-        if (name === 'org.texttechnologylab.annotations.dua.biofid.BIOfidArticle') return 'org.texttechnologylab.annotations.dua.Document';
-        if (name === 'org.texttechnologylab.annotations.dua.View' || name === 'org.texttechnologylab.annotations.dua.DUASofa') return 'uima.cas.TOP';
-        if (name === 'uima.tcas.Annotation' || name === 'cas:NULL' || name === 'cas:FSArray' || name === 'cas:Sofa') return 'uima.cas.TOP';
+        if (name === DUA_TYPE_NAMES.TOP) return '';
+        if (name === DUA_TYPE_NAMES.ARTIFACT) return DUA_TYPE_NAMES.TOP;
+        if (name === DUA_TYPE_NAMES.CORPUS || name === DUA_TYPE_NAMES.DOCUMENT) return DUA_TYPE_NAMES.ARTIFACT;
+        if (DUA_CORPUS_TYPE_NAMES.has(name) && name !== DUA_TYPE_NAMES.CORPUS) return DUA_TYPE_NAMES.CORPUS;
+        if (name === DUA_TYPE_NAMES.BIOFID_ARTICLE) return DUA_TYPE_NAMES.DOCUMENT;
+        if (name === DUA_TYPE_NAMES.VIEW || name === DUA_TYPE_NAMES.DUA_SOFA) return DUA_TYPE_NAMES.TOP;
+        if (name === DUA_TYPE_NAMES.ANNOTATION || name === DUA_TYPE_NAMES.NULL || name === DUA_TYPE_NAMES.FS_ARRAY || name === DUA_TYPE_NAMES.SOFA) return DUA_TYPE_NAMES.TOP;
         if (name === 'abbyy:Page') return 'abbyy:Document';
         if (name === 'abbyy:Block') return 'abbyy:Page';
         if (name === 'abbyy:Paragraph') return 'abbyy:Block';
@@ -745,39 +816,34 @@
         if (name === 'dependency:ROOT') return 'dependency:Dependency';
         if (['type3:Date', 'type3:Location', 'type3:Person', 'type3:Organization', 'type3:Event', 'type3:Product'].includes(name)) return 'type3:NamedEntity';
         if (name === 'gnfinder:VerifiedTaxon') return 'gnfinder:Taxon';
-        if (casAnnotationType(name)) return 'uima.tcas.Annotation';
-        return 'uima.cas.TOP';
+        if (casAnnotationType(name)) return DUA_TYPE_NAMES.ANNOTATION;
+        return DUA_TYPE_NAMES.TOP;
     }
 
     function casArtifactType(typeName) {
         const name = String(typeName || '');
-        return name === 'org.texttechnologylab.annotations.dua.Artifact'
-            || name === 'org.texttechnologylab.annotations.dua.Corpus'
-            || name === 'org.texttechnologylab.annotations.dua.Document'
-            || name.startsWith('org.texttechnologylab.annotations.dua.biofid.');
+        return DUA_ARTIFACT_TYPE_NAMES.has(name);
     }
 
     function isArtifactTypeName(typeName) {
-        return /\bArtifact$/.test(String(typeName || ''));
+        return String(typeName || '') === DUA_TYPE_NAMES.ARTIFACT;
     }
 
     function isCorpusTypeName(typeName) {
-        return /[:.]Corpus$/.test(String(typeName || ''));
+        return DUA_CORPUS_TYPE_NAMES.has(String(typeName || ''));
     }
 
     function isDocumentTypeName(typeName) {
-        return /[:.]Document$/.test(String(typeName || '')) && !/[:.]DocumentMetaData$/.test(String(typeName || ''));
+        return DUA_DOCUMENT_TYPE_NAMES.has(String(typeName || ''));
     }
 
     function isLikelyDocumentTypeName(typeName) {
-        return isDocumentTypeName(typeName) || /(^|[:.])Document$/.test(String(typeName || ''));
+        return isDocumentTypeName(typeName);
     }
 
     function casAnnotationType(typeName) {
         const name = String(typeName || '');
-        if (!name || casArtifactType(name)) return false;
-        if (name === 'uima.cas.TOP' || name === 'cas:NULL' || name === 'cas:FSArray' || name === 'cas:Sofa') return false;
-        return !name.startsWith('uima.cas.');
+        return DUA_EXACT_ANNOTATION_TYPE_NAMES.has(name);
     }
 
     function casDisplayFeatures(typeCode, typeName, annotation, artifact) {
@@ -1955,8 +2021,8 @@
         candidates.push(doc.title, doc.name);
         (document && document.sofas || []).forEach(row => pushFeatures(row.features));
         (document && document.featureStructures || []).forEach(row => {
-            const typeName = String(row.typeName || row.type || '').toLowerCase();
-            if (typeName.includes('metadata') || typeName.includes('document')) pushFeatures(row.features);
+            const typeName = String(row.typeName || row.type || '');
+            if (DUA_METADATA_TITLE_TYPE_NAMES.has(typeName)) pushFeatures(row.features);
         });
         const title = candidates.map(value => String(value || '').trim()).find(value => value && value !== '_InitialView' && value !== 'No document text available.');
         return title || ('Document ' + fsId);
@@ -2615,14 +2681,24 @@
     }
 
     function primitiveKindForFeature(feature) {
-        const raw = String(feature.range || feature.type || feature.kind || feature.valueType || feature.name || '').toLowerCase();
-        if (raw.includes('fs') || raw.includes('ref') || raw.includes('uima.tcas') || raw.includes('org.')) return 'fs-reference';
-        if (raw.includes('double')) return 'double';
-        if (raw.includes('float')) return 'float';
-        if (raw.includes('long')) return 'long';
-        if (raw.includes('int') || raw === 'begin' || raw === 'end' || raw.endsWith(':begin') || raw.endsWith(':end')) return 'integer';
-        if (raw.includes('bool')) return 'boolean';
-        if (raw.includes('string') || raw.includes('text') || raw.includes('label') || raw.includes('value') || raw.includes('id')) return 'string';
+        const candidates = [
+            feature && feature.rangeTypeName,
+            feature && feature.rangeType,
+            feature && feature.range,
+            feature && feature.typeName,
+            feature && feature.valueType
+        ].map(value => String(value || '').trim()).filter(Boolean);
+        for (const candidate of candidates) {
+            if (Object.prototype.hasOwnProperty.call(DUA_CANONICAL_PRIMITIVE_RANGE_KINDS, candidate)) {
+                return DUA_CANONICAL_PRIMITIVE_RANGE_KINDS[candidate];
+            }
+            if (DUA_CANONICAL_FS_REFERENCE_RANGES.has(candidate)) {
+                return 'fs-reference';
+            }
+            if (state.types.some(type => String(type.name || '') === candidate)) {
+                return 'fs-reference';
+            }
+        }
         return 'primitive';
     }
 
@@ -2694,7 +2770,7 @@
                 const inferredArtifact = casArtifactType(typeName);
                 const explicitArtifact = entry.artifact === true;
                 const explicitAnnotation = entry.annotation === true;
-                const inferredAnnotation = !inferredArtifact && !/Sofa$/.test(typeName) && !/FSArray$/.test(typeName) && !/Array$/.test(typeName);
+                const inferredAnnotation = casAnnotationType(typeName);
                 return Object.assign({}, entry, {
                     typeCode: Number(entry.typeCode || casTypeCode(typeName)),
                     superTypeCode: Number(entry.superTypeCode || (entry.superTypeName ? casTypeCode(entry.superTypeName) : 0) || casSuperTypeCode(typeName)),
@@ -3381,7 +3457,7 @@
     function typeCodeFromFeatureRange(binding) {
         const range = String(binding && (binding.featureRange || binding.range || '') || '').trim();
         if (!range) return 0;
-        const found = state.types.find(type => type.name === range || shortLabel(type.name) === shortLabel(range));
+        const found = state.types.find(type => String(type.name || '') === range);
         return found ? Number(found.typeCode) : 0;
     }
 

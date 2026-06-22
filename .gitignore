@@ -66,3 +66,4 @@ uce-shadcn-svelte-lab/*
 .codex-logs/*
 logs/*
 logs/*
+output/*
