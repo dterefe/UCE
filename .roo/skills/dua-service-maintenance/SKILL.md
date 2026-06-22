@@ -180,6 +180,100 @@ uce.portal/uce-dua-web/server.mjs
 uce.portal/uce-dua-web/vite.config.ts
 ```
 
+UCE DUA web Svelte surfaces:
+
+```bash
+uce.portal/uce-dua-web/src/App.svelte
+uce.portal/uce-dua-web/src/lib/components/CorpusSelector.svelte
+uce.portal/uce-dua-web/src/lib/components/DuaVizView.svelte
+uce.portal/uce-dua-web/src/lib/components/LexiconView.svelte
+uce.portal/uce-dua-web/src/lib/components/SearchView.svelte
+uce.portal/uce-dua-web/src/lib/components/DocumentReader.svelte
+```
+
+Legacy UCE web sources, used as behavior/reference material only:
+
+```bash
+uce.portal/uce-web
+```
+
+When migrating a legacy view, read the relevant legacy Freemarker/template/server path first, then implement the Svelte version in `uce.portal/uce-dua-web`. The goal is not a literal clone. The goal is to migrate and improve the visualization while preserving the useful data granularity and interaction semantics from legacy UCE.
+
+## UCE DUA Web Troubleshooting Flow
+
+Use this flow when the UCE DUA web UI is empty, slow, disconnected, showing stale values, or using the wrong payload fields.
+
+1. Verify the current service and web ports before editing:
+
+```bash
+curl -fsS http://127.0.0.1:17876/health
+curl -sS --max-time 5 http://127.0.0.1:4579/runtime-config.js
+podman ps --format '{{.Names}} {{.ID}} {{.Status}} {{.Ports}}' | rg 'dua-biofid-heideltime|uce-dua-web-live'
+```
+
+2. Verify the exact API shape the frontend is consuming. Do not infer from TypeScript types alone:
+
+```bash
+curl -sS 'http://127.0.0.1:17876/dua/api/v1/typesystem?includeAll=true&includeFeatures=true'
+curl -sS 'http://127.0.0.1:17876/dua/api/v1/feature-structures?limit=5&offset=0&includeValues=true'
+```
+
+3. Keep component code behind the request handler. Components should call the request/client layer, not invent their own endpoint-specific paging, filtering, fallback parsing, or direct service workarounds. Centralize request paging, streaming, normalization, feature-value merging, and compatibility behavior in:
+
+```bash
+uce.portal/uce-dua-web/src/lib/clients/requestHandler.ts
+uce.portal/uce-dua-web/src/lib/clients/duaClient.ts
+```
+
+4. If the API endpoint does not contain the format, value, feature, hierarchy, paging metadata, or resolver output required by the UI, read the DUA service code and fix the endpoint or add the correct endpoint support. Do not hide missing backend capability with frontend guesses, hard-coded type labels, synthetic IDs, unbounded fetches, or type-code fallbacks in components.
+
+Primary backend files for UCE API shapes:
+
+```bash
+duui-dua/dua-core/src/main/java/org/texttechnologylab/duui/dua/service/DUAUceApiSupport.java
+duui-dua/dua-core/src/main/java/org/texttechnologylab/duui/dua/service/DUAService.java
+duui-dua/dua-core/src/main/java/org/texttechnologylab/duui/dua/service/DUAWebSocketServer.java
+```
+
+5. After backend endpoint changes, rebuild the DUA image and restart only `dua-biofid-heideltime-service-17876`. Do not restart or remove the importer for web/API fixes.
+
+6. After frontend changes, run:
+
+```bash
+cd /home/stud_homes/s0424382/projects/ttlab/uce/biofid-nova-preprocessing/UCE/uce.portal/uce-dua-web
+npm run check
+npm run build
+```
+
+If `uce-dua-web-live` is serving Vite dev mode, source edits may be picked up live. If it is serving a built bundle, rebuild/recreate only the UCE web container and keep the DUA service/importer unchanged unless the API changed.
+
+7. Verify rendered behavior with browser evidence when the user asks for UI proof. Use the Playwright skill workflow when available. A clean build is not proof that the visible UI is filled, connected, or using the correct feature values.
+
+## UCE Web Data Rules
+
+The UCE DUA web should display UIMA/DUA payloads as feature structures and feature values.
+
+Do:
+
+```text
+Use FeatureStructure records, fsRef, typeName, features, featureValues, ranges, and UIMA type hierarchy.
+Use artifact title/artifactId/sourceURI/metadataJson from feature values when showing artifacts.
+Use paging/streaming at request-handler or backend endpoint level for large feature-structure collections.
+Use explicit type-system requests such as includeAll=true when hierarchy roots are required.
+```
+
+Do not:
+
+```text
+Do not use arbitrary frontend IDs or type-code-only state as user-visible identity.
+Do not use generic label/name fallbacks when an artifact title or feature value is required.
+Do not fetch the entire corpus into a component to compensate for a missing paged endpoint.
+Do not hard-code BioFID hierarchy in components when the type system can provide parent/child relations.
+Do not display abstract implementation roots such as Artifact when the user-facing hierarchy should start at Corpus and Document.
+```
+
+When a legacy UCE view had richer data granularity than the current DUA endpoint, the correct fix is to inspect the legacy source, inspect the current DUA service/source, then modify the API/service normalization so the Svelte frontend can request the same useful data cleanly.
+
 ## Build DUA
 
 From the DUA repo:
@@ -385,6 +479,131 @@ If `document.list` times out:
 3. Inspect `DUAUceApiSupport.documentList`.
 4. Avoid unbounded directory scans or serializing huge pages during startup.
 5. Keep normal list responses paged.
+
+## Active DUA Store Migration
+
+Use this when the DUA store itself must be corrected in place, for example when imported annotation spans were written against side/type-specific views and must be collapsed into the document artifact's `_InitialView`.
+
+Hard rules:
+
+```text
+do not run a migration while the importer is writing
+do not start the importer while the migration is writing
+do not delete the store
+do not use ad hoc frontend fallbacks to hide bad DUA data
+do not collapse across domain bases
+dry-run the exact store first
+apply only after unresolved counts are zero or explicitly understood
+```
+
+First check processes:
+
+```bash
+podman ps -a --format '{{.Names}} {{.ID}} {{.Status}}' | rg '^dua-biofid-heideltime-importer-full\b|^dua-biofid-heideltime-service-17876\b'
+pgrep -af 'BIOfidAnnotationViewMigration|BIOfidPipelineImporter|DUAServiceLauncher' || true
+```
+
+If `dua-biofid-heideltime-importer-full` is `Up`, do not run an in-place migration. Let it finish or explicitly stop it only when the user asks. The DUA service may be left running for read-only dry-runs, but restart it after an apply so readers reopen the corrected LMDB state.
+
+Compile migration-capable code:
+
+```bash
+cd /home/stud_homes/s0424382/projects/ttlab/duui-alpha/DockerUnifiedUIMAInterface
+mvn -pl duui-dua/dua-core -am -DskipTests package
+```
+
+Run Java LMDB tools with the same module access flags used by the container:
+
+```bash
+JAVA_LMDB_FLAGS='--add-opens=java.base/java.nio=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED'
+CP='duui-dua/dua-core/target/classes:duui-dua/dua-core/target/dependency/*:duui-base/target/classes:duui-core/target/classes'
+```
+
+For annotation side-view collapse, dry-run a single shard first:
+
+```bash
+java $JAVA_LMDB_FLAGS -cp "$CP" \
+  org.texttechnologylab.duui.dua.uce.BIOfidAnnotationViewMigration \
+  /storage/projects/BIOfid/code/dterefe/artifacts/dua-heideltime/domains/biofid-2026-06-18-heideltime-group-0
+```
+
+Expected safe dry-run shape:
+
+```text
+seenSpans=N
+migratedSpans=N
+unresolvedSpans=0
+applied=false
+```
+
+Then dry-run the full store with bounded domain concurrency. LMDB has one writer per environment, so concurrency is only across independent domain environments:
+
+```bash
+java $JAVA_LMDB_FLAGS -cp "$CP" \
+  org.texttechnologylab.duui.dua.uce.BIOfidAnnotationViewMigration \
+  /storage/projects/BIOfid/code/dterefe/artifacts/dua-heideltime \
+  --workers=4 | tee /tmp/biofid_annotation_view_migration_full_dryrun.log
+```
+
+Only apply after the final totals show `unresolvedSpans=0`:
+
+```bash
+java $JAVA_LMDB_FLAGS -cp "$CP" \
+  org.texttechnologylab.duui.dua.uce.BIOfidAnnotationViewMigration \
+  /storage/projects/BIOfid/code/dterefe/artifacts/dua-heideltime \
+  --workers=4 --apply | tee /tmp/biofid_annotation_view_migration_apply.log
+```
+
+Migration implementation requirements:
+
+```text
+rewrite packed span blocks, not just direct span rows
+update annotation FS view metadata to the document artifact initial view
+rewrite AnnotationBase.sofa graph references in batches grouped by graph block
+do not remove and add graph edges one annotation at a time
+keep each domain migration transactional
+checkpoint each migrated domain
+print per-domain counts and final totals
+```
+
+Troubleshooting:
+
+```text
+all spans unresolved:
+  check whether durable sofa refs are signed negative; reject only zero, not negative refs
+  check whether registry document ids include a corpus/document prefix
+  check whether the registry stores local sofa refs while spans store durable sofa refs
+
+some spans unresolved:
+  check allocation-order fallback within the same durable domain base
+  map to nearest following document artifact first, then nearest preceding document artifact
+  never map across a different high 32-bit domain base
+
+apply is too slow:
+  inspect CPU/RSS with ps
+  if it is doing per-annotation graph rewrites, stop it and implement batched graph-block rewrites
+  completed LMDB transactions remain committed; an interrupted active transaction is discarded
+
+service still shows old view data:
+  restart only dua-biofid-heideltime-service-17876 after apply
+  do not restart the importer unless the user asks
+```
+
+After apply, verify with a full dry-run again. Correct shape after a successful apply is:
+
+```text
+alreadyInitialSpans=N
+migratedSpans=0
+unresolvedSpans=0
+```
+
+Then restart only the DUA service and check:
+
+```bash
+podman restart dua-biofid-heideltime-service-17876
+curl -fsS http://127.0.0.1:17876/health
+curl -sS http://127.0.0.1:17876/stats
+```
 
 ## Final Verification Checklist
 
