@@ -121,6 +121,7 @@ services:
 
   dua-biofid-importer:
     container_name: dua-biofid-importer
+    entrypoint: []
     image: ${DUA_SERVICE_IMAGE:-docker.texttechnologylab.org/duas:0.1.0-SNAPSHOT}
     build:
       context: ${DUA_SERVICE_BUILD_CONTEXT:-/home/stud_homes/s0424382/projects/ttlab/duui-alpha/DockerUnifiedUIMAInterface/duui-dua}
@@ -140,6 +141,11 @@ services:
       DUA_WRITEBACK_PARALLELISM: ${DUA_WRITEBACK_PARALLELISM:-4}
       DUA_IMPORT_DOMAIN_STRATEGY: ${DUA_IMPORT_DOMAIN_STRATEGY:-DOCUMENT}
       DUA_IMPORT_DOMAIN_GROUP_SIZE: ${DUA_IMPORT_DOMAIN_GROUP_SIZE:-1}
+      DUA_IMPORT_TIMEOUT_MINUTES: ${DUA_IMPORT_TIMEOUT_MINUTES:-10}
+      SPARQL_HOST: ${SPARQL_HOST:-http://uce-fuseki-sparql:5430/}
+      SPARQL_ENDPOINT: ${SPARQL_ENDPOINT:-biofid-search/sparql}
+      EMBEDDING_WEBSERVER_BASE_URL: ${EMBEDDING_WEBSERVER_BASE_URL:-http://uce-rag-service:5678/}
+      RAG_WEBSERVER_BASE_URL: ${RAG_WEBSERVER_BASE_URL:-http://uce-rag-service:5678/}
     volumes:
       - "${DUA_SERVICE_STORE_HOST_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/dua-heideltime}:${DUA_SERVICE_STORE_CONTAINER_PATH:-/data/dua}:rw"
       - "${DUA_SERVICE_SOURCE_HOST_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/2026_06_18_heideltime}:${DUA_SERVICE_SOURCE_CONTAINER_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/2026_06_18_heideltime}:ro"
@@ -157,6 +163,50 @@ services:
     networks:
       - app_net
 
+  duas-importfull:
+    container_name: duas-importfull
+    image: ${DUA_SERVICE_IMAGE:-docker.texttechnologylab.org/duas:0.1.0-SNAPSHOT}
+    build:
+      context: ${DUA_SERVICE_BUILD_CONTEXT:-/home/stud_homes/s0424382/projects/ttlab/duui-alpha/DockerUnifiedUIMAInterface/duui-dua}
+      dockerfile: ${DUA_SERVICE_DOCKERFILE:-Containerfile}
+    profiles:
+      - dua
+    restart: unless-stopped
+    ports:
+      - "${DUA_IMPORTFULL_SERVICE_HTTP_PORT:-17878}:17875"
+      - "${DUA_IMPORTFULL_SERVICE_WS_PORT:-17879}:17876"
+    environment:
+      DUA_SERVICE_BIND_HOST: ${DUA_SERVICE_BIND_HOST:-0.0.0.0}
+      DUA_SERVICE_PUBLIC_HOST: ${DUA_SERVICE_PUBLIC_HOST:-127.0.0.1}
+      DUA_STORE_PATH: ${DUA_SERVICE_STORE_CONTAINER_PATH:-/data/dua}
+      DUA_PORT: "17875"
+      SPARQL_HOST: ${SPARQL_HOST:-http://uce-fuseki-sparql:5430/}
+      SPARQL_ENDPOINT: ${SPARQL_ENDPOINT:-biofid-search/sparql}
+      RAG_WEBSERVER_BASE_URL: ${RAG_WEBSERVER_BASE_URL:-http://uce-rag-service:5678/}
+      EMBEDDING_WEBSERVER_BASE_URL: ${EMBEDDING_WEBSERVER_BASE_URL:-http://uce-rag-service:5678/}
+      DUA_RAG_MODEL: ${DUA_RAG_MODEL:-openai/gemma3:latest}
+      DUA_RAG_MODEL_URL: ${DUA_RAG_MODEL_URL:-https://www.llm.texttechnologylab.org/api}
+      DUA_RAG_API_KEY: ${DUA_RAG_API_KEY:-}
+    volumes:
+      - "${DUA_IMPORTFULL_STORE_HOST_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/dua-heideltime-import-full}:${DUA_SERVICE_STORE_CONTAINER_PATH:-/data/dua}:rw"
+      - "${DUA_SERVICE_SOURCE_HOST_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/2026_06_18_heideltime}:${DUA_SERVICE_SOURCE_CONTAINER_PATH:-/storage/projects/BIOfid/code/dterefe/artifacts/development/2026_06_18_heideltime}:ro"
+      - "${UCE_CONFIG_PATH:-./.dev/storage/config/uceConfig.json}:/opt/dua/uceConfig.json:ro"
+    command:
+      - java
+      - --enable-preview
+      - --enable-native-access=ALL-UNNAMED
+      - --add-opens
+      - java.base/java.nio=ALL-UNNAMED
+      - --add-exports
+      - java.base/sun.nio.ch=ALL-UNNAMED
+      - -cp
+      - /opt/dua/lib/*
+      - org.texttechnologylab.duui.dua.service.DUAServiceLauncher
+      - ${DUA_SERVICE_STORE_CONTAINER_PATH:-/data/dua}
+      - "17875"
+    networks:
+      - app_net
+
   uce-dua-web:
     container_name: uce-dua-web
     image: ${UCE_DUA_WEB_DEV_IMAGE:-docker.io/library/node:20-alpine}
@@ -167,6 +217,9 @@ services:
       PORT: "4579"
       UCE_DUA_WS_URL: ${UCE_DUA_WEB_WS_URL:-ws://duas:17876/ws/duaviz}
       VITE_DUA_WS_URL: ${UCE_DUA_WEB_WS_URL:-ws://duas:17876/ws/duaviz}
+      UCE_DUA_HTTP_URL: ${UCE_DUA_WEB_HTTP_URL:-http://duas:17875}
+      VITE_DUA_HTTP_URL: ${UCE_DUA_WEB_HTTP_URL:-http://duas:17875}
+      UCE_DEV_PAYLOADS_ENABLED: ${UCE_DEV_PAYLOADS_ENABLED:-false}
     ports:
       - "${UCE_DUA_WEB_PORT:-4579}:4579"
     volumes:
@@ -178,6 +231,37 @@ services:
       - npm install && npm run dev -- --host 0.0.0.0 --port 4579
     depends_on:
       duas:
+        condition: service_started
+        required: false
+    networks:
+      - app_net
+
+  uce-dua-web-importfull:
+    container_name: uce-dua-web-importfull
+    image: ${UCE_DUA_WEB_DEV_IMAGE:-docker.io/library/node:20-alpine}
+    working_dir: /app
+    restart: unless-stopped
+    profiles:
+      - dua
+    environment:
+      HOST: 0.0.0.0
+      PORT: "4579"
+      UCE_DUA_WS_URL: ws://duas-importfull:17876/ws/duaviz
+      VITE_DUA_WS_URL: ws://duas-importfull:17876/ws/duaviz
+      UCE_DUA_HTTP_URL: http://duas-importfull:17875
+      VITE_DUA_HTTP_URL: http://duas-importfull:17875
+      UCE_DEV_PAYLOADS_ENABLED: ${UCE_DEV_PAYLOADS_ENABLED:-false}
+    ports:
+      - "4580:4579"
+    volumes:
+      - ./uce.portal/uce-dua-web:/app:rw
+      - uce_dua_web_node_modules:/app/node_modules
+    command:
+      - sh
+      - -lc
+      - npm install && npm run dev -- --host 0.0.0.0 --port 4579
+    depends_on:
+      duas-importfull:
         condition: service_started
         required: false
     networks:
