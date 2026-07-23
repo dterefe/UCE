@@ -1,2 +1,7 @@
 target/
 *.log
+.classpath
+.factorypath
+.project
+.settings/
+*.iml
