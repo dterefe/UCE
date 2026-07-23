@@ -1,5 +1,6 @@
 {
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.compile.nullAnalysis.mode": "automatic",
-    "java.import.maven.enabled": true
+    "java.import.maven.enabled": true,
+    "java.import.generatesMetadataFilesAtProjectRoot": false
 }
