@@ -7,6 +7,8 @@ import org.texttechnologylab.uce.health.HealthCheck;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import spark.Service;
+
 import static spark.Spark.*;
 
 /**
@@ -54,11 +56,33 @@ public final class UceSparkHealth {
         }, JSON::writeValueAsString);
     }
 
+    public static void wireK8sHealth(Service service, Supplier<HealthCheck> liveness,
+                                     Supplier<HealthCheck> readiness) {
+        service.get("/health/live", (req, res) -> {
+            var check = liveness.get();
+            res.status("DOWN".equals(check.getStatus()) ? 503 : 200);
+            return check;
+        }, JSON::writeValueAsString);
+        service.get("/health/ready", (req, res) -> {
+            var check = readiness.get();
+            res.status("DOWN".equals(check.getStatus()) ? 503 : 200);
+            return check;
+        }, JSON::writeValueAsString);
+    }
+
     // ── Simple health ────────────────────────────────────────────────────
 
     /** Wire {@code GET /health} with a simple map supplier. HTTP 503 if status is DOWN. */
     public static void wireHealth(Supplier<Map<String, Object>> healthSupplier) {
         get("/health", (req, res) -> {
+            var h = healthSupplier.get();
+            res.status("DOWN".equals(h.get("status")) ? 503 : 200);
+            return h;
+        }, JSON::writeValueAsString);
+    }
+
+    public static void wireHealth(Service service, Supplier<Map<String, Object>> healthSupplier) {
+        service.get("/health", (req, res) -> {
             var h = healthSupplier.get();
             res.status("DOWN".equals(h.get("status")) ? 503 : 200);
             return h;
@@ -72,9 +96,17 @@ public final class UceSparkHealth {
         get("/status", (req, res) -> statusSupplier.get(), JSON::writeValueAsString);
     }
 
+    public static void wireStatus(Service service, Supplier<Map<String, Object>> statusSupplier) {
+        service.get("/status", (req, res) -> statusSupplier.get(), JSON::writeValueAsString);
+    }
+
     /** Wire {@code GET /api/schema}. */
     public static void wireSchema(Supplier<Map<String, Object>> schemaSupplier) {
         get("/api/schema", (req, res) -> schemaSupplier.get(), JSON::writeValueAsString);
+    }
+
+    public static void wireSchema(Service service, Supplier<Map<String, Object>> schemaSupplier) {
+        service.get("/api/schema", (req, res) -> schemaSupplier.get(), JSON::writeValueAsString);
     }
 
     // ── Middleware ───────────────────────────────────────────────────────
@@ -101,6 +133,23 @@ public final class UceSparkHealth {
             return toJson(Map.of(
                     "error", "Not found: " + req.requestMethod() + " " + req.uri()
             ));
+        });
+    }
+
+    public static void wireMiddleware(Service service) {
+        service.before((req, res) ->
+                System.out.printf("[%s] %s %s%n",
+                        java.time.LocalTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+                        req.requestMethod(), req.uri()));
+        service.exception(Exception.class, (e, req, res) -> {
+            System.err.println("ERROR " + req.requestMethod() + " " + req.uri() + ": " + e.getMessage());
+            res.status(500);
+            res.type("application/json");
+            res.body(toJson(Map.of("error", e.getMessage() != null ? e.getMessage() : "Internal server error")));
+        });
+        service.notFound((req, res) -> {
+            res.type("application/json");
+            return toJson(Map.of("error", "Not found: " + req.requestMethod() + " " + req.uri()));
         });
     }
 

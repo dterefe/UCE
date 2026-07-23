@@ -4,3 +4,6 @@
 [submodule "uce-search-portal"]
 	path = uce-search-portal
 	url = https://github.com/dterefe/uce-search-portal.git
+[submodule "uce-geo-service"]
+	path = uce-geo-service
+	url = https://github.com/dterefe/uce-geo-service.git
