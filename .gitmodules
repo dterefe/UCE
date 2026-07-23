@@ -1,0 +1,6 @@
+[submodule "uce-postgresql"]
+	path = uce-postgresql
+	url = https://github.com/dterefe/uce-postgresql.git
+[submodule "uce-search-portal"]
+	path = uce-search-portal
+	url = https://github.com/dterefe/uce-search-portal.git
